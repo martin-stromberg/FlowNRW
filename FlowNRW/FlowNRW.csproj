@@ -26,7 +26,7 @@
 
 		<!-- Unpackaged Windows app (plain .exe in a ZIP, no MSIX signing required), see https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>
-		<WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+		<WindowsAppSDKSelfContained Condition="'$(RuntimeIdentifier)' != ''">true</WindowsAppSDKSelfContained>
 		<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
 
 		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
