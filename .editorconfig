@@ -17,3 +17,8 @@ indent_size = 2
 
 [*.md]
 trim_trailing_whitespace = false
+
+# Compiler-generated sources (XAML source generators etc.) are not documented by hand.
+[**/obj/**.cs]
+generated_code = true
+dotnet_diagnostic.CS1591.severity = none
