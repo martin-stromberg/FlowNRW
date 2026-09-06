@@ -1,0 +1,200 @@
+name: PR CI for Staging
+
+on:
+  pull_request:
+    branches:
+      - staging
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+concurrency:
+  group: pr-staging-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  detect-backmerge:
+    # actions/checkout on a pull_request event checks out the synthetic merge commit
+    # (base + head), so "origin/main is a parent of HEAD" is a direct, reliable signal that
+    # this PR's head branch is exactly main's current tip - i.e. the automated back-merge PR
+    # created by sync-staging-with-main.yml. Its code already passed every gate on main.
+    runs-on: ubuntu-latest
+    outputs:
+      is_backmerge: ${{ steps.check.outputs.is_backmerge }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check whether this PR is a pure back-merge from main
+        id: check
+        run: |
+          git fetch origin main:refs/remotes/origin/main --no-tags
+
+          main_sha="$(git rev-parse origin/main)"
+          is_main_merge_parent=false
+          for parent in $(git show -s --format=%P HEAD); do
+            if [[ "$parent" == "$main_sha" ]]; then
+              is_main_merge_parent=true
+              break
+            fi
+          done
+
+          if [[ "$is_main_merge_parent" == "true" ]]; then
+            echo "is_backmerge=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Back-merge from main detected - CI checks will be skipped."
+          elif git diff --quiet origin/main HEAD; then
+            echo "is_backmerge=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Pure back-merge from main detected (tree identical) - CI checks will be skipped."
+          else
+            echo "is_backmerge=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  static-checks:
+    name: static checks
+    needs: detect-backmerge
+    if: needs.detect-backmerge.outputs.is_backmerge != 'true'
+    # Hybrid job model: runs in parallel with build-and-test (no `needs:` between them), so a
+    # format/security/analyzer failure is visible without waiting for the test run.
+    # Windows runner: the MAUI app targets net10.0-windows only, which cannot be restored or
+    # built on Linux.
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install MAUI workload
+        uses: ./.github/actions/setup-maui-workload
+
+      - name: Restore dependencies
+        run: dotnet restore FlowNRW.sln
+        shell: pwsh
+
+      - name: Format check
+        # Gate 1. --severity error restricts this to whitespace/style plus genuine analyzer
+        # errors; warning-level analyzer diagnostics are Gate 3's concern.
+        run: dotnet format FlowNRW.sln --verify-no-changes --no-restore --severity error
+        shell: pwsh
+
+      - name: Security scan
+        # Gate 2 - shared composite action, see .github/actions/security-scan.
+        uses: ./.github/actions/security-scan
+        with:
+          solution-path: FlowNRW.sln
+          artifact-name: vulnerable-packages-pr
+
+      - name: Static analysis
+        # Gate 3: the whole solution (including the MAUI app) must build warning-free.
+        run: dotnet build FlowNRW.sln -c Release --no-restore "-p:TreatWarningsAsErrors=true"
+        shell: pwsh
+
+  build-and-test:
+    name: build & test
+    needs: detect-backmerge
+    if: needs.detect-backmerge.outputs.is_backmerge != 'true'
+    # Only the platform-independent projects (FlowNRW.Core, FlowNRW.Tests) are built here, so
+    # this job needs neither Windows nor the MAUI workload and stays fast.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore FlowNRW.Tests/FlowNRW.Tests.csproj
+
+      - name: Build
+        run: dotnet build FlowNRW.Tests/FlowNRW.Tests.csproj --no-restore -c Release
+
+      - name: Test
+        # Gate 4 (blocking): collects coverage for the threshold below.
+        run: >
+          dotnet test FlowNRW.Tests/FlowNRW.Tests.csproj --no-build -c Release
+          --collect:"XPlat Code Coverage"
+          --logger "trx;LogFileName=test-results.trx"
+          --logger "console;verbosity=normal"
+
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool --version 5.5.11
+
+      - name: Generate coverage report
+        run: reportgenerator "-reports:FlowNRW.Tests/TestResults/**/coverage.cobertura.xml" "-targetdir:coverage-report" "-reporttypes:TextSummary"
+
+      - name: Enforce coverage threshold
+        # Gate 5: hard 70% line-coverage minimum.
+        env:
+          COVERAGE_THRESHOLD: '70'
+        run: |
+          set -euo pipefail
+          summary="coverage-report/Summary.txt"
+          if ! grep -q "Line coverage:" "$summary"; then
+            echo "Could not determine line coverage from the generated report." >&2
+            exit 1
+          fi
+          coverage="$(grep -m1 "Line coverage:" "$summary" | grep -oE '[0-9]+([.,][0-9]+)?' | head -n1 | tr ',' '.')"
+          threshold="$COVERAGE_THRESHOLD"
+          echo "Line coverage: ${coverage}% (threshold: ${threshold}%)"
+          awk -v cov="$coverage" -v thr="$threshold" 'BEGIN { exit !(cov >= thr) }'
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report-pr
+          path: coverage-report/
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-pr
+          path: FlowNRW.Tests/TestResults/*.trx
+          retention-days: 14
+
+  release-scripts-test:
+    name: release scripts
+    needs: detect-backmerge
+    if: needs.detect-backmerge.outputs.is_backmerge != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test release scripts
+        run: npm run test:release-version
+
+  back-merge-skip:
+    needs: detect-backmerge
+    if: needs.detect-backmerge.outputs.is_backmerge == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Back-merge detected
+        run: echo "Back-merge PR from main detected. Redundant checks are skipped."
