@@ -1,0 +1,36 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root="$(git rev-parse --show-toplevel)"
+
+# --- Branch blocker ---
+branch_name="$(git symbolic-ref --quiet --short HEAD || true)"
+case "$branch_name" in
+  main|staging)
+    echo "Direct commits to '$branch_name' are blocked. Create a feature branch and merge via pull request." >&2
+    exit 1
+    ;;
+esac
+
+# --- csproj/.cs XML doc check (staged files) ---
+echo "Running csproj/.cs XML doc check..."
+python "$repo_root/.githooks/csproj-xmldoc-check.py"
+
+# --- NotImplementedException/stub check (staged files, warning only) ---
+echo "Running stub implementation check..."
+python "$repo_root/.githooks/no-notimplemented-check.py"
+
+# --- Enum coverage check (staged files, warning only) ---
+echo "Running enum coverage check..."
+python "$repo_root/.githooks/enum-coverage-check.py"
+
+# --- dotnet format on the platform-independent projects (mirrors CI Gate 1) ---
+if ! command -v dotnet >/dev/null 2>&1; then
+  echo "dotnet not found. Install the .NET SDK." >&2
+  exit 1
+fi
+
+echo "Running dotnet format check..."
+for project in FlowNRW.Core/FlowNRW.Core.csproj FlowNRW.Tests/FlowNRW.Tests.csproj; do
+  dotnet format "$repo_root/$project" --verify-no-changes --severity error
+done

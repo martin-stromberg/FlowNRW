@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root="$(git rev-parse --show-toplevel)"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main|refs/heads/staging)
+      branch_name="${remote_ref#refs/heads/}"
+      echo "Direct pushes to '$branch_name' are blocked. Update this branch via pull request." >&2
+      exit 1
+      ;;
+  esac
+done
+
+# --- NotImplementedException/stub check (whole repo, blocking) ---
+echo "Running stub implementation check..."
+python "$repo_root/.githooks/no-notimplemented-check.py" --all --strict
+
+# --- Enum coverage check (whole repo, blocking) ---
+echo "Running enum coverage check..."
+python "$repo_root/.githooks/enum-coverage-check.py" --all --strict
