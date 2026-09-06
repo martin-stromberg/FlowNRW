@@ -10,7 +10,7 @@
 - Direkte Commits/Pushes auf `main` und `staging` werden durch die Git-Hooks blockiert.
 
 Details zu Promotion (`staging` → `main`), Back-Merge (`main` → `staging`) und Releases in
-[CI-CD.md](CI-CD.md).
+[docs/CI-CD.md](docs/CI-CD.md).
 
 ## Git-Hooks
 

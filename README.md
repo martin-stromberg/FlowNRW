@@ -9,9 +9,10 @@
 | `FlowNRW/` | MAUI-App (`net10.0-windows10.0.19041.0`, win-x64, unpackaged) |
 | `FlowNRW.Core/` | Plattformunabhängige Logik (`net10.0`), von der App referenziert |
 | `FlowNRW.Tests/` | xUnit-Tests für `FlowNRW.Core` (`net10.0`, laufen auch unter Linux) |
-| `.github/` | CI/CD-Workflows und Composite Actions, siehe [CI-CD.md](CI-CD.md) |
+| `.github/` | CI/CD-Workflows und Composite Actions, siehe [docs/CI-CD.md](docs/CI-CD.md) |
 | `.githooks/` | Lokale Git-Hooks (Branch-Schutz, XML-Doc-, Stub- und Format-Checks) |
 | `scripts/` | Node-Skripte für Release-Version und Update-Manifest (`update.json`) |
+| `docs/` | Projektdokumentation (u. a. [CI-CD.md](docs/CI-CD.md)) |
 
 Die Version wird zentral in `Directory.Build.props` gepflegt (`0.0.1`) und in CI über
 `-p:Version=X.Y.Z[-rc.N]` überschrieben (semantic-release, Conventional Commits).
@@ -59,7 +60,7 @@ dotnet publish FlowNRW/FlowNRW.csproj -c Release -f net10.0-windows10.0.19041.0 
 
 - Branches: `main` (stabile Releases) und `staging` (Integration, Release Candidates).
   Feature-Branches werden per PR nach `staging` gemerged; Details in
-  [CONTRIBUTING.md](CONTRIBUTING.md) und [CI-CD.md](CI-CD.md).
+  [CONTRIBUTING.md](CONTRIBUTING.md) und [docs/CI-CD.md](docs/CI-CD.md).
 - Commits folgen [Conventional Commits](https://www.conventionalcommits.org/)
   (`feat:` → Minor, `fix:` → Patch, `!`/`BREAKING CHANGE` → Major).
 - Formatierung: `dotnet format FlowNRW.sln --verify-no-changes --severity error`
