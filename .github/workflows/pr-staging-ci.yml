@@ -19,10 +19,11 @@ permissions:
 
 jobs:
   detect-backmerge:
-    # actions/checkout on a pull_request event checks out the synthetic merge commit
-    # (base + head), so "origin/main is a parent of HEAD" is a direct, reliable signal that
-    # this PR's head branch is exactly main's current tip - i.e. the automated back-merge PR
-    # created by sync-staging-with-main.yml. Its code already passed every gate on main.
+    # A pure back-merge PR (created by sync-staging-with-main.yml) has main's current tip as
+    # its head commit, or at least an identical tree. Its code already passed every gate on
+    # main. The comparison deliberately uses the PR's *head* sha, not the checked-out
+    # synthetic merge commit: whenever staging and main point at the same commit, main would
+    # be a parent of every PR's merge commit and all checks would be skipped.
     runs-on: ubuntu-latest
     outputs:
       is_backmerge: ${{ steps.check.outputs.is_backmerge }}
@@ -34,22 +35,17 @@ jobs:
 
       - name: Check whether this PR is a pure back-merge from main
         id: check
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           git fetch origin main:refs/remotes/origin/main --no-tags
 
           main_sha="$(git rev-parse origin/main)"
-          is_main_merge_parent=false
-          for parent in $(git show -s --format=%P HEAD); do
-            if [[ "$parent" == "$main_sha" ]]; then
-              is_main_merge_parent=true
-              break
-            fi
-          done
 
-          if [[ "$is_main_merge_parent" == "true" ]]; then
+          if [[ "$HEAD_SHA" == "$main_sha" ]]; then
             echo "is_backmerge=true" >> "$GITHUB_OUTPUT"
             echo "::notice::Back-merge from main detected - CI checks will be skipped."
-          elif git diff --quiet origin/main HEAD; then
+          elif git diff --quiet origin/main "$HEAD_SHA"; then
             echo "is_backmerge=true" >> "$GITHUB_OUTPUT"
             echo "::notice::Pure back-merge from main detected (tree identical) - CI checks will be skipped."
           else
