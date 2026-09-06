@@ -93,7 +93,7 @@ jobs:
 
       - name: Static analysis
         # Gate 3: the whole solution (including the MAUI app) must build warning-free.
-        run: dotnet build FlowNRW.sln -c Release --no-restore "-p:TreatWarningsAsErrors=true"
+        run: dotnet build FlowNRW.sln -c Release "-p:TreatWarningsAsErrors=true"
         shell: pwsh
 
   build-and-test:
