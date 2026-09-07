@@ -1,0 +1,23 @@
+<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FlowNRW – Projektstatus</title><style>body{font:16px system-ui;max-width:960px;margin:40px auto;padding:0 20px;color:#18283d;background:#f5f7fa}article{padding:24px;background:white;border-radius:16px}progress{width:100%}pre{white-space:pre-wrap;font:inherit}.blocked{border-left:5px solid #bf7800;padding:16px;background:#fff3d8}</style><article><h1>iOS ÖPNV-App</h1><p>Planung erstellt, Abnahmeentscheidung offen. Windows-Release und Tests in GitHub Actions bleiben erhalten.</p><progress value="0" max="4"></progress><p>0 von 4 Entwicklungsschritten abgeschlossen; noch keine Implementierung begonnen.</p><ol><li>Fahrplanauskunft und Providerintegration</li><li>Verbindungssuche und iOS-Grundlage</li><li>Abfahrtsmonitore und Favoriten</li><li>Karte und Hintergrundaktualisierung</li></ol><section class="blocked"><h2>Offene Entscheidung</h2><pre># Offene Entscheidung – Abnahmestrategie
+
+Datum: 2026-09-07
+Phase: Projektplanung / offene Punkte vor endg&#252;ltiger Planpr&#252;fung
+Basisbranch: `task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app`
+Schritt-Branch: noch keiner angelegt
+
+## Grund
+
+Die lokale native Teststrategie ist offen. Kein Mac/Xcode/iOS-Simulator ist in der erreichbaren Umgebung nachgewiesen. Der Nutzer hat Windows-Release und Tests in GitHub Actions ausdr&#252;cklich erhalten und iOS-CI/neues Deployment ausgeschlossen. Dies beantwortet nicht ausdr&#252;cklich, ob die native iOS-Abnahme auf sp&#228;ter verschoben werden darf.
+
+## Kl&#228;rung
+
+Bestandsaufnahme ausgef&#252;hrt; .NET/Windows vorhanden, Core-Basistests 5/5 bestanden. Eine geb&#252;ndelte Frage zur Abnahme gestellt (Windows native UI-E2E und iOS sp&#228;ter manuell oder vorhandenen Mac nutzen); Antwort ausstehend. Keine Lifecycle-Kl&#228;rungs- oder Abnahmerunden begonnen (je 0).
+
+## Ben&#246;tigte Entscheidung
+
+Windows als automatisierte UI-Abnahmeplattform f&#252;r gemeinsame Abl&#228;ufe mit ausdr&#252;cklich sp&#228;terer manueller iOS-Abnahme best&#228;tigen oder erreichbare Mac-Testumgebung benennen. Danach Plan aktualisieren und erneut unabh&#228;ngig pr&#252;fen.
+
+## Gesicherter Stand
+
+Anforderung, Bestandsaufnahme und Projektplan mit vier Entwicklungsschritten vorhanden. Keine Implementierung, kein Schrittbranch, kein Merge begonnen. Fremde &#196;nderungen .gitignore und design-draft.zip bleiben unber&#252;hrt. Endg&#252;ltiger Planungscommit erfolgt erst nach vollst&#228;ndiger aktueller Planpr&#252;fung und Kl&#228;rung.
+</pre></section><p><a href="project-plan.md">Projektplan</a> · <a href="todo.md">Tracking</a></p></article></html>
