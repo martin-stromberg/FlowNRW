@@ -8,10 +8,10 @@ Issue: #1 (keine Veröffentlichung beauftragt)
 - [x] Einstiegspunkt: neues Projekt, issue.md
 - [x] Anforderung
 - [x] Bestandsaufnahme
-- [x] Projektplan (Entwurf; Abnahmeentscheidung ausstehend)
-- [ ] Offene Punkte
-- [ ] Planprüfung
-- [ ] Planungscommit
+- [x] Projektplan
+- [x] Offene Punkte
+- [x] Planprüfung
+- [x] Planungscommit
 - [ ] Entwicklungsschritte-Tracking
 - [ ] Entwicklungsschleife
 - [ ] Aufräumen
@@ -28,3 +28,9 @@ Nutzerergänzung: Windows-Release und Tests in GitHub Actions erhalten; iOS-CI u
 
 
 Planprüfung 1 abgeschlossen: fachliche Abdeckung vollständig; Status Projektplan lückenhaft ausschließlich wegen offener nativer Abnahmestrategie. blocked.md/status.html angelegt. Kein Planungscommit, keine Implementierung. Sicherungscommit hält die offene Planung fest.
+
+2026-09-07: Nutzer bestätigt Windows-UI-Prüfung aller Abläufe soweit möglich. Native iOS-Abnahme liegt vorerst beim Nutzer. Planungsblockade damit gelöst; keine erneute Zustimmung nötig. Plan wird aktualisiert und erneut geprüft.
+
+
+2026-09-08: Fortsetzung nach Nutzungslimit. Windows-Basisbuild Release mit TreatWarningsAsErrors=true erfolgreich, 0 Warnungen/Fehler. Aktualisierte Anforderung und Plan vorhanden; unabhängige erneute Prüfung läuft.
+

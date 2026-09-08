@@ -2,48 +2,50 @@
 
 ## Ergebnis
 
-**Status:** Projektplan lückenhaft
+**Status:** Projektplan vollständig
 
-Geprüft am 2026-09-07: aktueller Vier-Schritte-Plan gegen vollständige requirement.md (A01–A17, K01–K12), issue.md, inventory.md und die verbindliche Nutzerergänzung zum Erhalt der Windows-Release-/Testabläufe. Der fachliche Implementierungsumfang ist abgedeckt. Die ausdrücklich gestellte Frage zur nativen Abnahmestrategie bleibt jedoch unbeantwortet; damit ist der Plan noch nicht abschließend geklärt und dieser Bericht erteilt keine Implementierungsfreigabe.
+Unabhängige erneute Prüfung am 2026-09-08 gegen issue.md, die vollständige aktuelle requirement.md, inventory.md und die verbindlichen Nutzerergänzungen. Geprüft wurde der aktuelle Vier-Schritte-Plan einschließlich sämtlicher Rahmenbedingungen, Akzeptanzkriterien und offener Punkte. Die einzige Lücke des archivierten Berichts project-plan-check.1.md ist durch die ausdrückliche Nutzerentscheidung und deren konsistente Übernahme geschlossen.
 
 ## Abgleich Anforderung ↔ Entwicklungsschritte
 
-| Anforderung | Entwicklungsschritte / Nachweis im Plan | Bewertung |
+| Anforderung | Geplante Abdeckung | Bewertung |
 |---|---|---|
-| A01 / K01 – iOS, C#, MVVM, Vorlage ersetzen, Visual Studio | 2: Kundenanforderung und AK1; 4: integrierte Plattformprüfung/Dokumentation | Geplant |
-| A02 / K02 – Adressen, Haltestellen, Koordinaten, nächste Verbindungen | 1 AK1–2; 2 AK2–3 | Geplant |
-| A03 / K02 – Umstiege, Fußwege, Linien, Betreiber, Echtzeit | 1 AK2; 2 AK3 | Geplant |
-| A04 / K03 – NRW-Priorität | 1 Rahmenbedingungen/AK3; 2 AK4 | Geplant, Gebietsprüfung ausdrücklich mehr als VRR/Rechteck |
-| A05 / K04 – Auswahl über Suche/Karte, Abfahrtszustände, Gleis | 1 AK2–3; 3 AK1–3; 4 AK1 | Geplant |
-| A06 / K05 – Intervalle, Favoritenmonitore, Entfernung | 3 Kundenanforderung/AK4–5 | Geplant |
-| A07 / K06 – bundesweite Suche, GPS-Nahbereich | 1 AK1; 2 AK2; 3 AK1 | Geplant |
-| A08 / K06 – Haltestellenkarte, Linienverläufe | 4 AK1–2 | Geplant, Geometrie nur soweit geliefert |
-| A09 / K03 – regionale Echtzeit ergänzen/konsolidieren | 1 AK3; 2 AK4; 3 AK3 | Geplant |
-| A10 / K03 – bundesweiter Anbieter, EFA/TRIAS, Normalisierung, Fallback | 1 Rahmenbedingungen/AK1–4; 2 AK4; 3 AK3 | Geplant; EFA als gewähltes Protokoll ist begründet |
-| A11 / K07 – Design, klare Navigation, Barrierearmut | 2 AK8; 3 Rahmenbedingungen; 4 AK1/5 | Geplant |
-| A12 / K01 – Views/ViewModels/Services, DI, async | 1 Rahmenbedingungen; 2 Rahmenbedingungen/AK1; 3/4 Weiterverwendung | Geplant |
-| A13 / K08 – Cache, Netzoptimierung, Ausfälle, Hintergrund | 1 AK4; 3 Intervalle/Fehler; 4 AK3–4 | Geplant |
-| A14 / K09 – Datenschutz, HTTPS, technische Persistenz | 1 AK4; 2 AK5; 3 Favoriten/Datenschutz; 4 AK4 | Geplant |
-| A15 / K10 – Erweiterbarkeit Verbünde, Sharing, optionale Pushs | 1 AK6; 2 AK5; 4 AK8 | Geplant ohne unbeauftragte Produktintegration |
-| A16 / K11 – Service-/Modell-/UI-Tests, Fehler-/Performancelogs | 1 AK4–5; 2 AK6–7; 3 Tests; 4 AK6–7 | Inhaltlich geplant; verbindliche native Abnahmeaufteilung noch offen |
-| A17 / K12 – Windows-Actions-Release und Tests erhalten, kein iOS-Deployment | Rahmenbedingungen sämtlicher Schritte; 2 AK7; 4 AK7–8 | Geplant, Nutzerergänzung korrekt erhalten |
+| A01 / K01 – iOS, C#, MVVM, Visual Studio, Vorlage ersetzen | Schritt 2 Kundenanforderung/AK1; Schritt 4 AK7–8 | Vollständig |
+| A02 / K02 – Start/Ziel als Adresse, Haltestelle, Koordinate; nächste Verbindungen | Schritt 1 AK1–2; Schritt 2 AK2–3 | Vollständig |
+| A03 / K02 – Umstiege, Fußwege, Linien, Betreiber, Echtzeit | Schritt 1 AK2; Schritt 2 AK3 | Vollständig |
+| A04 / K03 – regionale Priorität bei NRW-Start/Ziel | Schritt 1 Rahmenbedingungen/AK3; Schritt 2 AK4; Vorgehensentscheidung 4 | Vollständig; mindestens ein Punkt in NRW, keine Gleichsetzung mit VRR/Rechteck |
+| A05 / K04 – Monitorwahl über Suche/Karte; Verspätung, Ausfall, Gleis/Steig | Schritt 1 AK2–3; Schritt 3 AK1–3; Schritt 4 AK1 | Vollständig |
+| A06 / K05 – konfigurierbare Intervalle, Favoritenmonitore nach Entfernung | Schritt 3 AK4–5 | Vollständig, einschließlich Neustart/fehlendem Standort |
+| A07 / K06 – bundesweite Suche und GPS-Nahbereich | Schritt 1 AK1; Schritt 2 AK2; Schritt 3 AK1 | Vollständig |
+| A08 / K06 – Karte mit Haltestellen/Linienverläufen | Schritt 4 AK1–2 | Vollständig, gelieferte Geometrie und zugängliche Listenalternative |
+| A09 / K03 – regionale Echtzeit ergänzen und Soll/Ist konsolidieren | Schritt 1 AK3; Schritt 2 AK4; Schritt 3 AK3 | Vollständig, eindeutige Zuordnung und unbekannte Werte |
+| A10 / K03 – bundesweite API, NRW-EFA/TRIAS, Normalisierung, Fallback | Schritt 1 Rahmenbedingungen/AK1–4; Schritt 2 AK4; Schritt 3 AK3 | Vollständig; EFA als Ausprägung begründet |
+| A11 / K07 – klare, barrierearme Gestaltung und Navigation nach Design | Schritt 2 AK8; Schritt 3 AK8; Schritt 4 AK1/5 | Vollständig |
+| A12 / K01 – Views/ViewModels/Services, DI, asynchrone APIs | Schritt 1 Rahmenbedingungen; Schritt 2 Rahmenbedingungen/AK1; Schritte 3–4 Weiterverwendung | Vollständig |
+| A13 / K08 – Cache, optimierte Abrufe, Fehler, Hintergrundaktualisierung | Schritt 1 AK4; Schritt 3 AK5–6; Schritt 4 AK3–4 | Vollständig, keine dauerhafte iOS-Intervallgarantie |
+| A14 / K09 – keine ungewollte personenbezogene Speicherung, HTTPS, technische Daten | Schritt 1 AK4; Schritt 2 AK5; Schritt 3 AK6; Schritt 4 AK4 | Vollständig |
+| A15 / K10 – Erweiterbarkeit Verbünde, Sharing, optionale Pushs | Schritt 1 AK6; Schritt 2 AK5; Schritt 4 AK8 | Vollständig ohne unbeauftragte aktuelle Integration |
+| A16 / K11 – Service-/Modell-/UI-Tests, Fehler-/Performancelogs | Schritt 1 AK4–5; Schritt 2 AK6–7; Schritt 3 AK7–8; Schritt 4 AK6–8 | Vollständig, tatsächliche Windows-UI-Ausführung und Versuchsnachweise |
+| A17 / K12 – Windows-Actions-Release/Tests erhalten; kein iOS-CI/Deployment; native iOS-Abnahme beim Nutzer | Rahmenbedingungen aller Schritte; Schritt 2 AK6–7; Schritt 3 AK7–8; Schritt 4 AK6–8; Vorgehensentscheidung 8 | Vollständig, keine lokale iOS-Ausführung als Abschlussblocker |
 
-Konfiguration ist abgedeckt: austauschbare Provider/Geheimnisse, HTTPS, Cachegrenzen, Aktualisierungsintervalle und sichere Grenzen, technische Favoritenhaltung, Kartenkonfiguration. Konkrete technische Werte dürfen gemäß Auftrag im Lifecycle begründet werden. Keine neue Nutzerentscheidung über bereits technisch prüfbare Entwicklungszugänge wird verlangt.
+Die fünf fachlichen Abläufe Verbindungssuche, Abfahrten, Favoriten, Umgebung und Aktualisierung sind vollständig zugeordnet. Provider-/Geheimniskonfiguration, HTTPS, technische Speicherung, Cachegrenzen, Aktualisierungsintervalle und Kartenkonfiguration sind berücksichtigt. Konkrete technische Werte und Anbieterfeldprüfungen sind zulässige Lifecycle-Detailentscheidungen, keine ausgelassenen Kundenanforderungen.
 
-Nicht-Ziele sind gewahrt: keine iOS-CI-/Deployment-Pipeline, kein neues automatisiertes Deployment, keine Veröffentlichung; Design-Zusatzfunktionen werden nicht unbemerkt umgesetzt. Die fünf fachlichen Abläufe aus requirement.md sind über Datenversorgung, Verbindungssuche, Monitor/Favoriten, Umgebungskarte und Aktualisierung abgedeckt.
+Nicht-Ziele sind gewahrt: keine iOS-CI-/Deployment-Pipeline, kein neues automatisiertes Deployment, keine Veröffentlichung und keine unbeauftragten Zusatzprodukte aus dem Designarchiv. Windows-Release und Tests werden ausdrücklich erhalten. Die geänderte Abnahmestrategie entbindet nicht von iOS-Implementierung, Codeprüfung und manueller Prüfanleitung.
 
 ## Abhängigkeitsprüfung
 
-Vier existierende Schritte, konsistente Übersichtstabelle und Beschreibungen: 1 ohne Voraussetzung, 2 nach 1, 3 nach 2, 4 nach 2 und 3. Alle Verweise zeigen auf frühere Schritte; keine Zyklen. Transitive Abhängigkeit von 4 auf die Datenversorgung ist über 2 vorhanden. Kartenwahl ergänzt Schritt 3 ausdrücklich in Schritt 4.
+Vier existierende Schritte: 1 ohne Voraussetzung; 2 nach 1; 3 nach 2; 4 nach 2 und 3. Beschreibung und Übersichtstabelle stimmen überein. Alle Verweise zeigen auf frühere Schritte; keine Zyklen. Schritt 4 erhält die Datenversorgung transitiv über Schritt 2. Die spätere Kartenwahl für Monitore wird in Schritt 3 ausdrücklich an Schritt 4 übergeben.
 
-Die Schritte enthalten jeweils Kundenanforderung, Bereiche, Abhängigkeiten, Rahmenbedingungen und prüfbare Akzeptanzkriterien und eignen sich fachlich als Lifecycle-Eingaben. Schritt 1 ist eine separat testbare Service-Lieferung; seine Unabhängigkeit von nativer UI-Abnahme löst die offene Projektplanentscheidung nicht auf. Die Aussage unter „Vier Ausbaustufen“, jeder Schritt liefere bedienbare Funktionen, ist für Schritt 1 als Service-Nutzung zu verstehen; er liefert ausdrücklich noch keine fachliche UI.
+Jeder Schritt enthält eine eigenständig verständliche Kundenanforderung, betroffene Bereiche, Voraussetzungen, verbindliche Rahmenbedingungen und prüfbare Akzeptanzkriterien. Die Übergabe als Lifecycle-Eingabe ist vollständig. Schritt 1 liefert separat nutzbare fachliche Services und benötigt mangels UI-Änderung noch keine native UI-Abnahme. Schritte 2–4 enthalten die bestätigte Windows-/iOS-Prüfaufteilung jeweils selbst.
 
 ## Fehlende oder unvollständige Punkte
 
-- [ ] **Verbindliche Abnahmestrategie ungeklärt:** Unter „Offene Punkte“ steht korrekt, dass die bereits gestellte Nutzerfrage zur Windows-UI-E2E-Abnahme und späteren manuellen iOS-Abnahme bzw. einem verfügbaren Mac unbeantwortet ist. Vor einer vollständigen Planfreigabe muss die Antwort oder eine ausdrücklich autorisierte Annahme eingearbeitet werden. Danach müssen AK6–7 der UI-Schritte und die Abschlusskriterien eindeutig festlegen, welche iOS-Nachweise vor Projektabschluss erforderlich sind und welche gegebenenfalls als autorisierte spätere Prüfung verbleiben. Die Erhaltung der Windows-CI allein autorisiert kein Verschieben der iOS-Abnahme. Schweigen ist keine Zustimmung.
+Keine.
+
+Die frühere offene Abnahmeentscheidung ist ausdrücklich beantwortet: „Ja, Teste alle UI-Abläufe unter Windows soweit es möglich ist. iOS muss erst einmal bei mir liegen.“ Plan und Anforderung verlangen nun tatsächliche Windows-UI-Prüfungen aller Abläufe soweit technisch möglich, konkrete Versuchsnachweise bei Grenzen und eine manuelle iOS-Abnahmecheckliste für den Nutzer. Diese Übernahme ist konsistent; eine erneute Rückfrage ist nicht erforderlich.
 
 ## Hinweise
 
-Keine weitere fachliche Abdeckungslücke festgestellt. Unsichere Live-Verfügbarkeit wird korrekt nicht als Garantie dargestellt: VRR-Einzelproben begründen eine Entwicklungsoption, db-rest HTTP 503 verlangt weitere technische Prüfung. Lifecycle muss reale Nutzung und Grenzen nachweisen; fehlende Anbieterzugänge dürfen nicht mit Fixtures verdeckt werden.
+Der Status bestätigt Planvollständigkeit, keine bereits implementierte Funktion oder bestandene Produktabnahme. Die Datenanbieter bleiben technisch zu prüfen: Einzelproben begründen Entwicklungsoptionen, keine flächendeckende oder produktive Verfügbarkeitsgarantie. Schritt 1 fordert reale Adapter und Live-Nachweise; Fixtures dürfen eine fehlende echte Versorgung nicht verschleiern. Ein tatsächlich zwingender Zugangsmangel ist erst bei Nachweis als Blockade zu behandeln.
 
-Die Bestandsaufnahme nennt fünf erfolgreiche Counter-Tests, aber keine iOS-Ausführung; der Plan behauptet keine bestehenden nativen Testnachweise. Erhalt der Windows-Pipelines und Verzicht auf iOS-CI sind klar von lokaler Produktprüfung getrennt. Dieser Bericht prüft Planung, nicht implementierte Funktion oder erfolgreiche Abnahme.
+Die bisherige Bestandsaufnahme belegt fünf erfolgreiche Counter-Tests, keine native iOS-Ausführung. Der Plan behauptet keinen vorhandenen iOS-Testnachweis. Nicht ausführbare Windows-Flüsse dürfen erst nach ernsthaften Versuchen mit konkreten Ursachen dokumentiert werden; reine ViewModel-Tests oder pauschale Plattformhinweise erfüllen die UI-Prüfanforderung nicht. Native iOS-Abnahme bleibt gemäß ausdrücklicher Nutzerentscheidung beim Nutzer und darf keinen erneuten lokalen Abschlussstopp auslösen.

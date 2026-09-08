@@ -2,7 +2,7 @@
 
 Basisbranch: `task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app`  
 Issue: #1 · Aufgaben-ID: `5142e36d-e8e0-4663-82eb-99c1599a0b31`  
-Quelle: `issue.md`, ergänzender Gestaltungsvorschlag `design-draft.zip`, verbindliche Nutzerergänzung zu Windows-CI vom 2026-09-07  
+Quelle: `issue.md`, ergänzender Gestaltungsvorschlag `design-draft.zip`, verbindliche Nutzerergänzungen zu Windows-CI und lokaler Abnahme vom 2026-09-07  
 Stand: 2026-09-07
 
 ## Ziel
@@ -29,7 +29,7 @@ Die vorhandene .NET-MAUI-Anwendung soll ihre Standardvorlageninhalte durch eine 
 | A14 | Ohne Zustimmung keine personenbezogenen Daten speichern; API-Aufrufe über sichere Verbindungen; lokale Speicherung nur technischer Daten, beispielsweise Favoriten. |
 | A15 | Erweiterbarkeit für weitere Verkehrsverbünde und Sharing-Dienste sowie optionale Push-Benachrichtigungen für Störungen/Abfahrten vorsehen. |
 | A16 | Unit-Tests für Services und Datenmodelle, UI-Tests für Routing und Abfahrtsmonitor sowie Logging von API-Fehlern und Performance-Metriken bereitstellen. |
-| A17 | Windows bleibt als Release- und Testplattform in den vorhandenen GitHub Actions erhalten. iOS ist dort laut Nutzer nicht zuverlässig möglich; eine iOS-CI-/Deployment-Pipeline gehört nicht zum Umfang. Automatisiertes Deployment wird später anderweitig implementiert. Die iOS-App bleibt das Produktziel; lokale Testnachweise entfallen dadurch nicht. |
+| A17 | Windows bleibt als Release- und Testplattform in den vorhandenen GitHub Actions erhalten. iOS ist dort laut Nutzer nicht zuverlässig möglich; eine iOS-CI-/Deployment-Pipeline gehört nicht zum Umfang. Automatisiertes Deployment wird später anderweitig implementiert. Die iOS-App bleibt das Produktziel; alle UI-Abläufe werden unter Windows soweit technisch möglich tatsächlich getestet. Native iOS-Abnahme liegt zunächst beim Nutzer und ist kein lokaler Abschlussblocker. |
 
 ## Betroffene Bereiche
 
@@ -70,8 +70,8 @@ Die vorhandene .NET-MAUI-Anwendung soll ihre Standardvorlageninhalte durch eine 
 | K08 | Cache, optimierte Abrufe, Fehlerbehandlung und Hintergrundaktualisierung sind implementiert und für erfolgreiche, fehlende sowie ausfallende Daten prüfbar (A13). |
 | K09 | API-Verbindungen sind abgesichert; technische lokale Daten bleiben vom Speichern personenbezogener Daten ohne Zustimmung getrennt (A14). |
 | K10 | Anbieter- und Servicegrenzen ermöglichen weitere Verkehrsverbünde sowie spätere Sharing-/optionale Push-Erweiterungen, ohne diese Integrationen als bereits geliefert auszugeben (A15). |
-| K11 | Service-/Modell-Unit-Tests und UI-Tests der Verbindungssuche/des Monitors sowie datensparsame API-Fehler-/Performance-Diagnose sind vorhanden; tatsächliche Testausführung und Plattformgrenzen werden dokumentiert (A16). |
-| K12 | GitHub Actions behalten die vorhandenen Windows-Test- und Releaseabläufe funktionsfähig bei. Änderungen zur iOS-App ersetzen oder entfernen diese Abläufe nicht. Eine iOS-CI-/Deployment-Pipeline wird nicht als Lieferung vorausgesetzt; verfügbare lokale Build-/Unit-/UI-Testnachweise und verbleibende Plattformgrenzen werden weiterhin ausgewiesen (A17). |
+| K11 | Service-/Modell-Unit-Tests und UI-Tests der Verbindungssuche/des Monitors sowie datensparsame API-Fehler-/Performance-Diagnose sind vorhanden; alle UI-Abläufe werden unter Windows soweit technisch möglich tatsächlich getestet. Nicht ausführbare Windows-Flüsse werden nach ernsthaftem Versuch mit konkreter Ursache und Versuchsnachweis dokumentiert. Native iOS-Abnahme liegt zunächst beim Nutzer; eine manuelle Prüfanleitung wird übergeben (A16, verbindliche Nutzerergänzung). |
+| K12 | GitHub Actions behalten die vorhandenen Windows-Test- und Releaseabläufe funktionsfähig bei. Änderungen zur iOS-App ersetzen oder entfernen diese Abläufe nicht. Eine iOS-CI-/Deployment-Pipeline wird nicht als Lieferung vorausgesetzt; verfügbare lokale Build-/Unit-/Windows-UI-Testnachweise und verbleibende Plattformgrenzen werden weiterhin ausgewiesen. Native iOS-Ausführung ist gemäß Nutzerentscheidung keine lokale Abschlussvoraussetzung (A17). |
 
 ## Designquelle und Abgrenzung
 
@@ -81,7 +81,7 @@ Das Design beschreibt iOS-Karten, Linienkennzeichnungen, Soll-/Ist-Zeiten, Statu
 
 ## Explizite Nicht-Ziele
 
-**Verbindliche Nutzerergänzung:** Eine iOS-CI-/Deployment-Pipeline in GitHub Actions und die Implementierung eines neuen automatisierten Deployments sind Nicht-Ziele dieses Projekts. Das Deployment wird später anderweitig umgesetzt. Die bestehenden Windows-Release- und Testabläufe bleiben bestehen. Diese Abgrenzung hebt die Anforderungen an die iOS-App und verfügbare lokale Tests nicht auf.
+**Verbindliche Nutzerergänzung:** Eine iOS-CI-/Deployment-Pipeline in GitHub Actions und die Implementierung eines neuen automatisierten Deployments sind Nicht-Ziele dieses Projekts. Das Deployment wird später anderweitig umgesetzt. Die bestehenden Windows-Release- und Testabläufe bleiben bestehen. Diese Abgrenzung hebt die Anforderungen an die iOS-Implementierung und verfügbare lokale Tests nicht auf. Zur Abnahme hat der Nutzer verbindlich bestätigt: „Ja, Teste alle UI-Abläufe unter Windows soweit es möglich ist. iOS muss erst einmal bei mir liegen.“ Native iOS-Abnahme einschließlich Build, Gerät/Simulator, UI und Hintergrundverhalten liegt deshalb zunächst beim Nutzer; sie ist kein lokaler Abschlussblocker. Alle Windows-UI-Abläufe werden soweit technisch möglich tatsächlich getestet. Nach ernsthaftem Versuch nicht ausführbare Windows-Flüsse erhalten konkrete Ursachen und Versuchsnachweise statt eines behaupteten Testerfolgs. Diese Entscheidung erfordert keine erneute Rückfrage.
 
 issue.md nennt keinen eigenen Nicht-Ziele-Abschnitt. Es fordert insbesondere keine Veröffentlichung, keinen App-Store-Upload und keine tatsächliche Sharing-Integration als aktuelle Kernfunktion; Sharing und optionale Pushs stehen unter Erweiterbarkeit. Aus dieser Einordnung folgt keine Zusage ihrer sofortigen Implementierung. Ein Ausschluss weiterer Funktionen wurde vom Nutzer nicht ausdrücklich bestätigt.
 
@@ -97,9 +97,10 @@ issue.md nennt keinen eigenen Nicht-Ziele-Abschnitt. Es fordert insbesondere kei
 
 1. **Designumfang – behandelt:** issue.md bestimmt den fachlichen Umfang, das Archiv dient als Gestaltungsvorlage. Passende Verbindungsdetails werden berücksichtigt; zusätzliche Funktionen werden nicht übernommen. Die widersprüchliche Tab-Struktur wird anhand des Kernumfangs aufgelöst. Daraus entsteht keine erforderliche Nutzerentscheidung.
 2. **Produktive Datenversorgung:** Welche bundesweiten und NRW-Endpunkte/Zugänge stehen zur Verfügung? Vorschlag: zunächst vorhandene Repository-Konfiguration und dokumentierte Anbieter prüfen; nur bei danach fehlenden zwingenden Zugängen Nutzerentscheidung einholen.
-3. **Lokale Abnahmeumgebung:** Sind Mac/Xcode, iOS-Simulator oder Gerät für lokale Build- und UI-Tests verfügbar? Dies zunächst technisch ermitteln; fehlende lokale Möglichkeiten als tatsächliche Prüfgrenze dokumentieren. Eine iOS-Ausführung in GitHub Actions wird gemäß Nutzerergänzung nicht verlangt; Windows-Tests und -Releases dort bleiben erhalten.
+3. **Lokale Abnahmeumgebung – verbindlich geklärt:** Alle UI-Abläufe unter Windows soweit technisch möglich tatsächlich testen; native iOS-Abnahme übernimmt zunächst der Nutzer. Keine lokale iOS-Ausführung als Abschlussblocker und keine erneute Rückfrage dazu. iOS-Target/Plattformcode werden implementiert und geprüft, eine manuelle iOS-Prüfanleitung wird übergeben. Nicht ausführbare Windows-Flüsse werden nach ernsthaftem Versuch mit konkreter technischer Grenze dokumentiert. Windows-Tests und -Releases in GitHub Actions bleiben erhalten; keine iOS-CI oder neues automatisiertes Deployment.
 
 Weitere konkrete Implementierungsentscheidungen gehören nach Bestandsaufnahme in den Projektplan bzw. Lifecycle und sind keine zusätzliche Nutzeranforderung.
+
 
 
 
