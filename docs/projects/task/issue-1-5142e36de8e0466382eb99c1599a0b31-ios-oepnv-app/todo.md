@@ -12,7 +12,7 @@ Issue: #1 (keine Veröffentlichung beauftragt)
 - [x] Offene Punkte
 - [x] Planprüfung
 - [x] Planungscommit
-- [ ] Entwicklungsschritte-Tracking
+- [x] Entwicklungsschritte-Tracking
 - [ ] Entwicklungsschleife
 - [ ] Aufräumen
 - [ ] Abschlusscommit
@@ -34,3 +34,6 @@ Planprüfung 1 abgeschlossen: fachliche Abdeckung vollständig; Status Projektpl
 
 2026-09-08: Fortsetzung nach Nutzungslimit. Windows-Basisbuild Release mit TreatWarningsAsErrors=true erfolgreich, 0 Warnungen/Fehler. Aktualisierte Anforderung und Plan vorhanden; unabhängige erneute Prüfung läuft.
 
+
+
+Schritt 1 In Arbeit; Lifecycle-Klärungsrunden 0, Abnahmerunden 0. Planungscommit b2454f5.
