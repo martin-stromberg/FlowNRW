@@ -37,3 +37,11 @@ Planprüfung 1 abgeschlossen: fachliche Abdeckung vollständig; Status Projektpl
 
 
 Schritt 1 In Arbeit; Lifecycle-Klärungsrunden 0, Abnahmerunden 0. Planungscommit b2454f5.
+
+2026-09-09: Lifecycle Schritt1 erfolgreich, Abschlusscommit 0d7eb4b, Reviewhistorie ecc25c8. 98 .NET-/26Node-Tests,98%Corecoverage,Windowsbuild0/0. Plan-/Code-/Dokureviews grün. Projekt-Abnahmerunde1 gestartet; Lifecycle-Klärungsrunden0 (Usage-Unterbrechungen keine fachlichen Klärungsrunden).
+
+Projekt-Abnahmerunde1: Abweichungen gefunden (AK3 zusätzliche bundesweite Fahrten bei regionaler Teilantwort verworfen). Gezielte Lifecycle-Korrekturanforderung auf demselben Branch gestartet; Nachbesserung1 von maximal2, keine Mergefreigabe. Ursprüngliche Lifecycle-Artefakte nicht rekonstruiert.
+
+2026-09-15: Nutzer fordert kleinere Lieferpakete und IIS-Zwischenstände. Neuschnitt8 Schritte, Schritt1 unverändert; unabhängige neue Planprüfung vor Schritten2–8 erforderlich. IIS-Begutachtungsseite unter http://localhost/%C3%96PNV/ installiert und HTTP/Hash-geprüft, docs/review/README.md. Externe URL optional angefragt. Keine native UI-Lieferung vor Schritt2.
+
+2026-09-15: Acht-Schritte-Neuschnitt unabhängig vollständig geprüft; Tracking synchronisiert, bestehende Branchzuordnungen1–4 bewahrt. Schritt1 Projektabnahmerunde2 erfüllt; Korrekturcommit1eba9c3,106Tests98,61%CoreWindows0/0. Merge vorbereitet. Agents durch Usage-Limit zeitweise ausgefallen; lokale Korrektur gemäß Skillfallback, unabhängige Abnahme anschließend wieder möglich.

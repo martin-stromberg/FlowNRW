@@ -1,0 +1,6 @@
+## 2026-09-09 — Konfigurierbare bundesweite und regionale Fahrplanauskunft
+
+- Die Core-Datenversorgung löst Orte und Haltestellen auf, ruft Verbindungen und Abfahrten ab und normalisiert Providerantworten für die spätere Oberfläche.
+- NRW-EFA-Echtzeit wird bei regionalen Punkten bevorzugt und nur über eindeutige Stop-/Fahrtzuordnung mit bundesweiten Daten zusammengeführt; Providerfehler bleiben als Fallback, Warnung oder unbekannter Wert sichtbar.
+- Technische Konfiguration, HTTPS-Gateway, Cancellation, begrenzte Wiederholungen, flüchtiger Cache und datensparsame Diagnose sind dokumentiert.
+- Verifikation und echte Providerproben weisen 98 erfolgreiche Core-Tests, 98,00 % Core-Coverage, einen fehlerfreien Windows-Build sowie die Grenzen der Entwicklungsendpunkte nach.

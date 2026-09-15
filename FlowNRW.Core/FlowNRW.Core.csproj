@@ -8,4 +8,7 @@
     <WarningsAsErrors>$(WarningsAsErrors);NU1605;CS1591</WarningsAsErrors>
   </PropertyGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Transit/Resources/nrw-dvg2-2023.geojson" />
+  </ItemGroup>
 </Project>
