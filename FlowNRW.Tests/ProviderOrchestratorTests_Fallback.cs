@@ -20,7 +20,7 @@ public sealed class ProviderOrchestratorTests_Fallback
         var nrw = new Address { Coordinate = new(51.45, 7.01) };
         var berlin = new Address { Coordinate = new(52.52, 13.40) };
         var result = await Create(national, regional).RouteAsync(originInNrw ? nrw : berlin, originInNrw ? berlin : nrw, DateTimeOffset.UtcNow);
-        Assert.Equal("regional", Assert.Single(result.Items).Id);
+        Assert.Equal(new[] { "regional", "national" }, result.Items.Select(item => item.Id));
         Assert.Equal("efa+db-rest", result.Source);
     }
 

@@ -28,7 +28,7 @@ public sealed class RealtimeConsolidator : IRealtimeConsolidator
         }).ToArray();
     }
 
-    private static bool Matches(TripIdentity left, TripIdentity right)
+    internal static bool Matches(TripIdentity left, TripIdentity right)
     {
         if (!SameStop(left.Stop, right.Stop)) return false;
         if (left.PlannedTime is null || right.PlannedTime is null ||
@@ -40,7 +40,7 @@ public sealed class RealtimeConsolidator : IRealtimeConsolidator
         return Equal(left.Line, right.Line) && Equal(left.Operator, right.Operator) && Equal(left.Direction, right.Direction);
     }
 
-    private static bool SameStop(Stop left, Stop right)
+    internal static bool SameStop(Stop left, Stop right)
     {
         if (Present(left.Dhid) && Present(right.Dhid)) return left.Dhid == right.Dhid;
         if (left.Source == right.Source && Present(left.Id) && Present(right.Id)) return left.Id == right.Id;
@@ -55,3 +55,4 @@ public sealed class RealtimeConsolidator : IRealtimeConsolidator
     private static bool Equal(string? left, string? right) => Present(left) && Present(right) && Normalize(left!) == Normalize(right!);
     private static string Normalize(string value) => string.Join(' ', value.Trim().ToUpperInvariant().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 }
+

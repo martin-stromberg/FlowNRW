@@ -22,7 +22,7 @@ public sealed class ProviderOrchestratorTests_RegionResolution
         var regional = new TransitTestProvider { Journeys = new() { Items = new[] { new Journey { Id = "regional" } }, Source = "efa" } };
         var origin = identityOnly ? new Address { Stop = new() { Id = "nrw", Source = "db-rest" } } : new Address { Name = "Gelsenkirchen Hbf" };
         var result = await Create(national, regional).RouteAsync(origin, new() { Coordinate = new(52.52, 13.4) }, DateTimeOffset.UtcNow);
-        Assert.Equal("regional", Assert.Single(result.Items).Id);
+        Assert.Equal(new[] { "regional", "national" }, result.Items.Select(item => item.Id));
         Assert.True(regional.Calls > 0);
     }
     /// <summary>A coordinate-less NRW stop activates regional departures after resolution.</summary>
@@ -31,7 +31,7 @@ public sealed class ProviderOrchestratorTests_RegionResolution
     {
         var regional = new TransitTestProvider { Departures = new() { Items = new[] { new StopEvent { Identity = new() { TripId = "regional" } } }, Source = "efa" } };
         var result = await Create(National(), regional).DeparturesAsync(new() { Id = "nrw", Source = "db-rest" }, DateTimeOffset.UtcNow);
-        Assert.Equal("regional", Assert.Single(result.Items).Identity.TripId);
+        Assert.Equal(new[] { "regional", "national" }, result.Items.Select(item => item.Identity.TripId));
     }
     /// <summary>Unresolved region is explicitly diagnosed even when routing succeeds.</summary>
     [Fact]

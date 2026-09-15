@@ -16,6 +16,12 @@ Eine DHID identifiziert nur die Haltestelle. Eine Fahrt darf zusätzlich nur üb
 
 **Umsetzung:** `RealtimeConsolidator.Consolidate`.
 
+## Ergänzung regionaler Teilergebnisse
+
+Routing und Abfahrten übernehmen zusätzliche bundesweite Ergebnisse in die gemeinsame Menge. Nur beidseitig eindeutig passende Fahrten werden zusammengeführt; bei Verbindungen müssen sämtliche Fahrtabschnitte und Fußweg-Endpunkte passen. Unklare Zuordnungen bleiben getrennt. Bekannte regionale Echtzeitfelder behalten Vorrang, fehlende Werte können aus der eindeutig passenden zweiten Quelle ergänzt werden. Geometrie und Umstiege der gewählten Verbindung bleiben erhalten. Die vereinigte Menge wird stabil nach Ist- bzw. Sollabfahrt sortiert und anschließend auf `TransitProvider:MaxResults` begrenzt.
+
+Nachweis: [Korrekturprüfung mit 106 Tests](verification/union-correction-checks.md).
+
 ## Unbekannte Werte
 
 Nicht gelieferte Istzeiten, Verspätungen, Ausfälle und Steige/Gleise bleiben unbekannt. Pünktlichkeit wird nicht aus dem Fehlen eines Echtzeitwerts abgeleitet. Warnungen und Datenalter werden an die aufrufende Schicht weitergegeben.

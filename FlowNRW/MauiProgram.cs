@@ -62,7 +62,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IProviderOrchestrator>(services => new ProviderOrchestrator(
             services.GetRequiredService<DbRestProvider>(), services.GetRequiredService<IEfaProvider>(),
             services.GetRequiredService<INrwRegionClassifier>(), services.GetRequiredService<IRealtimeConsolidator>(),
-            services.GetRequiredService<ITransitCache>(), cacheOptions));
+            services.GetRequiredService<ITransitCache>(), cacheOptions, providerOptions));
         builder.Services.AddTransient<IStopSearchService, StopSearchService>();
         builder.Services.AddTransient<IRoutingService, RoutingService>();
         builder.Services.AddTransient<IDepartureService, DepartureService>();
@@ -70,3 +70,4 @@ public static class MauiProgram
         return builder.Build();
     }
 }
+

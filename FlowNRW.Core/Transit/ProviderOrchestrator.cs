@@ -13,6 +13,7 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
     private readonly IRealtimeConsolidator consolidator;
     private readonly ITransitCache cache;
     private readonly TransitCacheOptions options;
+    private readonly int maxResults;
     private readonly Dictionary<string, object> pending = new();
     private readonly object gate = new();
 
@@ -23,8 +24,9 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
     /// <param name="consolidator">Unique event matcher.</param>
     /// <param name="cache">Typed memory cache.</param>
     /// <param name="options">Cache age and size limits.</param>
+    /// <param name="providerOptions">Existing provider result limit; defaults to standard settings.</param>
     public ProviderOrchestrator(ITransitProvider national, IEfaProvider regional, INrwRegionClassifier classifier,
-        IRealtimeConsolidator consolidator, ITransitCache cache, TransitCacheOptions options)
+        IRealtimeConsolidator consolidator, ITransitCache cache, TransitCacheOptions options, TransitProviderOptions? providerOptions = null)
     {
         options.Validate();
         this.national = national;
@@ -33,6 +35,9 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
         this.consolidator = consolidator;
         this.cache = cache;
         this.options = options;
+        providerOptions ??= new TransitProviderOptions();
+        providerOptions.Validate();
+        maxResults = providerOptions.MaxResults;
     }
 
     /// <inheritdoc />
@@ -161,21 +166,62 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
     private static string[] Codes<T>(ProviderResult<T> first, ProviderResult<T> second, string? extra) =>
         first.Warnings.Concat(second.Warnings).Concat(new[] { first.ErrorCode, second.ErrorCode, extra }.OfType<string>()).Distinct().ToArray();
 
-    private IReadOnlyList<StopEvent> MergeEvents(IReadOnlyList<StopEvent> primary, IReadOnlyList<StopEvent> secondary) =>
-        consolidator.Consolidate(consolidator.Consolidate(primary, secondary), primary);
-
-    private IReadOnlyList<Journey> MergeJourneys(IReadOnlyList<Journey> primary, IReadOnlyList<Journey> secondary)
+    private IReadOnlyList<StopEvent> MergeEvents(IReadOnlyList<StopEvent> primary, IReadOnlyList<StopEvent> secondary)
     {
-        var secondaryEvents = secondary.SelectMany(journey => journey.Legs.SelectMany(leg => new[] { leg.Departure, leg.Arrival })).ToArray();
-        return primary.Select(journey => journey with
-        {
-            Legs = journey.Legs.Select(leg =>
-            {
-                var events = MergeEvents(new[] { leg.Departure, leg.Arrival }, secondaryEvents);
-                return leg with { Departure = events[0], Arrival = events[1] };
-            }).ToArray()
-        }).ToArray();
+        var enriched = consolidator.Consolidate(consolidator.Consolidate(primary, secondary), primary);
+        return enriched.Concat(Unmatched(primary, secondary, (left, right) => RealtimeConsolidator.Matches(left.Identity, right.Identity)))
+            .OrderBy(item => item.Realtime.ActualTime ?? item.PlannedTime ?? DateTimeOffset.MaxValue).Take(maxResults).ToArray();
     }
+
+    private IReadOnlyList<Journey> MergeJourneys(IReadOnlyList<Journey> primary, IReadOnlyList<Journey> secondary) =>
+        primary.Select(journey => EnrichJourney(journey, primary, secondary)).Concat(Unmatched(primary, secondary, SameJourney))
+            .OrderBy(item => item.Legs.FirstOrDefault()?.Departure.Realtime.ActualTime ?? item.Legs.FirstOrDefault()?.Departure.PlannedTime ?? DateTimeOffset.MaxValue)
+            .Take(maxResults).ToArray();
+
+    private Journey EnrichJourney(Journey journey, IReadOnlyList<Journey> primary, IReadOnlyList<Journey> secondary)
+    {
+        var matches = secondary.Where(candidate => SameJourney(journey, candidate)).ToArray();
+        if (matches.Length != 1 || primary.Count(candidate => SameJourney(candidate, matches[0])) != 1)
+            return journey;
+        return journey with
+        {
+            Legs = journey.Legs.Zip(matches[0].Legs).Select(pair => pair.First with
+            {
+                Departure = EnrichEvent(pair.First.Departure, pair.Second.Departure),
+                Arrival = EnrichEvent(pair.First.Arrival, pair.Second.Arrival)
+            }).ToArray()
+        };
+    }
+
+    private StopEvent EnrichEvent(StopEvent primary, StopEvent secondary) =>
+        consolidator.Consolidate(consolidator.Consolidate(new[] { primary }, new[] { secondary }), new[] { primary })[0];
+
+    private static IEnumerable<T> Unmatched<T>(IReadOnlyList<T> primary, IReadOnlyList<T> secondary, Func<T, T, bool> matches)
+    {
+        foreach (var candidate in secondary)
+        {
+            var possible = primary.Where(item => matches(item, candidate)).ToArray();
+            if (possible.Length != 1 || secondary.Count(item => matches(possible[0], item)) != 1)
+                yield return candidate;
+        }
+    }
+
+    private static bool SameJourney(Journey left, Journey right)
+    {
+        if (left.Legs.Count == 0 || left.Legs.Count != right.Legs.Count) return false;
+        return left.Legs.Zip(right.Legs).All(pair =>
+        {
+            if ((pair.First.Walking is null) != (pair.Second.Walking is null)) return false;
+            if (pair.First.Walking is null)
+                return RealtimeConsolidator.Matches(pair.First.Departure.Identity, pair.Second.Departure.Identity) &&
+                    RealtimeConsolidator.Matches(pair.First.Arrival.Identity, pair.Second.Arrival.Identity);
+            return SameWalkingEvent(pair.First.Departure, pair.Second.Departure) && SameWalkingEvent(pair.First.Arrival, pair.Second.Arrival);
+        });
+    }
+
+    private static bool SameWalkingEvent(StopEvent left, StopEvent right) =>
+        left.PlannedTime is { } leftTime && right.PlannedTime is { } rightTime && (leftTime - rightTime).Duration() <= TimeSpan.FromSeconds(60) &&
+        RealtimeConsolidator.SameStop(left.Identity.Stop, right.Identity.Stop);
 
     private sealed class Pending<T>
     {
@@ -184,3 +230,4 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
         internal int Waiters { get; set; }
     }
 }
+
