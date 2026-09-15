@@ -45,3 +45,5 @@ Projekt-Abnahmerunde1: Abweichungen gefunden (AK3 zusätzliche bundesweite Fahrt
 2026-09-15: Nutzer fordert kleinere Lieferpakete und IIS-Zwischenstände. Neuschnitt8 Schritte, Schritt1 unverändert; unabhängige neue Planprüfung vor Schritten2–8 erforderlich. IIS-Begutachtungsseite unter http://localhost/%C3%96PNV/ installiert und HTTP/Hash-geprüft, docs/review/README.md. Externe URL optional angefragt. Keine native UI-Lieferung vor Schritt2.
 
 2026-09-15: Acht-Schritte-Neuschnitt unabhängig vollständig geprüft; Tracking synchronisiert, bestehende Branchzuordnungen1–4 bewahrt. Schritt1 Projektabnahmerunde2 erfüllt; Korrekturcommit1eba9c3,106Tests98,61%CoreWindows0/0. Merge vorbereitet. Agents durch Usage-Limit zeitweise ausgefallen; lokale Korrektur gemäß Skillfallback, unabhängige Abnahme anschließend wieder möglich.
+
+Schritt1 fertig, vollständig ohne Konflikte in Basisbranch integriert; integrierten Schrittbranch sicher gelöscht. Schritt2 Verbindungssuche In Arbeit, Klärungsrunden0/Abnahmerunden0. 1 von8 fertig.
