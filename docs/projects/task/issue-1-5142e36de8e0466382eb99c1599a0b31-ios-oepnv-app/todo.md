@@ -47,3 +47,5 @@ Projekt-Abnahmerunde1: Abweichungen gefunden (AK3 zusätzliche bundesweite Fahrt
 2026-09-15: Acht-Schritte-Neuschnitt unabhängig vollständig geprüft; Tracking synchronisiert, bestehende Branchzuordnungen1–4 bewahrt. Schritt1 Projektabnahmerunde2 erfüllt; Korrekturcommit1eba9c3,106Tests98,61%CoreWindows0/0. Merge vorbereitet. Agents durch Usage-Limit zeitweise ausgefallen; lokale Korrektur gemäß Skillfallback, unabhängige Abnahme anschließend wieder möglich.
 
 Schritt1 fertig, vollständig ohne Konflikte in Basisbranch integriert; integrierten Schrittbranch sicher gelöscht. Schritt2 Verbindungssuche In Arbeit, Klärungsrunden0/Abnahmerunden0. 1 von8 fertig.
+
+2026-09-15: Schritt2 fortgesetzt. Bestandsaufnahme abgeschlossen; kompakte Detailplanung läuft. Native Windows-UI-Automation unter PowerShell5.1 erfolgreich vorgeprüft (Vorlagenbutton per InvokePattern bedient, sichtbare Änderung bestätigt), Nachweis docs/help/verbindungssuche/verification/windows-uia-preflight.md. IIS-Seite erneut HTTP200 und identische Quell-/Zielprüfsumme. Noch keine fachliche UI-Abnahme oder neue App-Lieferung.
