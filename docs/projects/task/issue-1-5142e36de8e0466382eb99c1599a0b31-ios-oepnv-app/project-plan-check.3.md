@@ -27,7 +27,7 @@ Unabhängige Prüfung am 2026-09-15 des Neuschnitts auf acht Entwicklungsschritt
 | A15 – Weitere Verbünde, spätere Sharing-/Push-Erweiterung | 1 AK 6; Vorgehensentscheidung 7; 8 AK 6 | Vollständig |
 | A16 – Modell-/Servicetests, UI-Tests, Diagnose | 1 AK 4–5; explizite Tests und Rahmen 2–8 | Vollständig |
 | A17 – Windows-Test/Release erhalten, iOS-Abnahme beim Nutzer | Vorgehensentscheidung 8; Rahmen jeder Lieferung; 8 AK 5–6 | Vollständig |
-| A18 – Lokale IIS-Präsentation | Auf Nutzerwunsch 16.09.2026 vollständig aus aktuellem Plan entfernt | Entfallen |
+| A18 – Autorisierte IIS-Zwischenstände | Vorgehensentscheidung 9; Rahmen 2–8; 2 AK 5; 8 AK 6 | Vollständig |
 | A19 – Paketgrößen kritisch prüfen, Fortschritt/Branches erhalten | `package-review.md`; Vorgehensentscheidung 1; acht fachliche Lieferungen | Vollständig |
 
 Die daraus abgeleiteten K01–K14 sind damit abgedeckt. Der Abgleich sämtlicher ursprünglicher Schritt-AK in `package-review.md` stimmt mit den tatsächlichen alten und neuen Schrittbeschreibungen überein: Alt 1.1–1.6 bleiben erhalten; alt 2.1–2.8 verteilen sich auf 2, 5 und gemeinsame Rahmen/Abschluss; alt 3.1–3.8 auf 3, 5, 6, 7 und Rahmen/Abschluss; alt 4.1–4.8 auf 4, 5, 8 und integrierte Tests. Keine ursprüngliche Anforderung entfällt durch spätere Lieferung innerhalb des Projekts.
@@ -59,10 +59,6 @@ Keine.
 
 Die Lieferungen sind gegenüber den bisherigen Sammelpaketen fachlich enger: manuelle Suche, Monitor, Karte, GPS, Favoriten, Intervalle und Lebenszyklus lassen sich getrennt begutachten. Schritt 2 umfasst weiterhin notwendige Plattform-/UI-Grundlage und vollständige Verbindungsdetails; die begründete gemeinsame Lieferung ist nachvollziehbar. Schritt 8 bündelt nur die verbleibende Lebenszyklusfunktion mit notwendiger integrierter Schlussprüfung.
 
-Windows-UI-Ausführung soweit möglich, konkrete Nachweise technisch nicht ausführbarer Flüsse, iOS-Codeprüfung und manuelle Nutzerabnahme bleiben ausdrücklich verbindlich. Windows-CI und Releases werden erhalten; iOS-CI und neues automatisiertes Deployment bleiben Nicht-Ziele. Die lokale IIS-Präsentation und ihre Bereitstellungsprüfungen sind nach dem ausdrücklichen Nutzerwunsch vom 16.09.2026 kein Bestandteil des aktuellen Plans mehr.
+Windows-UI-Ausführung soweit möglich, konkrete Nachweise technisch nicht ausführbarer Flüsse, iOS-Codeprüfung und manuelle Nutzerabnahme bleiben ausdrücklich verbindlich. Windows-CI und Releases werden erhalten; iOS-CI und neues automatisiertes Deployment bleiben Nicht-Ziele. IIS verteilt native Windows-ZIP-Pakete mit Startanleitung, Version/Commit, Umfang und Grenzen sowie Begutachtungsinformationen; der Plan fordert keine Browser-App. Prüfungen von Site/Zielpfad, Download und lokalem Start sind vorgesehen. Die externe Stakeholder-URL kann separat geklärt werden, ohne unabhängige Entwicklung zu blockieren.
 
 Die Prüfung bestätigt die geplante Abdeckung, nicht bereits implementierte Funktionen, erfolgreiche native UI-Tests oder eine zukünftige Paketveröffentlichung. Bestehende Codeabnahme und deren Nachbesserung bleiben getrennte Verfahren.
-
-## Gezielte Fortschreibung 16.09.2026
-
-Der Hauptagent hat ausschließlich die vom Nutzer ausdrücklich gestrichenen IIS-/Zwischenpaketanteile gegen den vorher unabhängig geprüften Plan abgeglichen. App-Funktionen, Windows-CI, native Windows-UI-Prüfung, iOS-Prüfaufteilung und Schritt-Abhängigkeiten bleiben erhalten. Der separate Prüfagent war am Nutzungslimit nicht verfügbar; diese Fortschreibung erfolgt gemäß Skill-Fallback lokal und wird nicht als erneutes unabhängiges Vollreview bezeichnet. Keine neuen offenen Punkte.

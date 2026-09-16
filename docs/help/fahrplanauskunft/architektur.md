@@ -32,7 +32,7 @@ flowchart TD
     I --> A
 ```
 
-`MauiProgram.CreateMauiApp` registriert Optionen, Gateway, Adapter, Mapper, Cache, Klassifikator, Orchestrator und fachliche Services per Dependency Injection. Der Schritt bleibt ohne neue UI-Komponente; spätere Views greifen auf die Contracts zu.
+`MauiProgram.CreateMauiApp` registriert Optionen, Gateway, Adapter, Mapper, Cache, Klassifikator, Orchestrator und fachliche Services per Dependency Injection. Die [Verbindungssuche](../verbindungssuche/ablauf-technisch.md) greift über ihre Präsentationslogik auf diese Contracts zu.
 
 ## Provider erweitern und spätere Funktionen anschließen
 

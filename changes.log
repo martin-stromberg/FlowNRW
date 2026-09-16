@@ -1,3 +1,9 @@
+## 2026-09-16 — Manuelle Verbindungssuche und iOS-Plattformbasis
+
+- Native Suche ersetzt die Counter-Vorlage: Start und Ziel per Adresse, Haltestelle oder Koordinate wählen, Verbindungen und Teilstreckendetails öffnen und mit erhaltenem Kontext zurückkehren.
+- Quellen, Datenalter, Ersatzquellen, fehlende Echtzeit sowie Lade-, Leer- und Fehlerzustände sind sichtbar; geänderte Eingaben verwerfen alte Auswahlen und verspätete Antworten.
+- iOS-Ziel und Einstieg sowie Visual-Studio-/iOS-Prüfanleitung ergänzt. Native iOS-Abnahme bleibt beim Nutzer; bestehende Windows-CI und Releases bleiben unverändert.
+- 118 Tests, 97,01 % Core-Coverage und native Windows-Fixture-/Live-Prüfungen dokumentiert. IIS-ZIP-Lieferung und Download-/Startnachweis folgen erst nach fachlicher Projektabnahme.
 ## 2026-09-09 — Konfigurierbare bundesweite und regionale Fahrplanauskunft
 
 - Die Core-Datenversorgung löst Orte und Haltestellen auf, ruft Verbindungen und Abfahrten ab und normalisiert Providerantworten für die spätere Oberfläche.

@@ -3,9 +3,12 @@
 ## Important Notes Before Update
 
 - The included `db.transport.rest` and EFA endpoints are development/data-source options; productive public use still requires provider-specific availability, terms and approvals.
-- Step 1 delivers the platform-independent transit data core only; no new user interface or native iOS acceptance is included, with UI and iOS work following in Step 2.
 
 ## What's New
+
+- Native manual journey search with address/stop selection, coordinates, results, itinerary details and retained back-navigation context.
+- Visible loading/error/empty states, source and data age, fallback and unknown realtime information.
+- iOS platform foundation and setup/checklist; native iOS acceptance remains pending with the user.
 
 - Fixed missing national journeys and departures in partial regional results; merge uniquely matching trips, preserve regional realtime and apply the final sorted result limit.
 
@@ -16,9 +19,12 @@
 ## Wichtige Hinweise vor dem Update
 
 - Die enthaltenen `db.transport.rest`- und EFA-Endpunkte sind Entwicklungs-/Datenquellenoptionen; für einen produktiven öffentlichen Betrieb müssen Verfügbarkeit, Nutzungsbedingungen und Freigaben des jeweiligen Anbieters geklärt sein.
-- Schritt 1 liefert ausschließlich den plattformunabhängigen Fahrplandatenkern; eine neue Benutzeroberfläche oder native iOS-Abnahme ist nicht enthalten. UI und iOS folgen in Schritt 2.
 
 ## Neuerungen
+
+- Native manuelle Verbindungssuche mit Adress-/Haltestellenwahl, Koordinaten, Ergebnissen, Details und erhaltenem Kontext bei Rücknavigation.
+- Sichtbare Lade-/Fehler-/Leerzustände, Quelle und Datenalter, Ersatzquelle sowie unbekannte Echtzeit.
+- iOS-Plattformbasis und Einrichtungs-/Prüfanleitung; native iOS-Abnahme beim Nutzer noch offen.
 
 - Fehlende bundesweite Verbindungen und Abfahrten bei regionalen Teilergebnissen ergänzt; eindeutige Fahrten zusammengeführt, regionale Echtzeit priorisiert und finale Ergebnismenge sortiert/begrenzt.
 

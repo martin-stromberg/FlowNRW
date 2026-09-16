@@ -1,3 +1,7 @@
+# Historischer Begutachtungskanal – nicht mehr im Umfang
+
+Am 16.09.2026 hat der Nutzer die lokale IIS-Präsentation ausdrücklich gestrichen. Keine weiteren Bereitstellungen oder Änderungen an der lokalen Website. Die nachstehenden Angaben dokumentieren ausschließlich den früheren Stand.
+
 # Begutachtungsstände über IIS
 
 Vom Nutzer am 15. September 2026 beauftragter Bereitstellungsort: vorbereitete IIS-Website „ÖPNV“ auf diesem Windows-Rechner. Keine neue CI-/Deploymentpipeline und keine Browserportierung der MAUI-App.
