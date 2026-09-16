@@ -1,8 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+	<PropertyGroup Condition="'$(Configuration)' == 'UiTest'">
+		<DefineConstants>$(DefineConstants);UI_TEST_FIXTURES</DefineConstants>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(Configuration)' == 'UiTest'">
+		<Compile Include="..\tests\WindowsJourneyUiTests\UiTestFixtureServices.cs" Link="Testing\UiTestFixtureServices.cs" />
+	</ItemGroup>
+
 	<PropertyGroup>
-		<!-- Windows only for now; Android and iOS will be added later (see README.md, "Roadmap"). -->
 		<TargetFrameworks>net10.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx')) Or '$(EnableIos)' == 'true'">net10.0-ios</TargetFrameworks>
 
 		<OutputType>Exe</OutputType>
 		<RootNamespace>FlowNRW</RootNamespace>
@@ -25,12 +32,17 @@
 		<ApplicationVersion>1</ApplicationVersion>
 
 		<!-- Unpackaged Windows app (plain .exe in a ZIP, no MSIX signing required), see https://aka.ms/MauiTemplateUnpackaged -->
+	</PropertyGroup>
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<WindowsPackageType>None</WindowsPackageType>
 		<WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
 
 		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+	</PropertyGroup>
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<ItemGroup>

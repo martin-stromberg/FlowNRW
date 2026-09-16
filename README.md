@@ -1,11 +1,11 @@
 # FlowNRW
 
-.NET 10 MAUI-Anwendung (aktuell Windows). Erste Version: `0.0.1`.
+.NET 10 MAUI-Anwendung mit geprüfter Windows-Oberfläche und iOS-Plattformbasis. Erste Version: `0.0.1`.
 
 [![PR CI für Staging](https://img.shields.io/github/actions/workflow/status/martin-stromberg/FlowNRW/pr-staging-ci.yml?label=PR%20CI%20f%C3%BCr%20Staging)](https://github.com/martin-stromberg/FlowNRW/actions/workflows/pr-staging-ci.yml)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download/dotnet/10.0)
 
-FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahrten mit bevorzugten NRW-Echtzeitdaten. Der aktuelle Schritt liefert dafür den plattformunabhängigen Core-Datenkern; eine neue fachliche UI und native iOS-Abnahme gehören zum folgenden Ausbauschritt.
+FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahrten mit bevorzugten NRW-Echtzeitdaten. Die manuelle Verbindungssuche führt von Start-/Zielwahl über Ergebnisse zu Verbindungsdetails. Native iOS-Abnahme steht beim Nutzer aus.
 
 ## Aktueller Funktionsstand
 
@@ -14,13 +14,14 @@ FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahr
 - Konfigurierbare `db.transport.rest`- und EFA-Adapter mit NRW-Priorität, Fallback, Cache, Abbruch und begrenzten Wiederholungen.
 - Konservative Echtzeitkonsolidierung: Haltestellen- und Fahrtidentität müssen eindeutig zusammenpassen; fehlende Werte bleiben unbekannt.
 - Regionale Teilergebnisse werden um zusätzliche bundesweite Fahrten ergänzt; eindeutige Treffer behalten regionale Echtzeitpriorität. [106 Tests und Windows-Build geprüft](docs/help/fahrplanauskunft/verification/union-correction-checks.md).
-- Keine neue Benutzeroberfläche in diesem Schritt. Technische Details stehen in der [Fahrplanauskunft-Dokumentation](docs/help/fahrplanauskunft/index.md).
+- Native Suche mit Adress-/Haltestellentreffern und Koordinaten, Ergebnissen und Details; Lade-/Fehler-/Leerzustände, Quellen und Datenalter sind sichtbar. [Bedienung](docs/help/verbindungssuche/beschreibung.md).
+- iOS-Einstieg und Zielplattform vorhanden; [Visual-Studio-/iOS-Einrichtung und manuelle Prüfliste](docs/help/verbindungssuche/installation.md).
 
 ## Projektstruktur
 
 | Projekt | Inhalt |
 | --- | --- |
-| `FlowNRW/` | MAUI-App (`net10.0-windows10.0.19041.0`, win-x64, unpackaged) |
+| `FlowNRW/` | MAUI-App: Windows (win-x64, unpackaged), iOS auf macOS oder mit `EnableIos=true` |
 | `FlowNRW.Core/` | Plattformunabhängige Logik (`net10.0`), von der App referenziert |
 | `FlowNRW.Tests/` | xUnit-Tests für `FlowNRW.Core` (`net10.0`, laufen auch unter Linux) |
 | `.github/` | CI/CD-Workflows und Composite Actions, siehe [docs/CI-CD.md](docs/CI-CD.md) |
@@ -66,7 +67,7 @@ dotnet build FlowNRW/FlowNRW.csproj -t:Run -f net10.0-windows10.0.19041.0
 oder `FlowNRW.sln` in Visual Studio öffnen, `FlowNRW` als Startprojekt und
 "Windows Machine" als Ziel wählen, F5.
 
-Die Windows-App ist weiterhin die lokale Plattform für Build und Entwicklung. Die fachlichen Fahrplanauskunft-Services werden über Dependency Injection bereitgestellt und können von späteren Views verwendet werden; Schritt 1 liefert noch keinen neuen fachlichen UI-Ablauf.
+Unter Windows startet die manuelle Verbindungssuche. Start und Ziel suchen und je einen Treffer auswählen oder Koordinaten übernehmen; „Verbindungen suchen“ öffnet Ergebnisse und anschließend Details. Debug und Release verwenden reale Provider. Standortfreigabe ist nicht erforderlich.
 
 Release-Build wie in CI (self-contained, unpackaged):
 
@@ -104,8 +105,8 @@ Nur absolute HTTPS-Endpunkte ohne Benutzerinformationen, Query oder Fragment sin
 | Projekt/Bereich | Aufgabe |
 |----------------|---------|
 | `FlowNRW.Core/Transit/` | Modelle, Provideradapter, Orchestrator, Normalisierung, Cache und Diagnose. |
-| `FlowNRW/` | MAUI-Komposition und bestehende Windows-App. |
-| `FlowNRW.Tests/` | xUnit-Tests für Core und Providerverhalten. |
+| `FlowNRW/` | MAUI-Komposition, native Suche/Ergebnisse/Details und Windows-/iOS-Einstiege. |
+| `FlowNRW.Tests/` | xUnit-Tests für Core, Providerverhalten und Präsentationszustände. |
 | `docs/help/fahrplanauskunft/` | Technische API-, Betriebs-, Probe- und Verifikationsdokumentation. |
 
 Der Datenfluss ist `Service → ProviderOrchestrator → DbRestProvider/EfaProvider → TransitHttpGateway → Mapper → ProviderResult`. NRW wird über die amtlich dokumentierte Polygonressource klassifiziert; Fallbacks und Echtzeitkonsolidierung bleiben gekennzeichnet.
@@ -119,7 +120,7 @@ dotnet build FlowNRW.sln -c Release -p:TreatWarningsAsErrors=true
 dotnet test FlowNRW.Tests/FlowNRW.Tests.csproj -c Release --no-build --collect:"XPlat Code Coverage"
 ```
 
-Die aktuelle Verifikation weist 98 von 98 Tests, 0 Fehler, 0 Überspringungen und 98,00 % Core-Zeilenabdeckung (541/552) nach. Der Windows-Solution-Build meldet 0 Warnungen und 0 Fehler. Die Release-Skripte werden mit `npm run test:release-version` geprüft; der dokumentierte Lauf bestand mit 26 von 26 Tests. Einzelheiten und Providerproben stehen in [test-results.md](docs/features/task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app-schritt-1-fahrplanauskunft/test-results.md) und [iteration2-checks.md](docs/help/fahrplanauskunft/verification/iteration2-checks.md).
+Die aktuelle [Verifikation vom 16.09.2026](docs/help/verbindungssuche/verification/checks-2026-09-16.md) weist 118 bestandene Tests und 97,01 % Core-Zeilenabdeckung (715/737), Windows-Releasebuild ohne Warnungen/Fehler, native UI-Fixture-Abläufe und separate reale NRW-/bundesweite Bedienproben nach. [UI-Harness ausführen](tests/WindowsJourneyUiTests/README.md). `UiTest` ist ein isolierter Fixture-Build; nur reguläre Releaseartefakte ausliefern. Native iOS-Prüfung und spätere IIS-Download-/Startprüfung sind noch offen. Die bestehenden Release-Skripttests laufen mit `npm run test:release-version`.
 
 ## CI/CD
 
@@ -127,13 +128,11 @@ Die vorhandene GitHub-Actions-Konfiguration behält Windows-Build/Release sowie 
 
 ## Roadmap
 
-- Die fachliche UI für Verbindungssuche und Abfahrtsmonitor auf dem vorhandenen Datenkern ergänzen; iOS-Zielplattform und native Abnahme folgen in Schritt 2 (`TargetFrameworks` in `FlowNRW/FlowNRW.csproj`,
-  `Platforms/Android`, `Platforms/iOS`, Runtime-Einträge in
-  `scripts/generate-update-manifest.mjs` / `scripts/resolve-release-version.mjs` und
-  in `.github/actions/build-and-package/action.yml`).
+- Native iOS-Ausführung anhand der Prüfliste durch den Nutzer; die Plattformbasis ist implementiert.
+- Abfahrtsmonitor und weitere Ansichten folgen in späteren Projektschritten.
 
 Weitere Verkehrsverbünde sowie spätere Sharing-/Push-Funktionen bleiben Erweiterungspunkte. Sie sind in der technischen Dokumentation beschrieben, aber nicht als aktuelle Produktfunktion implementiert.
 
 ## Changelog
 
-Änderungen der Fahrplanauskunft stehen in [`changes.log`](changes.log) und in der [technischen Dokumentation](docs/help/fahrplanauskunft/index.md).
+Änderungen stehen in [`changes.log`](changes.log) und in der [technischen Dokumentation](docs/help/fahrplanauskunft/index.md).

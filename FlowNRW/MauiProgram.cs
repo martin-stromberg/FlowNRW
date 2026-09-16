@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using FlowNRW.Core.Transit;
+using FlowNRW.Core.Presentation;
 
 namespace FlowNRW;
 
@@ -66,8 +67,22 @@ public static class MauiProgram
         builder.Services.AddTransient<IStopSearchService, StopSearchService>();
         builder.Services.AddTransient<IRoutingService, RoutingService>();
         builder.Services.AddTransient<IDepartureService, DepartureService>();
+#if UI_TEST_FIXTURES
+        builder.Services.AddTransient<IStopSearchService, UiTestFixtureServices>();
+        builder.Services.AddTransient<IRoutingService, UiTestFixtureServices>();
+#endif
+        builder.Services.AddSingleton<IJourneyNavigation, ShellJourneyNavigation>();
+        builder.Services.AddSingleton(services => new JourneySearchViewModel(
+            new EndpointViewModel(services.GetRequiredService<IStopSearchService>(), providerOptions.MaxSearchLength),
+            new EndpointViewModel(services.GetRequiredService<IStopSearchService>(), providerOptions.MaxSearchLength),
+            services.GetRequiredService<IRoutingService>(), services.GetRequiredService<IJourneyNavigation>()));
+        builder.Services.AddSingleton<ResultsViewModel>();
+        builder.Services.AddSingleton<JourneyDetailViewModel>();
+        builder.Services.AddSingleton<SearchPage>();
+        builder.Services.AddTransient<ResultsPage>();
+        builder.Services.AddTransient<JourneyDetailPage>();
+        builder.Services.AddSingleton<AppShell>();
 
         return builder.Build();
     }
 }
-
