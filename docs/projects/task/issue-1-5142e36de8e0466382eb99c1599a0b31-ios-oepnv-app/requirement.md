@@ -30,7 +30,7 @@ Die vorhandene .NET-MAUI-Anwendung soll ihre Standardvorlageninhalte durch eine 
 | A15 | Erweiterbarkeit für weitere Verkehrsverbünde und Sharing-Dienste sowie optionale Push-Benachrichtigungen für Störungen/Abfahrten vorsehen. |
 | A16 | Unit-Tests für Services und Datenmodelle, UI-Tests für Routing und Abfahrtsmonitor sowie Logging von API-Fehlern und Performance-Metriken bereitstellen. |
 | A17 | Windows bleibt als Release- und Testplattform in den vorhandenen GitHub Actions erhalten. iOS ist dort laut Nutzer nicht zuverlässig möglich; eine iOS-CI-/Deployment-Pipeline gehört nicht zum Umfang. Automatisiertes Deployment wird später anderweitig implementiert. Die iOS-App bleibt das Produktziel; alle UI-Abläufe werden unter Windows soweit technisch möglich tatsächlich getestet. Native iOS-Abnahme liegt zunächst beim Nutzer und ist kein lokaler Abschlussblocker. |
-| A18 | Die vorbereitete IIS-Website „ÖPNV“ auf dieser Windows-Maschine darf für fertige Zwischenstände zur Stakeholder-/Keyuser-Begutachtung genutzt werden; manuelle Zwischenlieferungen ergänzen den bisherigen Umfang, kein neues automatisiertes Deployment. |
+| A18 | Entfallen am 16.09.2026: Nutzer nimmt lokale IIS-Präsentation und zugehörige Zwischenpaket-Bereitstellung aus dem Umfang. |
 | A19 | Die Größen der Aufgabenpakete vor Fortsetzung anhand des tatsächlichen Fortschritts prüfen und bei Bedarf kleinere begutachtbare Lieferungen planen; vorhandene Arbeit und gültige Branchzuordnungen bewahren. |
 
 ## Betroffene Bereiche
@@ -74,7 +74,7 @@ Die vorhandene .NET-MAUI-Anwendung soll ihre Standardvorlageninhalte durch eine 
 | K10 | Anbieter- und Servicegrenzen ermöglichen weitere Verkehrsverbünde sowie spätere Sharing-/optionale Push-Erweiterungen, ohne diese Integrationen als bereits geliefert auszugeben (A15). |
 | K11 | Service-/Modell-Unit-Tests und UI-Tests der Verbindungssuche/des Monitors sowie datensparsame API-Fehler-/Performance-Diagnose sind vorhanden; alle UI-Abläufe werden unter Windows soweit technisch möglich tatsächlich getestet. Nicht ausführbare Windows-Flüsse werden nach ernsthaftem Versuch mit konkreter Ursache und Versuchsnachweis dokumentiert. Native iOS-Abnahme liegt zunächst beim Nutzer; eine manuelle Prüfanleitung wird übergeben (A16, verbindliche Nutzerergänzung). |
 | K12 | GitHub Actions behalten die vorhandenen Windows-Test- und Releaseabläufe funktionsfähig bei. Änderungen zur iOS-App ersetzen oder entfernen diese Abläufe nicht. Eine iOS-CI-/Deployment-Pipeline wird nicht als Lieferung vorausgesetzt; verfügbare lokale Build-/Unit-/Windows-UI-Testnachweise und verbleibende Plattformgrenzen werden weiterhin ausgewiesen. Native iOS-Ausführung ist gemäß Nutzerentscheidung keine lokale Abschlussvoraussetzung (A17). |
-| K13 | Nach der ersten bedienbaren und weiteren abgenommenen UI-Lieferungen steht ein geprüfter Windows-Zwischenstand über die autorisierte IIS-Website „ÖPNV“ mit Startanleitung, Commit/Version, Umfang und Grenzen bereit. Site-Zuordnung und Zielpfad vor Installation prüfen, Download und lokalen Start nachweisen; technische Zugriffsgrenzen konkret dokumentieren. Die native MAUI-App wird als Paket verteilt, keine neue Web-App zugesagt (A18). |
+| K13 | Entfallen mit A18 am 16.09.2026; kein IIS-/Download-/Startnachweis als Projektabnahmekriterium. |
 | K14 | Eine dokumentierte Paketbewertung begründet kleine eigenständig prüfbare Lieferungen anhand vorhandener Ergebnisse, ohne ursprüngliche Anforderungen oder geleistete Arbeit zu verlieren (A19). |
 
 ## Designquelle und Abgrenzung
@@ -111,4 +111,4 @@ Weitere konkrete Implementierungsentscheidungen gehören nach Bestandsaufnahme i
 
 ## Verbindliche Ergänzungen und technische Einordnung
 
-Der Nutzer autorisiert die vorhandene Windows-IIS-Website „ÖPNV“ für fertige Zwischenstände und fordert vor Fortsetzung eine erneute Paketbewertung. Technische Entscheidung: IIS verteilt Windows-ZIP und Begutachtungsinformationen; die MAUI-App läuft nativ auf Windows. Keine Browserportierung und kein Projekt zur Deploymentautomatisierung. Site-Zuordnung und Schreibrechte werden vor Installation geprüft. Die bestätigte Windows-/iOS-Prüfaufteilung bleibt bestehen.
+Am 16.09.2026 zieht der Nutzer die lokale IIS-Präsentation zurück und verlangt die direkte Fortsetzung der App-Anforderungen. Bereits bestehende IIS-Inhalte werden nicht weiter bearbeitet. Kleinere Entwicklungsschritte, Windows-GitHub-Actions und die bestätigte Windows-/iOS-Prüfaufteilung bleiben bestehen.

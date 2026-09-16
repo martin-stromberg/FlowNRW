@@ -47,10 +47,10 @@
 | 43 | Prüfung | Format Windows-Warnings-as-errors Core-Coverage und bestehende Checks ausführen | Erledigt | Prüfstand 16.09.2026; Details siehe unten. |
 | 44 | Dokumentation | Visual-Studio- und iOS-Prüfanleitung aktualisieren | Erledigt | Prüfstand 16.09.2026; Details siehe unten. |
 | 45 | Dokumentation | Hilfe README Release Notes und Nachweise aktualisieren | Erledigt | Prüfstand 16.09.2026; Details siehe unten. |
-| 46 | Lieferung | Windows-ZIP mit Version Commit Grenzen und Startanleitung vorbereiten | Offen | — |
-| 47 | Lieferung | Nach fachlicher Projektabnahme IIS-Site und Ziel prüfen ZIP bereitstellen Download und Start nachweisen | Offen | — |
+| 46 | Lieferung | Windows-ZIP mit Version Commit Grenzen und Startanleitung vorbereiten | Entfallen | Nutzerwunsch 16.09.2026: keine lokale IIS-Präsentation. |
+| 47 | Lieferung | Nach fachlicher Projektabnahme IIS-Site und Ziel prüfen ZIP bereitstellen Download und Start nachweisen | Entfallen | Nutzerwunsch 16.09.2026: keine lokale IIS-Präsentation. |
 | 48 | E2E | LatestRouteWins nativ ausführen: verspätete erste Routingantwort nach Endpunktänderung und zweiter Suche darf Ergebnis Metadaten oder Navigation nicht überschreiben | Erledigt | Prüfstand 16.09.2026; Details siehe unten. |
-| 49 | Lieferung | Nach Projektabnahme IIS-ZIP herunterladen separat entpacken Suchseite starten und Version Commit Umfang Grenzen sowie Datum URL Zielpfad und Startnachweis prüfen | Offen | — |
+| 49 | Lieferung | Nach Projektabnahme IIS-ZIP herunterladen separat entpacken Suchseite starten und Version Commit Umfang Grenzen sowie Datum URL Zielpfad und Startnachweis prüfen | Entfallen | Nutzerwunsch 16.09.2026: keine lokale IIS-Präsentation. |
 
 ## Gesicherter Stand 16.09.2026
 

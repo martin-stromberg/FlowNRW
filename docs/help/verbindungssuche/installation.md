@@ -57,4 +57,4 @@ Nicht durch Live-Daten erzwingbare Ausfall-/Tageswechsel-/Cachefälle als nicht 
 
 ## Lieferstand und Nachweise
 
-[118 Tests, 97,01 % Core-Coverage und native Windows-Prüfung](verification/checks-2026-09-16.md) sind dokumentiert. iOS-Ausführung bleibt offen. Das Windows-ZIP über IIS wird erst nach fachlicher Projektabnahme bereitgestellt; Download und Start des ausgelieferten Pakets sind derzeit noch nicht nachgewiesen. Bestehende Windows-GitHub-Actions-Tests und Releases bleiben unverändert; es gibt keine neue iOS-CI oder Deploymentautomatisierung.
+[118 Tests, 97,01 % Core-Coverage und native Windows-Prüfung](verification/checks-2026-09-16.md) sind dokumentiert. iOS-Ausführung bleibt offen. Die lokale IIS-Präsentation samt gesonderter Zwischenpaket-Bereitstellung wurde am 16.09.2026 auf Nutzerwunsch aus dem Umfang genommen. Bestehende Windows-GitHub-Actions-Tests und Releases bleiben unverändert; es gibt keine neue iOS-CI oder Deploymentautomatisierung.
