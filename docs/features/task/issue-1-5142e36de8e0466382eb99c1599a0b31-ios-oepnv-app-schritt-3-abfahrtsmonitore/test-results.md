@@ -1,0 +1,26 @@
+# Testergebnis
+
+**Status:** Keine Fehler
+
+# Prüfungen am 16.09.2026
+
+## Ergebnis
+
+126/126 Coretests bestanden, kein Test übersprungen. Gesamte Core-Line-Coverage 96,93 % (821/847), siehe [Cobertura](core-cobertura-2026-09-16.xml). Windows Release mit TreatWarningsAsErrors=true: 0 Warnungen/0 Fehler. Gesamte Solution-Formatprüfung (severity error) und XML-Dokumentationsprüfung aller 99 C#-/Projektdateien erfolgreich. Windows-GitHub-Actions unverändert.
+
+## Native Windows-UI
+
+Tatsächliche MAUI-Fenster, über Prozess-ID begrenzte UIAutomation, Eingabe per ValuePattern und Bedienung per InvokePattern. Fixture-DI ausschließlich Configuration UiTest; reale Dienste im Releasebuild.
+
+- [Monitor-Fixture](native-monitor-2026-09-16.txt): Validierung, Adresstrefferfilter, leere/fehlerhafte Suche, mehrdeutige Auswahl mit korrekter Stop-ID, vollständige Echtzeit-/Ausfall-/Gleiswechselanzeige, Aktualisierung, Fehler mit Datenerhalt, leeres Ergebnis, Erholung, Rücknavigation und verspätete Antwort nach Stopwechsel bestanden.
+- [Routingregression](native-routing-regression-2026-09-16.txt): gesamte vorhandene native Verbindungssuche einschließlich Koordinaten, Details, Fehlererholung, paralleler Suche und verspäteter Antworten bestanden.
+- [Live-Monitor](native-live-2026-09-16.txt): reguläre App, Gelsenkirchen Hbf de:05513:5613, 99 reale Abfahrten über EFA um 20:34 Europe/Berlin. Erste sichtbare Fahrt ICE 947 Richtung Berlin Südkreuz, Soll 20:26/Ist 20:35, +9 Min., Gleis 6. Manuelle Aktualisierung und Rücknavigation bestanden. Ein vorheriger Lauf lieferte 95 Abfahrten und RE6 +7 Min. Unterschiedliche Momentaufnahmen sind kein Widerspruch. Providerwarnung sichtbar; keine Zusage zur dauerhaften Erreichbarkeit oder flächendeckenden Datenversorgung.
+- [Normales Fenster](native-departures.png) und [schmales Fenster](native-departures-narrow.png), 430 × 900: visuell geprüft. Texte und Gleiswechsel umbrechen vollständig; Aktualisieren erreichbar, vertikal scrollbar. Fehlende Echtzeit und Ausfall werden textlich unterschieden. Kein alleiniger Farbcode.
+
+## Korrigierte Test-/Umgebungsprobleme
+
+Die erste Screenshotaufnahme konnte das eigene Fenster nicht in den Vordergrund holen und wurde sicher abgebrochen; der spätere erneute Lauf erzeugte prüfbare Aufnahmen. Eine Monitor-Fixture enthielt zunächst nicht die erwartete Stop-ID in der Quellenkennung; Testdaten korrigiert und kompletter Lauf wiederholt. Der erste Live-Test erwartete nach Auswahl fälschlich den Status „Treffer“ statt „Endpunkt übernommen“; Prüfung auf tatsächlich erhaltenen Suchtext korrigiert und Live-Lauf vollständig wiederholt. Ein Buildversuch während der noch laufenden Live-App traf eine gesperrte EXE; nach Testende bestand der vollständige Build. Vier Formatabweichungen wurden korrigiert und nachgeprüft.
+
+## Grenzen
+
+Native iOS-Ausführung bleibt vereinbarungsgemäß beim Nutzer; gemeinsame Seiten/DI verwenden keine Windows-spezifischen Produkt-APIs. Keine iOS-CI, kein Deployment und keine IIS-Präsentation. Screenshots zeigen deterministische Fixtures, keine echten Fahrplandaten. Die vorhandenen Coretests belegen zusätzlich Coalescing, Cache und NRW-Konsolidierung. Die native Momentaufnahme ersetzt keine Providerverfügbarkeitsgarantie.
