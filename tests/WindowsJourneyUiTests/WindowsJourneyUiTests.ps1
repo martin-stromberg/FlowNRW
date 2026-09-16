@@ -1,4 +1,4 @@
-﻿param([string]$Exe, [switch]$Inspect, [string]$ScreenshotDirectory)
+﻿param([string]$Exe, [switch]$Inspect, [string]$ScreenshotDirectory, [switch]$Monitors, [switch]$LiveMonitors)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
@@ -23,6 +23,12 @@ try {
     function SetText([string]$id, [string]$value) { (Wait $id).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($value); Start-Sleep -Milliseconds 100 }
     function Name([string]$id) { return (Wait $id).Current.Name }
     function Assert([bool]$value, [string]$message) { if (!$value) { throw $message }; Write-Output "PASS $message" }
+    function Back { Click 'NavigationViewBackButton' }
+    function Contains([string]$id, [string]$pattern) { Assert ((Name $id) -match $pattern) "$id contains $pattern" }
+    function Status([string]$id, [string]$pattern) {
+        for ($j = 0; $j -lt 120; $j++) { if ((Name $id) -match $pattern) { return }; Start-Sleep -Milliseconds 100 }
+        throw "$id expected $pattern but was $(Name $id)"
+    }
     function SelectEndpoint([string]$prefix, [string]$value) { SetText ($prefix + 'Text') $value; Click ($prefix + 'Search'); Click ($prefix + 'Match0') }
     function Snapshot([string]$name) {
         if (!$ScreenshotDirectory) { return }
@@ -51,16 +57,66 @@ public static class NativeWindowCapture {
     }
     Wait 'OriginText' | Out-Null
     Snapshot 'native-search'
-    if ($Inspect) {
+    if ($LiveMonitors) {
+        Click 'OpenStopSearch'
+        SetText 'StopQuery' 'Gelsenkirchen Hbf'; Click 'FindStops'
+        for ($attempt = 0; $attempt -lt 120 -and !(Find 'StopMatch0'); $attempt++) { Start-Sleep -Milliseconds 500 }
+        Write-Output ('LIVE selected: ' + (Name 'StopMatch0'))
+        Click 'StopMatch0'
+        for ($attempt = 0; $attempt -lt 120 -and (Name 'MonitorStatus') -match 'werden'; $attempt++) { Start-Sleep -Milliseconds 500 }
+        Contains 'MonitorStatus' 'manuell aktualisiert'
+        Write-Output ('LIVE status: ' + (Name 'MonitorStatus'))
+        Write-Output ('LIVE metadata: ' + (Name 'MonitorMetadata'))
+        Write-Output ('LIVE departure: ' + (Name 'Departure0'))
+        Click 'RefreshDepartures'
+        for ($attempt = 0; $attempt -lt 120 -and (Name 'MonitorStatus') -match 'werden'; $attempt++) { Start-Sleep -Milliseconds 500 }
+        Contains 'MonitorStatus' 'manuell aktualisiert'
+        Write-Output ('LIVE refreshed: ' + (Name 'MonitorMetadata'))
+        Back; Assert (((Wait 'StopQuery').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value) -eq 'Gelsenkirchen Hbf') 'Live back preserves query'; Back; Wait 'OriginText' | Out-Null
+        Write-Output 'PASS live monitor lookup, departure board, manual refresh and back navigation'
+    } elseif ($Monitors) {
+        Click 'OpenStopSearch'
+        Wait 'StopQuery' | Out-Null
+        Click 'FindStops'; Contains 'StopSearchStatus' 'Suchtext'
+        foreach ($query in @('Adresse Essen', 'empty', 'error')) {
+            SetText 'StopQuery' $query; Click 'FindStops'; Status 'StopSearchStatus' 'Keine Haltestellen|fehlgeschlagen'
+            Assert ($null -eq (Find 'StopMatch0')) "Only stops offered: $query"
+        }
+        SetText 'StopQuery' 'monitor-sequence'; Click 'FindStops'; Click 'StopMatch1'
+        Contains 'MonitorStop' 'monitor-sequence'; Status 'MonitorStatus' 'manuell aktualisiert'
+        Contains 'MonitorMetadata' 'fixture-1.*Datenalter:.*Fallback.*Veralteter Cache'
+        Contains 'Departure0' 'RE 1.*Stand 1'; Contains 'Departure0' '\+3 Min\.'; Contains 'Departure0' 'Gleis-/Steigwechsel'
+        Contains 'Departure1' 'Pünktlich gemeldet'; Contains 'Departure2' 'keine Echtzeitdaten'; Contains 'Departure3' 'FÄLLT AUS'
+        Snapshot 'native-departures'
+        if ($ScreenshotDirectory) {
+            $bounds = $script:window.Current.BoundingRectangle
+            $transform = $script:window.GetCurrentPattern([System.Windows.Automation.TransformPattern]::Pattern)
+            $transform.Resize(430, 900); Snapshot 'native-departures-narrow'; $transform.Resize($bounds.Width, $bounds.Height)
+        }
+        Click 'RefreshDepartures'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'Departure0' 'Stand 2'
+        $retained = Name 'Departure0'; $retainedMetadata = Name 'MonitorMetadata'
+        Click 'RefreshDepartures'; Status 'MonitorStatus' 'Letzte bekannte Daten'
+        Assert ((Name 'Departure0') -eq $retained) 'Failed refresh retains departures'
+        Assert ((Name 'MonitorMetadata') -eq $retainedMetadata) 'Failed refresh retains source and timestamp'
+        Click 'RefreshDepartures'; Status 'MonitorStatus' 'Keine nächsten'
+        Assert ($null -eq (Find 'Departure0')) 'Successful empty refresh clears obsolete departures'
+        Click 'RefreshDepartures'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'Departure0' 'Stand 5'
+        Back
+        Assert (((Wait 'StopQuery').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value) -eq 'monitor-sequence') 'Back preserves stop search'
+        SetText 'StopQuery' 'monitor-error'; Click 'FindStops'; Click 'StopMatch0'; Status 'MonitorStatus' 'nicht geladen'
+        Assert ($null -eq (Find 'Departure0')) 'New stop does not retain previous stop departures'
+        Back
+        SetText 'StopQuery' 'monitor-slow'; Click 'FindStops'; Click 'StopMatch0'; Contains 'MonitorStatus' 'aktualisiert'
+        Back
+        SetText 'StopQuery' 'New Stop'; Click 'FindStops'; Click 'StopMatch0'; Status 'MonitorStatus' 'manuell aktualisiert'
+        Start-Sleep -Seconds 6
+        Contains 'MonitorStop' 'New Stop'; Contains 'MonitorMetadata' 'New Stop'; Contains 'Departure0' 'Stand 1'
+        Back; Back; Wait 'OriginText' | Out-Null
+        Write-Output 'PASS all monitor native UI scenarios'
+    } elseif ($Inspect) {
         $script:window.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { '{0}|{1}|{2}' -f $_.Current.AutomationId, $_.Current.ControlType.ProgrammaticName, $_.Current.Name }
     } else {
-        function Back { Click 'NavigationViewBackButton' }
-        function Contains([string]$id, [string]$pattern) { Assert ((Name $id) -match $pattern) "$id contains $pattern" }
         function Toggle([string]$id) { (Wait $id).GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle(); Start-Sleep -Milliseconds 150 }
-        function Status([string]$id, [string]$pattern) {
-            for ($j = 0; $j -lt 120; $j++) { if ((Name $id) -match $pattern) { return }; Start-Sleep -Milliseconds 100 }
-            throw "$id expected $pattern but was $(Name $id)"
-        }
         function RoundTrip {
             Click 'SearchJourneys'; Wait 'Journey0' | Out-Null; Back; Wait 'OriginText' | Out-Null
         }

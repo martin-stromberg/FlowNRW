@@ -3,8 +3,41 @@ using FlowNRW.Core.Transit;
 namespace FlowNRW;
 
 /// <summary>Deterministic services compiled exclusively into the UiTest configuration.</summary>
-internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingService
+internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingService, IDepartureService
 {
+    private readonly Dictionary<string, int> updates = [];
+
+    /// <inheritdoc />
+    public async Task<ProviderResult<StopEvent>> DeparturesAsync(Stop stop, DateTimeOffset departure, CancellationToken cancellationToken = default)
+    {
+        var count = updates.GetValueOrDefault(stop.Name) + 1;
+        updates[stop.Name] = count;
+        await Task.Delay(stop.Name.Contains("monitor-slow") ? 6000 : 700);
+        var sequence = stop.Name.Contains("monitor-sequence");
+        var error = stop.Name.Contains("monitor-error") || sequence && count == 3;
+        var empty = stop.Name.Contains("monitor-empty") || sequence && count == 4;
+        return new ProviderResult<StopEvent>
+        {
+            Items = error || empty ? [] : [Departure(stop, departure.AddMinutes(5), "RE 1 · Stand " + count, TimeSpan.FromMinutes(3), false, "2"),
+                Departure(stop, departure.AddMinutes(10), "S2", TimeSpan.Zero, false, "1"),
+                Departure(stop, departure.AddMinutes(15), "107", null, null, null),
+                Departure(stop, departure.AddMinutes(20), "U11", null, true, null)],
+            ErrorCode = error ? "fixture_unavailable" : null,
+            Source = "UI-Fixture " + stop.Name + " " + stop.Id, RetrievedAt = DateTimeOffset.UtcNow.AddMinutes(-2),
+            IsFallback = true, IsStale = true, Warnings = ["fixture_warning"]
+        };
+    }
+
+    private static StopEvent Departure(Stop stop, DateTimeOffset planned, string line, TimeSpan? delay, bool? cancelled, string? platform)
+    {
+        return new StopEvent
+        {
+            Identity = new() { Stop = stop, Line = line, Direction = "Essen Hauptbahnhof", Operator = "Fixture Bahn" },
+            PlannedTime = planned,
+            Realtime = new() { ActualTime = delay is { } value ? planned + value : null, Delay = delay, Cancelled = cancelled, PlannedPlatform = "1", Platform = platform }
+        };
+    }
+
     /// <inheritdoc />
     public async Task<ProviderResult<Address>> SearchAsync(string text, CancellationToken cancellationToken = default)
     {
@@ -64,4 +97,3 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
             Realtime = realtime ? new RealtimeStatus { ActualTime = time.AddMinutes(3), Cancelled = true, Source = "Fixture Echtzeit" } : new RealtimeStatus() };
     }
 }
-

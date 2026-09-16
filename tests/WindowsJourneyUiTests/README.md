@@ -12,3 +12,5 @@ dotnet build FlowNRW/FlowNRW.csproj -c UiTest -p:TreatWarningsAsErrors=true
 Das Screenshotverzeichnis vorher anlegen. Der Treiber startet und beendet seinen eigenen Appprozess. `-Inspect` unterstützt die Inspektion. Der Fixture-Lauf benötigt keine erreichbaren Fahrplananbieter und darf nicht als Live-Nachweis bezeichnet werden. `UiTest`-Artefakte niemals ausliefern; regulärer Release verwendet reale Services. Reale Bedienproben separat mit Releasebuild und Netzwerkzugang ausführen.
 
 [Prüfumfang, Screenshots und Live-Grenzen](../../docs/help/verbindungssuche/verification/checks-2026-09-16.md).
+
+Mit `-Monitors` werden die deterministischen Monitorflüsse geprüft. `-LiveMonitors` verwendet mit dem regulären Releasebuild echte Gelsenkirchener Haltestellen/Abfahrten und prüft Aktualisieren und Rücknavigation; Netzwerk und erreichbare Anbieter sind erforderlich. [Monitor-Nachweise](../../docs/help/abfahrten/verification/checks-2026-09-16.md).

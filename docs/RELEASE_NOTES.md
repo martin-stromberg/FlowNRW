@@ -6,6 +6,8 @@
 
 ## What's New
 
+- Manual stop departure boards with cancellation, delay and platform changes; failed refreshes retain the last known data and provenance.
+
 - Native manual journey search with address/stop selection, coordinates, results, itinerary details and retained back-navigation context.
 - Visible loading/error/empty states, source and data age, fallback and unknown realtime information.
 - iOS platform foundation and setup/checklist; native iOS acceptance remains pending with the user.
@@ -22,6 +24,8 @@
 
 ## Neuerungen
 
+- Manuelle Haltestellenmonitore mit Ausfall, Verspätung und Gleiswechsel; bei Aktualisierungsfehlern bleiben letzte bekannte Daten und Quelle erhalten.
+
 - Native manuelle Verbindungssuche mit Adress-/Haltestellenwahl, Koordinaten, Ergebnissen, Details und erhaltenem Kontext bei Rücknavigation.
 - Sichtbare Lade-/Fehler-/Leerzustände, Quelle und Datenalter, Ersatzquelle sowie unbekannte Echtzeit.
 - iOS-Plattformbasis und Einrichtungs-/Prüfanleitung; native iOS-Abnahme beim Nutzer noch offen.
@@ -31,3 +35,4 @@
 - Asynchrone, abbrechbare Fahrplandienste für Adress-/Haltestellensuche, nahe Haltestellen, Verbindungen und Abfahrten mit normalisierten Providerergebnissen ergänzt.
 - NRW-bevorzugte EFA-Daten, konservative Echtzeitkonsolidierung, transparente Fallback-/Stale-Zustände, begrenzten Speichercache und datensparsame Diagnose ergänzt.
 - Konfigurierbare `db.transport.rest`- und EFA-Adapter mit HTTPS-Prüfung, begrenzten Wiederholungen, Antwortlimits und dokumentierten Live-Probegrenzen ergänzt.
+
