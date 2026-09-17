@@ -1,3 +1,9 @@
+## 2026-09-17 — Interaktive Haltestellenkarte und Verbindungsverläufe
+
+- Haltestellensuche und Verbindungsdetails öffnen eine gemeinsame Windows-/iOS-Kartenansicht mit Originalkoordinaten und ausschließlich gelieferten Strecken.
+- Marker und native Liste führen zum richtigen Monitor; fehlende Positionen/Geometrie und Kartenfehler sind ausdrücklich erkennbar.
+- Lokale Leaflet-Assets, sichere JSON-Bridge und größenbegrenzter technischer HTTPS-Kachelcache ergänzt. Native iOS-Abnahme bleibt beim Nutzer.
+
 ## 2026-09-16 — Haltestellensuche und manueller Abfahrtsmonitor
 
 - Native Haltestellenauswahl, nächste Abfahrten und manuelle Aktualisierung mit sichtbarer Echtzeit, Ausfall und Gleiswechsel.
@@ -16,4 +22,3 @@
 - NRW-EFA-Echtzeit wird bei regionalen Punkten bevorzugt und nur über eindeutige Stop-/Fahrtzuordnung mit bundesweiten Daten zusammengeführt; Providerfehler bleiben als Fallback, Warnung oder unbekannter Wert sichtbar.
 - Technische Konfiguration, HTTPS-Gateway, Cancellation, begrenzte Wiederholungen, flüchtiger Cache und datensparsame Diagnose sind dokumentiert.
 - Verifikation und echte Providerproben weisen 98 erfolgreiche Core-Tests, 98,00 % Core-Coverage, einen fehlerfreien Windows-Build sowie die Grenzen der Entwicklungsendpunkte nach.
-

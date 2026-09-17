@@ -16,6 +16,7 @@ FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahr
 - Regionale Teilergebnisse werden um zusätzliche bundesweite Fahrten ergänzt; eindeutige Treffer behalten regionale Echtzeitpriorität. [106 Tests und Windows-Build geprüft](docs/help/fahrplanauskunft/verification/union-correction-checks.md).
 - Native Suche mit Adress-/Haltestellentreffern und Koordinaten, Ergebnissen und Details; Lade-/Fehler-/Leerzustände, Quellen und Datenalter sind sichtbar. [Bedienung](docs/help/verbindungssuche/beschreibung.md).
 - Native Haltestellensuche und manueller Abfahrtsmonitor mit Echtzeitstatus, Gleiswechseln und erhaltenen Daten bei Aktualisierungsfehlern. [Bedienung](docs/help/abfahrten/beschreibung.md).
+- Interaktive Haltestellenkarte mit nativer Listenalternative und gelieferten Verbindungsverläufen. [Bedienung und Kartenkonfiguration](docs/help/karte/beschreibung.md).
 - iOS-Einstieg und Zielplattform vorhanden; [Visual-Studio-/iOS-Einrichtung und manuelle Prüfliste](docs/help/verbindungssuche/installation.md).
 
 ## Projektstruktur
@@ -137,4 +138,3 @@ Weitere Verkehrsverbünde sowie spätere Sharing-/Push-Funktionen bleiben Erweit
 ## Changelog
 
 Änderungen stehen in [`changes.log`](changes.log) und in der [technischen Dokumentation](docs/help/fahrplanauskunft/index.md).
-

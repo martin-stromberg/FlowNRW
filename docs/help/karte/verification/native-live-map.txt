@@ -1,0 +1,7 @@
+LIVE stop: Gelsenkirchen, Hbf · efa de:05513:5613 de:05513:5613 · 51.50493, 7.10221
+LIVE map: Basiskarte geladen. Marker auswählen oder Haltestellenliste verwenden.
+PASS MapStatus contains Basiskarte geladen\.
+LIVE attribution: © OpenStreetMap contributors · openstreetmap.org/copyright
+PASS MonitorStatus contains manuell aktualisiert
+LIVE monitor: Gelsenkirchen, Hbf; Quelle: efa; Datenstand: 17.09.2026 09:35 UTC+02:00; Datenalter: 0 Min. Anbieterwarnung: Daten sind möglicherweise unvollständig; eine Quelle konnte keine aktuellen Daten liefern.
+PASS live stop map, basemap, attribution, monitor selection and back navigation

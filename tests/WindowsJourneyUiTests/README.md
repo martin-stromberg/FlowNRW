@@ -14,3 +14,5 @@ Das Screenshotverzeichnis vorher anlegen. Der Treiber startet und beendet seinen
 [Prüfumfang, Screenshots und Live-Grenzen](../../docs/help/verbindungssuche/verification/checks-2026-09-16.md).
 
 Mit `-Monitors` werden die deterministischen Monitorflüsse geprüft. `-LiveMonitors` verwendet mit dem regulären Releasebuild echte Gelsenkirchener Haltestellen/Abfahrten und prüft Aktualisieren und Rücknavigation; Netzwerk und erreichbare Anbieter sind erforderlich. [Monitor-Nachweise](../../docs/help/abfahrten/verification/checks-2026-09-16.md).
+
+`-Maps` prüft Marker per echter Maus, native Listen-/Tastaturwahl, Zoom/Pan, Kartenfehler, fehlende Positionen, Verbindungsgeometrie und Rücknavigation mit isolierten Kachelfixtures. `-LiveMaps` ist eine einzelne Release-Probe mit realer Gelsenkirchener Suche und Basiskarte; keine öffentlichen Kacheln für automatische Pan-/Zoom-Tests verwenden. [Kartenprüfung](../../docs/help/karte/verification/checks-2026-09-17.md).

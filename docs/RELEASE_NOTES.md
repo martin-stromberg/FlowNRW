@@ -6,6 +6,8 @@
 
 ## What's New
 
+- Interactive stop maps and supplied journey geometries with native list access, manual map recovery and bounded HTTPS tile caching.
+
 - Manual stop departure boards with cancellation, delay and platform changes; failed refreshes retain the last known data and provenance.
 
 - Native manual journey search with address/stop selection, coordinates, results, itinerary details and retained back-navigation context.
@@ -24,6 +26,8 @@
 
 ## Neuerungen
 
+- Interaktive Haltestellenkarte und gelieferte Verbindungsverläufe mit nativer Listenalternative, Kartenfehlerbehandlung und begrenztem HTTPS-Kachelcache.
+
 - Manuelle Haltestellenmonitore mit Ausfall, Verspätung und Gleiswechsel; bei Aktualisierungsfehlern bleiben letzte bekannte Daten und Quelle erhalten.
 
 - Native manuelle Verbindungssuche mit Adress-/Haltestellenwahl, Koordinaten, Ergebnissen, Details und erhaltenem Kontext bei Rücknavigation.
@@ -35,4 +39,3 @@
 - Asynchrone, abbrechbare Fahrplandienste für Adress-/Haltestellensuche, nahe Haltestellen, Verbindungen und Abfahrten mit normalisierten Providerergebnissen ergänzt.
 - NRW-bevorzugte EFA-Daten, konservative Echtzeitkonsolidierung, transparente Fallback-/Stale-Zustände, begrenzten Speichercache und datensparsame Diagnose ergänzt.
 - Konfigurierbare `db.transport.rest`- und EFA-Adapter mit HTTPS-Prüfung, begrenzten Wiederholungen, Antwortlimits und dokumentierten Live-Probegrenzen ergänzt.
-
