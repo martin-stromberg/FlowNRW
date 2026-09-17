@@ -1,0 +1,14 @@
+LIVE selected: Gelsenkirchen, Hbf · efa de:05513:5613 de:05513:5613 · 51.50493, 7.10221
+PASS MonitorStatus contains manuell aktualisiert
+LIVE status: 99 Abfahrten · manuell aktualisiert.
+LIVE metadata: Quelle: efa; Datenstand: 16.09.2026 20:34 UTC+02:00; Datenalter: 0 Min. Anbieterwarnung: Daten sind möglicherweise unvollständig; eine Quelle konnte keine aktuellen Daten liefern.
+LIVE departure: ICE 947 InterCityExpress → S Südkreuz Bhf (Berlin)
+Ausfallstatus unbekannt
+Soll: 16.09.2026 20:26 UTC+02:00
+Ist: 16.09.2026 20:35 UTC+02:00 · Abweichung: +9 Min.
+Gleis/Steig Soll: 6 · Aktuell: 6
+Betreiber: DB Fernverkehr AG
+PASS MonitorStatus contains manuell aktualisiert
+LIVE refreshed: Quelle: efa; Datenstand: 16.09.2026 20:34 UTC+02:00; Datenalter: 0 Min. Anbieterwarnung: Daten sind möglicherweise unvollständig; eine Quelle konnte keine aktuellen Daten liefern.
+PASS Live back preserves query
+PASS live monitor lookup, departure board, manual refresh and back navigation

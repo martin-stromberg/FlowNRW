@@ -70,6 +70,7 @@ public static class MauiProgram
 #if UI_TEST_FIXTURES
         builder.Services.AddTransient<IStopSearchService, UiTestFixtureServices>();
         builder.Services.AddTransient<IRoutingService, UiTestFixtureServices>();
+        builder.Services.AddTransient<IDepartureService, UiTestFixtureServices>();
 #endif
         builder.Services.AddSingleton<IJourneyNavigation, ShellJourneyNavigation>();
         builder.Services.AddSingleton(services => new JourneySearchViewModel(
@@ -82,6 +83,12 @@ public static class MauiProgram
         builder.Services.AddTransient<ResultsPage>();
         builder.Services.AddTransient<JourneyDetailPage>();
         builder.Services.AddSingleton<AppShell>();
+        builder.Services.AddSingleton<IDepartureNavigation, ShellDepartureNavigation>();
+        builder.Services.AddSingleton(services => new StopMonitorViewModel(
+            services.GetRequiredService<IStopSearchService>(), services.GetRequiredService<IDepartureService>(),
+            services.GetRequiredService<IDepartureNavigation>(), providerOptions.MaxSearchLength));
+        builder.Services.AddSingleton<StopSearchPage>();
+        builder.Services.AddTransient<DeparturePage>();
 
         return builder.Build();
     }
