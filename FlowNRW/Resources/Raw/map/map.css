@@ -1,0 +1,4 @@
+html,body,#map{height:100%;width:100%;margin:0;background:#e6edf2;font:16px system-ui}
+.station{background:#1b4b8c;border:3px solid white;border-radius:50%;color:white;font:bold 18px system-ui;text-align:center;line-height:32px;box-shadow:0 1px 5px #333}
+.leaflet-control-zoom a{min-width:44px;min-height:44px;line-height:44px!important}
+.leaflet-tooltip{font:16px system-ui;max-width:260px;white-space:normal}

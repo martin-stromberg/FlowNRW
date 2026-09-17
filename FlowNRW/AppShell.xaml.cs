@@ -17,6 +17,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("detail", typeof(JourneyDetailPage));
         Routing.RegisterRoute("stops", typeof(StopSearchPage));
         Routing.RegisterRoute("departures", typeof(DeparturePage));
+        Routing.RegisterRoute("map", typeof(MapPage));
         search.ToolbarItems.Add(new ToolbarItem
         {
             Text = "Abfahrten",

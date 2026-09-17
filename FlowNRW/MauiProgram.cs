@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using FlowNRW.Core.Transit;
 using FlowNRW.Core.Presentation;
+using FlowNRW.Core.Maps;
 
 namespace FlowNRW;
 
@@ -16,6 +17,9 @@ public static class MauiProgram
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
+#if WINDOWS
+        Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", Path.Combine(FileSystem.AppDataDirectory, "MapWebView"));
+#endif
         builder
             .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
@@ -89,6 +93,25 @@ public static class MauiProgram
             services.GetRequiredService<IDepartureNavigation>(), providerOptions.MaxSearchLength));
         builder.Services.AddSingleton<StopSearchPage>();
         builder.Services.AddTransient<DeparturePage>();
+        var mapOptions = new MapOptions
+        {
+            TileUrl = builder.Configuration["Map:TileUrl"] ?? "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+            Attribution = builder.Configuration["Map:Attribution"] ?? "© OpenStreetMap contributors · openstreetmap.org/copyright",
+            MinZoom = int.Parse(builder.Configuration["Map:MinZoom"] ?? "1", System.Globalization.CultureInfo.InvariantCulture),
+            MaxZoom = int.Parse(builder.Configuration["Map:MaxZoom"] ?? "18", System.Globalization.CultureInfo.InvariantCulture),
+            CacheMaxBytes = long.Parse(builder.Configuration["Map:CacheMaxBytes"] ?? "67108864", System.Globalization.CultureInfo.InvariantCulture),
+            Timeout = TimeSpan.Parse(builder.Configuration["Map:Timeout"] ?? "00:00:10", System.Globalization.CultureInfo.InvariantCulture)
+        };
+        mapOptions.Validate();
+        builder.Services.AddSingleton(mapOptions);
+        builder.Services.AddSingleton<IMapTileService>(_ => new MapTileService(
+            new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = Timeout.InfiniteTimeSpan }, mapOptions,
+            Path.Combine(FileSystem.CacheDirectory, "MapTiles")));
+        builder.Services.AddSingleton<MapViewModel>();
+        builder.Services.AddTransient<MapPage>();
+#if UI_TEST_FIXTURES
+        builder.Services.AddSingleton<IMapTileService, UiTestMapTiles>();
+#endif
 
         return builder.Build();
     }

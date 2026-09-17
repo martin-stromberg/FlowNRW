@@ -9,7 +9,8 @@ public sealed class StopSearchPage : ContentPage
 
     /// <summary>Creates the stop lookup view.</summary>
     /// <param name="model">Retained monitor session.</param>
-    public StopSearchPage(StopMonitorViewModel model)
+    /// <param name="map">Shared map snapshot.</param>
+    public StopSearchPage(StopMonitorViewModel model, FlowNRW.Core.Maps.MapViewModel map)
     {
         this.model = model;
         BindingContext = model;
@@ -31,6 +32,10 @@ public sealed class StopSearchPage : ContentPage
         var metadata = new Label { AutomationId = "StopSearchMetadata" };
         metadata.SetBinding(Label.TextProperty, "Lookup.Metadata");
         layout.Children.Add(metadata);
+        var showMap = new AsyncRelayCommand(async () => { map.ShowStops(); await Shell.Current.GoToAsync("map"); },
+            () => model.Stops.Count > 0 && !model.Lookup.IsBusy, _ => Title = "Karte konnte nicht geöffnet werden");
+        model.PropertyChanged += (_, _) => showMap.Refresh();
+        layout.Children.Add(new Button { Text = "Haltestellen auf Karte zeigen", AutomationId = "ShowStopMap", Command = showMap, LineBreakMode = LineBreakMode.WordWrap });
         var matches = new VerticalStackLayout { Spacing = 12 };
         void RenderMatches()
         {

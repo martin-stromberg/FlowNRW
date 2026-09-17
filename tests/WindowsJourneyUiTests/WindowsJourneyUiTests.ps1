@@ -1,4 +1,4 @@
-﻿param([string]$Exe, [switch]$Inspect, [string]$ScreenshotDirectory, [switch]$Monitors, [switch]$LiveMonitors)
+﻿param([string]$Exe, [switch]$Inspect, [string]$ScreenshotDirectory, [switch]$Monitors, [switch]$LiveMonitors, [switch]$Maps, [switch]$LiveMaps)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
@@ -40,24 +40,124 @@ using System.Runtime.InteropServices;
 public static class NativeWindowCapture {
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr window);
     [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr window, IntPtr dc, uint flags);
 }
 "@
         }
         $handle = [IntPtr]$script:window.Current.NativeWindowHandle
         [NativeWindowCapture]::SetForegroundWindow($handle) | Out-Null
         Start-Sleep -Milliseconds 750
-        if ([NativeWindowCapture]::GetForegroundWindow() -ne $handle) { throw 'Own app must be foreground for capture' }
+        $foreground = [NativeWindowCapture]::GetForegroundWindow() -eq $handle
         $rect = $script:window.Current.BoundingRectangle
         $bitmap = New-Object Drawing.Bitmap(([int]$rect.Width - 20), ([int]$rect.Height - 20))
         $graphics = [Drawing.Graphics]::FromImage($bitmap)
         try {
-            $graphics.CopyFromScreen(([int]$rect.Left + 10), ([int]$rect.Top + 10), 0, 0, $bitmap.Size)
+                        if ($foreground) {
+                $graphics.CopyFromScreen(([int]$rect.Left + 10), ([int]$rect.Top + 10), 0, 0, $bitmap.Size)
+            } else {
+                $dc = $graphics.GetHdc()
+                try { if (![NativeWindowCapture]::PrintWindow($handle, $dc, 2)) { throw 'Own window capture unavailable' } }
+                finally { $graphics.ReleaseHdc($dc) }
+            }
             $bitmap.Save((Join-Path $ScreenshotDirectory ($name + '.png')), [Drawing.Imaging.ImageFormat]::Png)
         } finally { $graphics.Dispose(); $bitmap.Dispose() }
     }
     Wait 'OriginText' | Out-Null
     Snapshot 'native-search'
-    if ($LiveMonitors) {
+    if ($LiveMaps) {
+        Click 'OpenStopSearch'; SetText 'StopQuery' 'Gelsenkirchen Hbf'; Click 'FindStops'
+        for ($attempt=0; $attempt -lt 120 -and !(Find 'StopMatch0'); $attempt++) { Start-Sleep -Milliseconds 500 }
+        Write-Output ('LIVE stop: '+(Name 'StopMatch0')); Click 'ShowStopMap'
+        for ($attempt=0; $attempt -lt 120 -and (Name 'MapStatus') -match 'wird geladen'; $attempt++) { Start-Sleep -Milliseconds 500 }
+        Write-Output ('LIVE map: '+(Name 'MapStatus')); Contains 'MapStatus' 'Basiskarte geladen\.'
+        Write-Output ('LIVE attribution: '+(Name 'MapAttribution')); Snapshot 'native-live-map'
+        Click 'ShowMapList'; Click 'MapStation0'
+        for ($attempt=0; $attempt -lt 120 -and (Name 'MonitorStatus') -match 'werden'; $attempt++) { Start-Sleep -Milliseconds 500 }
+        Contains 'MonitorStatus' 'manuell aktualisiert'; Write-Output ('LIVE monitor: '+(Name 'MonitorStop')+'; '+(Name 'MonitorMetadata'))
+        Back; Back; Back; Wait 'OriginText' | Out-Null
+        Write-Output 'PASS live stop map, basemap, attribution, monitor selection and back navigation'
+    } elseif ($Maps) {
+        Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class MapPointer {
+ [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+ [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr window, IntPtr dc, uint flags);
+ [DllImport("user32.dll")] public static extern bool SetCursorPos(int x,int y);
+ [DllImport("user32.dll")] public static extern void mouse_event(uint flags,uint dx,uint dy,uint data,UIntPtr info);
+ public static void Move(int dx,int dy) { mouse_event(1,unchecked((uint)dx),unchecked((uint)dy),0,UIntPtr.Zero); }
+}
+"@
+        function MapClick([double]$x,[double]$y) {
+            $handle=[IntPtr]$script:window.Current.NativeWindowHandle
+            [MapPointer]::SetForegroundWindow($handle) | Out-Null
+            Start-Sleep -Milliseconds 200
+            if ([MapPointer]::GetForegroundWindow() -ne $handle) { $script:window.SetFocus(); Start-Sleep -Milliseconds 300 }
+            if ([MapPointer]::GetForegroundWindow() -ne $handle) { throw 'Own map window must be foreground' }
+            $rect=(Wait 'MapCanvas').Current.BoundingRectangle
+            [MapPointer]::SetCursorPos([int]($rect.Left+$rect.Width*$x),[int]($rect.Top+$rect.Height*$y)) | Out-Null
+            [MapPointer]::mouse_event(2,0,0,0,[UIntPtr]::Zero); [MapPointer]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
+            Start-Sleep -Milliseconds 500
+        }
+        function MapPan {
+            MapClick 0.7 0.6
+            $rect=(Wait 'MapCanvas').Current.BoundingRectangle
+            [MapPointer]::mouse_event(2,0,0,0,[UIntPtr]::Zero)
+            for ($step=1; $step -le 10; $step++) {
+                [MapPointer]::Move(-20,0)
+                Start-Sleep -Milliseconds 30
+            }
+            [MapPointer]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
+            Start-Sleep -Milliseconds 600
+        }
+        function KeyboardActivate([string]$id) {
+            Add-Type -AssemblyName System.Windows.Forms
+            (Wait $id).SetFocus()
+            if ([MapPointer]::GetForegroundWindow() -ne [IntPtr]$script:window.Current.NativeWindowHandle) { throw 'Own map window must be foreground for keyboard input' }
+            [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+            Start-Sleep -Milliseconds 200
+        }
+        Click 'OpenStopSearch'; SetText 'StopQuery' 'Map Essen'; Click 'FindStops'; Wait 'StopMatch1' | Out-Null
+        Click 'ShowStopMap'; Status 'MapStatus' 'Basiskarte geladen\.'
+        Contains 'MapDataStatus' '2 Haltestellen.*2 Kartenpositionen'
+        Start-Sleep -Milliseconds 500
+        Snapshot 'native-map'
+        MapClick 0.5 0.285
+        Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-1'
+        Back; Status 'MapStatus' 'Basiskarte geladen\.'
+        Click 'ShowMapList'; KeyboardActivate 'MapStation0'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-0'
+        Back; Back; Wait 'StopQuery' | Out-Null
+                SetText 'StopQuery' 'map-missing'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
+        Contains 'MapDataStatus' '0 Kartenpositionen'; Click 'ShowMapList'; Contains 'MapStation0' 'Keine Kartenposition'
+        Click 'MapStation0'; Status 'MonitorStatus' 'manuell aktualisiert'; Back; Back
+        SetText 'StopQuery' 'map-offline'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
+        Status 'MapStatus' 'fehlt oder ist veraltet'; Click 'ShowMapList'; Click 'MapStation0'; Status 'MonitorStatus' 'manuell aktualisiert'; Back
+        Click 'ShowMapCanvas'; Status 'MapStatus' 'Basiskarte geladen\.'
+        MapClick 0.018 0.08; Status 'MapStatus' 'Basiskarte geladen\.'; $beforePan=Name 'MapViewport'; MapPan; Assert ((Name 'MapViewport') -ne $beforePan) 'Pan changes actual map viewport'; Status 'MapStatus' 'Basiskarte geladen\.'; Snapshot 'native-map-panned'
+        Click 'ResetMap'; Status 'MapStatus' 'Basiskarte geladen\.'
+        Snapshot 'native-map'
+        if ($ScreenshotDirectory) {
+            $bounds=$script:window.Current.BoundingRectangle
+            $transform=$script:window.GetCurrentPattern([System.Windows.Automation.TransformPattern]::Pattern)
+            $transform.Resize(430,900); Click 'ShowMapList'; Snapshot 'native-map-list-narrow'
+            $transform.Resize($bounds.Width,$bounds.Height)
+        }
+        Back
+        SetText 'StopQuery' '<img src=x onerror=alert(1)>'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
+        Status 'MapStatus' 'Basiskarte geladen\.'; Click 'ShowMapList'; Contains 'MapStation0' 'onerror'
+        Click 'MapStation0'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorStop' 'onerror'; Back; Back
+        SetText 'StopQuery' 'map-slow'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
+        Back; SetText 'StopQuery' 'Newest map'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
+        Status 'MapStatus' 'Basiskarte geladen\.'; Start-Sleep -Seconds 6; Contains 'MapMetadata' 'Newest map'; Back; Back
+        SelectEndpoint 'Origin' 'Essen'; SelectEndpoint 'Destination' 'Berlin'; Click 'SearchJourneys'; Click 'Journey0'
+        Click 'ShowJourneyMap'; Status 'MapStatus' 'Basiskarte geladen\.'; Contains 'MapDataStatus' 'Teilweiser Verlauf'; Contains 'MapSegment0' 'RE 1.*3 gelieferte Punkte'; Contains 'MapSegment1' 'Fußweg.*2 gelieferte Punkte'
+        Snapshot 'native-journey-map'
+        Back; Wait 'JourneyDetailSection1' | Out-Null; Back; Click 'Journey1'; Click 'ShowJourneyMap'
+        Contains 'MapDataStatus' 'Keine darstellbare Geometrie'; Assert ($null -eq (Find 'MapSegment0')) 'Previous journey geometry removed'
+        Back; Back; Back; Wait 'OriginText' | Out-Null
+        Write-Output 'PASS native map marker/list, missing positions, offline recovery, zoom, late tiles, journey geometry and back navigation'
+    } elseif ($LiveMonitors) {
         Click 'OpenStopSearch'
         SetText 'StopQuery' 'Gelsenkirchen Hbf'; Click 'FindStops'
         for ($attempt = 0; $attempt -lt 120 -and !(Find 'StopMatch0'); $attempt++) { Start-Sleep -Milliseconds 500 }
