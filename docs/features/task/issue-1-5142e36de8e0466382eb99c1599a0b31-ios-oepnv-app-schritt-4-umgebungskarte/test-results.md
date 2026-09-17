@@ -1,0 +1,32 @@
+# Testergebnis
+
+**Status:** Keine Fehler
+
+# Prüfungen Schritt 4 – 17.09.2026
+
+## Ergebnis und Umfang
+
+138/138 Coretests bestanden, kein Test übersprungen. Core-Zeilenabdeckung 94,09 % (1164/1237), siehe [Cobertura](core-cobertura.xml). Windows Release und UiTest mit TreatWarningsAsErrors=true: 0 Warnungen/0 Fehler. Gesamte Solution-Formatprüfung (severity error) und XML-Dokumentationsprüfung aller 104 C#-/Projektdateien erfolgreich. Keine Änderungen an GitHub Actions.
+
+## Native Windows-UI
+
+Echte MAUI-Appfenster, UIAutomation auf die jeweilige Prozess-ID begrenzt. Marker und Zoom werden mit nativen Mausereignissen betätigt, Pan mit gedrückter Maustaste und echten Bewegungsereignissen; eine nur im UiTest-Build enthaltene Viewportanzeige bestätigt den geänderten Kartenausschnitt. Native Listenwahl wird zusätzlich per Tastatur/Enter ausgeführt. Keine JS-/ViewModel-Aufrufe ersetzen diese Bedienung.
+
+- [Karten-Fixtures](native-map-fixtures.txt): Suche → Karte → zweiter Marker → richtiger Monitor → zurück; native Liste/Tastatur → erster Monitor; Stop ohne Koordinaten; Kartenfehler mit weiter nutzbarer Liste und Erholung; Zoom/Verschieben/Rücksetzen; HTML-artiger Stationsname bleibt Text; langsame alte Kacheln nach Seitenwechsel; Verbindungsdetails → gelieferter Linien-/Fußwegverlauf → andere Verbindung ohne Geometrie → Rücknavigation.
+- [Routingregression](native-routing-regression.txt): bestehende native Routingabläufe einschließlich Koordinaten, Details, Fehlererholung und verspäteter Antworten erfolgreich.
+- [Monitorregression](native-monitor-regression.txt): bestehende native Suche/Aktualisierung, Fehlererhalt, Leerantworten und Stopwechsel erfolgreich.
+- [Echte Kartenprobe](native-live-map.txt): Release-App um 09:35 Europe/Berlin, Gelsenkirchen Hbf de:05513:5613 bei 51.50493/7.10221, Quelle EFA mit sichtbarer Ersatzquellenwarnung. Basiskarte von OpenStreetMap tatsächlich geladen; geografische Orientierung und Attribution im [Live-Screenshot](native-live-map.png) visuell geprüft. Auswahl aus der nativen Kartenliste öffnete den echten Gelsenkirchener Abfahrtsmonitor; Rückweg bis zur Suche erfolgreich. Die Probe verspricht keine dauerhafte Anbietererreichbarkeit.
+
+[Normale Karte](native-map.png), [verschobene Karte](native-map-panned.png), [schmale native Liste](native-map-list-narrow.png) und [Verbindungsverlauf](native-journey-map.png) wurden visuell geprüft. Texte umbrechen; Herkunft, Status und Auswahl bleiben lesbar. Fixture-Kacheln sind ausdrücklich als KARTENFIXTURE beschriftet und belegen keine reale Geografie. Alle automatisierten Zoom-/Panläufe verwenden ausschließlich lokale Fixtures.
+
+## Korrekturen während der Prüfung
+
+- Im Windows-Automationsbaum waren native Controls hinter der eingebetteten Karte nicht erreichbar. Separate native Listenansicht vor dem WebView ergänzt; tatsächliche Tastaturauswahl anschließend bestanden.
+- Reine Cursorpositionierung bewegte anfangs keinen Kartenausschnitt. Der Treiber sendet jetzt echte Mausbewegungsereignisse bei gedrückter Taste und prüft eine Änderung der echten Viewportkoordinaten. Erst dieser Lauf gilt als bestandener Pan-Test.
+- Vordergrundaktivierung war zeitweise gesperrt. Screenshots verwenden dann ausschließlich PrintWindow für das eigene Fenster; Pointer-/Tastatureingaben erfolgen weiterhin nur nach bestätigtem Fokus auf das eigene Appfenster. Aufnahmen danach tatsächlich visuell geprüft.
+- Nicht mehr sichtbare Kacheln werden abgebrochen; alte Seiten-/Renderantworten verworfen. Timeout, Cachegrenze, conditional 304, no-store, mandatory revalidation, Offline, ungültige Bilddaten und Koordinatengrenzen durch Coretests abgesichert.
+
+## Aussagegrenzen
+
+Native iOS-Ausführung, VoiceOver/Pinch und große Systemschrift bleiben Teil der übergebenen Geräteprüfliste. Die Windows-UIA-Inspektion bietet hier keine lokale Einstellung der Systemschrift; die globale Windows-Einstellung wurde nicht verändert. Schmale Fensterbreite 430 × 900 wurde tatsächlich geprüft; globale Schriftvergrößerung wird nicht als durchgeführt ausgegeben. Gemeinsamer iOS-Code verwendet lokale HybridWebView-Assets, generierte Cache-JSON-Metadaten und HTTPS ohne ATS-Ausnahme. Keine iOS-CI, keine IIS-Präsentation und kein Deployment.
+
