@@ -55,7 +55,7 @@ public sealed class MapViewModel
         Reset();
         Title = "Haltestellenkarte";
         Stations = monitor.Stops.Select((candidate, index) => new MapStation(index, candidate)).ToArray();
-        Metadata = monitor.Lookup.Metadata;
+        Metadata = monitor.SearchMetadata;
         Status = Stations.Count == 0 ? "Keine Haltestellen vorhanden. Bitte zuerst suchen."
             : $"{Stations.Count} Haltestellen · {Stations.Count(item => item.Position is not null)} Kartenpositionen. Auswahl öffnet die Abfahrten.";
     }

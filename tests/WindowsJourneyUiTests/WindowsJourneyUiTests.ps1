@@ -1,4 +1,4 @@
-﻿param([string]$Exe, [switch]$Inspect, [string]$ScreenshotDirectory, [switch]$Monitors, [switch]$LiveMonitors, [switch]$Maps, [switch]$LiveMaps)
+﻿param([string]$Exe, [switch]$Inspect, [string]$ScreenshotDirectory, [switch]$Monitors, [switch]$LiveMonitors, [switch]$Maps, [switch]$LiveMaps, [switch]$Locations, [switch]$LiveLocations)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
@@ -63,8 +63,185 @@ public static class NativeWindowCapture {
         } finally { $graphics.Dispose(); $bitmap.Dispose() }
     }
     Wait 'OriginText' | Out-Null
-    Snapshot 'native-search'
-    if ($LiveMaps) {
+    if (!$LiveLocations) { Snapshot 'native-search' }
+    if ($LiveLocations) {
+        # Never capture screenshots, raw UI names, endpoint values or returned stop identities here.
+        Assert ($null -eq (Find 'LocationScenario')) 'Release has no fixture scenario control'
+        Click 'OriginLocation'
+        $resolved = $false
+        for ($attempt = 0; $attempt -lt 180; $attempt++) {
+            $state = Name 'OriginLocationStatus'
+            if ($state -notmatch 'wird ermittelt') { $resolved = $true; break }
+            Start-Sleep -Milliseconds 500
+        }
+        if (!$resolved) { throw 'OS location probe did not finish; permission dialog or operating-system response requires inspection without logging private UI content' }
+        $success = (Name 'OriginLocationStatus') -match 'übernommen'
+        if ($success) {
+            Assert ((Name 'OriginSelection') -match 'Aktueller Standort') 'OS location accepted as endpoint (coordinates omitted)'
+            Click 'OpenStopSearch'; Click 'FindNearbyStops'
+            for ($attempt = 0; $attempt -lt 180; $attempt++) {
+                $state = Name 'NearbyStatus'
+                if ($state -notmatch 'wird ermittelt|werden geladen') { break }
+                Start-Sleep -Milliseconds 500
+            }
+            if (Find 'StopMatch0') {
+                Click 'StopMatch0'
+                for ($attempt = 0; $attempt -lt 120 -and (Name 'MonitorStatus') -match 'werden'; $attempt++) { Start-Sleep -Milliseconds 500 }
+                Assert ($null -ne (Find 'MonitorStop')) 'Real nearby candidate opens monitor (identity omitted)'
+                Write-Output 'OS RESULT current position and real nearby selection available; provider departure status not disclosed'
+                Back
+            } else { Write-Output 'OS LIMIT location obtained; nearby request returned no selectable result; inspect sanitized provider diagnostics separately' }
+            Back
+        } else {
+            $classification = if ($state -match 'nicht erlaubt') { 'permission denied' }
+                elseif ($state -match 'deaktiviert') { 'location services disabled' }
+                elseif ($state -match 'nicht unterstützt') { 'unsupported' }
+                elseif ($state -match 'zu lange|Zeit') { 'timeout' }
+                elseif ($state -match 'Keine aktuelle|nicht verfügbar') { 'position unavailable' }
+                else { 'location request failed' }
+            Write-Output ('OS LIMIT ' + $classification + '; successful position and nearby OS flow NOT EXECUTED')
+            Assert ((Wait 'OriginText').Current.IsEnabled -and (Wait 'OriginSearch').Current.IsEnabled) 'Manual inputs remain enabled after actual OS outcome'
+        }
+        Write-Output 'OS probe finished without storing coordinates, nearby identities or screenshots; this is separate from fixture coverage'
+    } elseif ($Locations) {
+        Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class LocationPointer {
+ [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+ [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+ [DllImport("user32.dll")] public static extern bool SetCursorPos(int x,int y);
+ [DllImport("user32.dll")] public static extern void mouse_event(uint flags,uint dx,uint dy,uint data,UIntPtr info);
+}
+"@
+        function LocationForeground {
+            $handle = [IntPtr]$script:window.Current.NativeWindowHandle
+            [LocationPointer]::SetForegroundWindow($handle) | Out-Null
+            Start-Sleep -Milliseconds 200
+            if ([LocationPointer]::GetForegroundWindow() -ne $handle) { $script:window.SetFocus(); Start-Sleep -Milliseconds 300 }
+            if ([LocationPointer]::GetForegroundWindow() -ne $handle) { throw 'Own location window must be foreground for physical input' }
+        }
+        function LocationMapMarker {
+            LocationForeground
+            $rect = (Wait 'MapCanvas').Current.BoundingRectangle
+            [LocationPointer]::SetCursorPos([int]($rect.Left + $rect.Width * 0.5), [int]($rect.Top + $rect.Height * 0.285)) | Out-Null
+            [LocationPointer]::mouse_event(2,0,0,0,[UIntPtr]::Zero)
+            [LocationPointer]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
+            Start-Sleep -Milliseconds 500
+        }
+        function LocationKeyboard([string]$id) {
+            Add-Type -AssemblyName System.Windows.Forms
+            LocationForeground
+            (Wait $id).SetFocus()
+            if ([LocationPointer]::GetForegroundWindow() -ne [IntPtr]$script:window.Current.NativeWindowHandle) { throw 'Own location window must retain foreground for keyboard input' }
+            [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+            Start-Sleep -Milliseconds 200
+        }
+        function Locate([string]$prefix, [string]$scenario = 'success') {
+            SetText 'LocationScenario' $scenario
+            Click ($prefix + 'Location')
+            Status ($prefix + 'LocationStatus') 'übernommen'
+        }
+        function Nearby([string]$scenario = 'success') {
+            SetText 'NearbyScenario' $scenario
+            Click 'FindNearbyStops'
+            Status 'NearbyStatus' 'nahe Haltestellen gefunden'
+        }
+        function LocationRoundTrip {
+            Click 'SearchJourneys'; Click 'Journey0'; Wait 'JourneyDetailSection1' | Out-Null; Back; Back
+        }
+        Contains 'LocationCalls' '^0$'
+        SelectEndpoint 'Origin' 'Manual Start'; SelectEndpoint 'Destination' 'Manual Ziel'
+        LocationRoundTrip; Contains 'LocationCalls' '^0$'
+        Write-Output 'PASS manual route and navigation do not request location'
+        Locate 'Origin'; Contains 'OriginSelection' 'Aktueller Standort'; LocationRoundTrip
+        SelectEndpoint 'Origin' 'Manual start for located destination'
+        Locate 'Destination'; Contains 'DestinationSelection' 'Aktueller Standort'; LocationRoundTrip
+        SelectEndpoint 'Destination' 'Manual destination for location failures'
+        Contains 'LocationCalls' '^2$'
+        Locate 'Origin' 'reduced'; Contains 'OriginLocationStatus' 'ungefähr|Genauigkeit|ungenau'
+        foreach ($failure in @(
+            @('denied', 'nicht erlaubt'), @('disabled', 'deaktiviert'), @('unsupported', 'nicht unterstützt'),
+            @('timeout', 'zu lange'), @('unavailable', 'Keine aktuelle Position'), @('error', 'nicht ermittelt')
+        )) {
+            $retained = Name 'OriginSelection'
+            SetText 'LocationScenario' $failure[0]; Click 'OriginLocation'; Status 'OriginLocationStatus' $failure[1]
+            Assert ((Name 'OriginSelection') -eq $retained) ('Failed location retains completed endpoint: ' + $failure[0])
+            Assert ((Wait 'OriginLocation').Current.IsEnabled) ('Location retry enabled: ' + $failure[0])
+            SelectEndpoint 'Origin' ('Manual after ' + $failure[0]); LocationRoundTrip
+        }
+        Locate 'Origin'
+        SetText 'LocationScenario' 'denied'; Click 'OriginLocation'; Status 'OriginLocationStatus' 'nicht erlaubt'
+        SelectEndpoint 'Origin' 'After revoked permission'; LocationRoundTrip
+        Write-Output 'PASS fixture permission revocation, failure states, retained selection and manual recovery'
+        SetText 'LocationScenario' 'slow'; Click 'OriginLocation'; Status 'OriginLocationStatus' 'wird ermittelt'
+        SelectEndpoint 'Origin' 'Newest manual endpoint'
+        Start-Sleep -Seconds 6
+        Contains 'OriginSelection' 'Newest manual endpoint'
+        SetText 'LocationScenario' 'slow'; Click 'DestinationLocation'; Status 'DestinationLocationStatus' 'wird ermittelt'
+        Click 'OpenStopSearch'; Back
+        Start-Sleep -Seconds 6
+        Assert ((Name 'DestinationLocationStatus') -notmatch 'wird ermittelt') 'Page exit cancels pending location state'
+        SetText 'DestinationText' 'After back'; SelectEndpoint 'Destination' 'After back'
+        Locate 'Destination'; LocationRoundTrip
+        Write-Output 'PASS late endpoint responses and page exit do not overwrite new input'
+        $bounds = $script:window.Current.BoundingRectangle
+        $transform = $script:window.GetCurrentPattern([System.Windows.Automation.TransformPattern]::Pattern)
+        $transform.Resize(430,900)
+        SetText 'LocationScenario' 'success'; LocationKeyboard 'OriginLocation'; Status 'OriginLocationStatus' 'übernommen'
+        Assert ((Wait 'OriginLocation').Current.BoundingRectangle.Width -le 430) 'Location action fits narrow viewport'
+        Snapshot 'native-location-narrow'
+        $transform.Resize($bounds.Width,$bounds.Height)
+        Click 'OpenStopSearch'
+        Nearby
+        Contains 'StopMatch0' 'Umgebung Süd'; Contains 'StopMatch0' '225'
+        Contains 'StopMatch1' 'Umgebung Nord'; Contains 'StopMatch1' 'unbekannt'
+        Contains 'StopSearchMetadata' 'Nearby.*Datenalter:.*Fallback'
+        $bounds = $script:window.Current.BoundingRectangle
+        $transform = $script:window.GetCurrentPattern([System.Windows.Automation.TransformPattern]::Pattern)
+        $transform.Resize(430,900)
+        Assert ((Wait 'FindNearbyStops').Current.BoundingRectangle.Width -le 430) 'Nearby action fits narrow viewport'
+        Snapshot 'native-nearby-narrow'
+        $transform.Resize($bounds.Width,$bounds.Height)
+        Click 'StopMatch0'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-nearby-0'
+        Back; Click 'ShowStopMap'; Status 'MapStatus' 'Basiskarte geladen\.'
+        Contains 'MapDataStatus' '2 Haltestellen.*2 Kartenpositionen'
+        LocationMapMarker
+        Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-nearby-1'
+        Back; Click 'ShowMapList'; LocationKeyboard 'MapStation0'
+        Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-nearby-0'
+        Back; Back
+        Nearby 'nearby-missing'; Click 'ShowStopMap'
+        Contains 'MapDataStatus' '2 Haltestellen.*1 Kartenpositionen'
+        Click 'ShowMapList'; Contains 'MapStation1' 'Keine Kartenposition'; Click 'MapStation1'
+        Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-nearby-1'; Back; Back
+        SetText 'NearbyScenario' 'nearby-empty'; Click 'FindNearbyStops'; Status 'NearbyStatus' 'Keine Haltestellen'
+        Assert ($null -eq (Find 'StopMatch0')) 'Successful empty nearby result removes previous candidates'
+        Nearby
+        SetText 'NearbyScenario' 'nearby-error'; Click 'FindNearbyStops'; Status 'NearbyStatus' 'nicht geladen|fehlgeschlagen'
+        if (Find 'StopMatch0') { Contains 'NearbyStatus' 'vorher|bisher|letzte|bekannt' }
+        SetText 'StopQuery' 'Manual after nearby failure'; Click 'FindStops'; Click 'StopMatch0'
+        Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorStop' 'Manual after nearby failure'; Back
+        foreach ($failure in @(@('denied','nicht erlaubt'), @('timeout','zu lange'), @('unavailable','Keine aktuelle Position'))) {
+            SetText 'NearbyScenario' $failure[0]; Click 'FindNearbyStops'; Status 'NearbyStatus' $failure[1]
+            Assert ((Wait 'FindStops').Current.IsEnabled) ('Manual stop lookup enabled after ' + $failure[0])
+        }
+        SetText 'NearbyScenario' 'slow'; Click 'FindNearbyStops'; Status 'NearbyStatus' 'wird ermittelt'
+        SetText 'StopQuery' 'Newest manual stop'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null
+        Start-Sleep -Seconds 6
+        Contains 'StopMatch0' 'Newest manual stop'
+        SetText 'NearbyScenario' 'nearby-slow'; Click 'FindNearbyStops'; Status 'NearbyStatus' 'werden geladen'
+        SetText 'StopQuery' 'Cancel old nearby'
+        Nearby 'new'
+        Start-Sleep -Seconds 6
+        Contains 'StopMatch0' 'Neue Umgebung'; Contains 'StopSearchMetadata' 'Nearby new'
+        SetText 'NearbyScenario' 'slow'; Click 'FindNearbyStops'; Status 'NearbyStatus' 'wird ermittelt'
+        Back; Start-Sleep -Seconds 6; Wait 'OriginText' | Out-Null
+        Assert ($null -eq (Find 'MonitorStop')) 'Abandoned location never navigates to monitor'
+        Click 'OpenStopSearch'; Nearby; Click 'StopMatch0'; Status 'MonitorStatus' 'manuell aktualisiert'
+        Back; Back; Wait 'OriginText' | Out-Null
+        Write-Output 'PASS fixture location endpoints, failure/revocation, latest wins, nearby list/map/monitor, unknown distance/position, keyboard and back navigation'
+    } elseif ($LiveMaps) {
         Click 'OpenStopSearch'; SetText 'StopQuery' 'Gelsenkirchen Hbf'; Click 'FindStops'
         for ($attempt=0; $attempt -lt 120 -and !(Find 'StopMatch0'); $attempt++) { Start-Sleep -Milliseconds 500 }
         Write-Output ('LIVE stop: '+(Name 'StopMatch0')); Click 'ShowStopMap'

@@ -62,3 +62,5 @@ Schritt2 konfliktfrei in Basisbranch integriert; integrierten Branch sicher gel�
 17.09.2026: Schritt4 Lifecycle abgeschlossen (65179fa), Reviews archiviert d6ca720. 138 Tests/94,09% Coverage, native Karten-/Routing-/Monitorflüsse, echte NRW-Kartenprobe und schmale Ansicht erfolgreich. Projektabnahme Runde1 erfüllt; getrennte lokale Abnahme gemäß dokumentiertem Agentenlimit-Fallback. Keine fachlichen Klärungsrunden. Merge freigegeben.
 
 17.09.2026: Schritt4 konfliktfrei integriert, Schrittbranch sicher gelöscht. Schritt5 Standort In Arbeit, Klärungsrunden0/Abnahmerunden0. 4 von8 fertig.
+
+18.09.2026: Schritt5 implementiert; 165 Coretests/94,42% Abdeckung, Release und UiTest0/0, native Standort-/Routing-/Monitor-/Karten-Fixtures erfolgreich. Echte Windows-OS-Probe vor Start von automatischer Freigabeprüfung wegen sensibler Positionsübermittlung abgelehnt. Schritt5 Blockiert bis expliziter Freigabe; kein Merge/keine Projektabnahme. Unabhängige Adaptervorprüfung korrigiert, Gesamtprüfungen lokal nach erneutem Agentenlimit. Details blocked.md und Feature-continue.md.

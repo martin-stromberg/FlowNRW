@@ -1,5 +1,7 @@
 using FlowNRW.Core.Transit;
 using FlowNRW.Core.Maps;
+using FlowNRW.Core.Presentation;
+using System.ComponentModel;
 
 namespace FlowNRW;
 
@@ -7,6 +9,11 @@ namespace FlowNRW;
 internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingService, IDepartureService, IMapTileService
 {
     private readonly Dictionary<string, int> updates = [];
+    private readonly UiTestLocationServices? location;
+
+    /// <summary>Creates transit fixtures with an optional shared location scenario.</summary>
+    /// <param name="location">UiTest-only scenario controller.</param>
+    public UiTestFixtureServices(UiTestLocationServices? location = null) { this.location = location; }
 
     /// <inheritdoc />
     public async Task<MapTile> GetAsync(int zoom, int x, int y, CancellationToken cancellationToken)
@@ -62,9 +69,24 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
     }
 
     /// <inheritdoc />
-    public Task<ProviderResult<NearbyStopResult>> NearbyAsync(GeoCoordinate coordinate, CancellationToken cancellationToken = default)
+    public async Task<ProviderResult<NearbyStopResult>> NearbyAsync(GeoCoordinate coordinate, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(new ProviderResult<NearbyStopResult>());
+        var scenario = location?.Scenario ?? "success";
+        await Task.Delay(scenario == "nearby-slow" ? 6000 : 600);
+        var newest = coordinate.Latitude > 51.49;
+        var name = newest ? "Neue Umgebung" : "Umgebung";
+        return new ProviderResult<NearbyStopResult>
+        {
+            Items = scenario is "nearby-empty" or "nearby-error" ? [] :
+            [
+                new() { Stop = new Stop { Id = "fixture-nearby-0", Name = name + " Süd", Source = "fixture", Coordinate = new(51.45, 7.01) }, DistanceMeters = 225 },
+                new() { Stop = new Stop { Id = "fixture-nearby-1", Name = name + " Nord", Source = "fixture", Coordinate = scenario == "nearby-missing" ? null : new(51.46, 7.01) } }
+            ],
+            ErrorCode = scenario == "nearby-error" ? "fixture_unavailable" : null,
+            Source = "UI-Fixture Nearby " + (newest ? "new" : "original"),
+            RetrievedAt = DateTimeOffset.UtcNow.AddMinutes(-2),
+            IsFallback = true, IsStale = true, Warnings = ["fixture_warning"]
+        };
     }
 
     /// <inheritdoc />
@@ -122,5 +144,48 @@ internal sealed class UiTestMapTiles(MapViewModel model) : IMapTileService
             return new("", Error: true);
         if (name.Contains("map-slow")) await Task.Delay(6000, cancellationToken);
         return await images.GetAsync(zoom, x, y, cancellationToken);
+    }
+}
+
+/// <summary>Explicitly selected location scenarios compiled only for native UI tests.</summary>
+internal sealed class UiTestLocationServices : ICurrentLocationService, INotifyPropertyChanged
+{
+    private string scenario = "success";
+    private int calls;
+
+    /// <summary>Notifies native fixture controls of scenario and counter updates.</summary>
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>Selected deterministic scenario; never supplied to Release builds.</summary>
+    public string Scenario
+    {
+        get => scenario;
+        set { scenario = value.Trim().ToLowerInvariant(); PropertyChanged?.Invoke(this, new(nameof(Scenario))); }
+    }
+
+    /// <summary>Number of explicit location requests since this process started.</summary>
+    public int Calls => calls;
+
+    /// <inheritdoc />
+    public async Task<LocationResult> GetCurrentAsync(CancellationToken cancellationToken)
+    {
+        var selected = Scenario;
+        calls++;
+        PropertyChanged?.Invoke(this, new(nameof(Calls)));
+        // Deliberately non-cooperative to prove UI revisions also reject late completions.
+        await Task.Delay(selected == "slow" ? 6000 : 400);
+        var status = selected switch
+        {
+            "denied" => LocationStatus.Denied,
+            "disabled" => LocationStatus.Disabled,
+            "unsupported" => LocationStatus.Unsupported,
+            "timeout" => LocationStatus.Timeout,
+            "unavailable" => LocationStatus.Unavailable,
+            "error" => LocationStatus.Error,
+            _ => LocationStatus.Success
+        };
+        if (status != LocationStatus.Success) return new(status);
+        return new(LocationStatus.Success, new GeoCoordinate(selected == "new" ? 51.5 : 51.4556, 7.0116),
+            DateTimeOffset.UtcNow, selected == "reduced" ? 1000 : 30, selected == "reduced");
     }
 }
