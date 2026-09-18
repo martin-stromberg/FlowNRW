@@ -7,23 +7,34 @@ public sealed class StopMonitorViewModel : ObservableObject
 {
     private readonly IDepartureService departures;
     private readonly IDepartureNavigation navigation;
+    private readonly IStopSearchService nearby;
+    private readonly ICurrentLocationService? location;
     private CancellationTokenSource? request;
     private long revision;
     private bool opening;
+    private CancellationTokenSource? nearbyRequest;
+    private long nearbyRevision;
+    private bool nearbyActive;
 
     /// <summary>Creates an independent stop monitor session.</summary>
     /// <param name="search">Independent lookup service.</param>
     /// <param name="departures">Departure service.</param>
     /// <param name="navigation">Monitor navigation.</param>
     /// <param name="maxSearchLength">Configured search length.</param>
-    public StopMonitorViewModel(IStopSearchService search, IDepartureService departures, IDepartureNavigation navigation, int maxSearchLength)
+    /// <param name="location">Optional current-location provider.</param>
+    /// <param name="nearbySearch">Independent nearby lookup scope.</param>
+    public StopMonitorViewModel(IStopSearchService search, IDepartureService departures, IDepartureNavigation navigation, int maxSearchLength, ICurrentLocationService? location = null, IStopSearchService? nearbySearch = null)
     {
         Lookup = new EndpointViewModel(search, maxSearchLength);
         this.departures = departures;
         this.navigation = navigation;
+        this.location = location;
+        nearby = nearbySearch ?? search;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => SelectedStop is not null && !IsBusy,
             _ => SetStatus("Aktualisierung fehlgeschlagen. Bitte erneut versuchen."));
-        Lookup.PropertyChanged += (_, _) => { Notify(nameof(Stops)); Notify(nameof(SearchStatus)); };
+        Lookup.PropertyChanged += (_, _) => RefreshSearchBindings();
+        Lookup.Changed += OnLookupChanged;
+        NearbyCommand = new AsyncRelayCommand(FindNearbyAsync, () => !IsNearbyBusy && location is not null, _ => SetNearbyFailure("Nahe Haltestellen konnten nicht geladen werden."));
     }
 
     /// <summary>Retained stop lookup input.</summary>
@@ -33,12 +44,19 @@ public sealed class StopMonitorViewModel : ObservableObject
     {
         get
         {
-            return Lookup.Matches.Where(item => !string.IsNullOrWhiteSpace(item.Stop?.Id)).ToArray();
+            return nearbyActive ? NearbyStops : Lookup.Matches.Where(item => !string.IsNullOrWhiteSpace(item.Stop?.Id)).ToArray();
         }
     }
     /// <summary>Stop-specific search state.</summary>
-    public string SearchStatus => !Lookup.IsBusy && Lookup.Result is { ErrorCode: null } && Stops.Count == 0
+    public string SearchStatus => nearbyActive || IsNearbyBusy ? NearbyStatus : !Lookup.IsBusy && Lookup.Result is { ErrorCode: null } && Stops.Count == 0
         ? "Keine Haltestellen gefunden. Bitte Eingabe ändern." : Lookup.Status;
+    /// <summary>Provenance belonging to the currently displayed candidates.</summary>
+    public string SearchMetadata
+    {
+        get { return nearbyActive ? NearbyResult is null ? "" : JourneyPresentation.Metadata(NearbyResult) : Lookup.Metadata; }
+    }
+    /// <summary>Whether the location-to-nearby request chain is running.</summary>
+    public bool IsNearbyBusy { get; private set; }
     /// <summary>Complete selected stop identity.</summary>
     public Stop? SelectedStop { get; private set; }
     /// <summary>Selected stop title.</summary>
@@ -64,16 +82,96 @@ public sealed class StopMonitorViewModel : ObservableObject
     public string Status { get; private set; } = "Bitte eine Haltestelle auswählen.";
     /// <summary>Manual refresh action.</summary>
     public AsyncRelayCommand RefreshCommand { get; }
+    /// <summary>Finds stops around the explicitly requested current position.</summary>
+    public AsyncRelayCommand NearbyCommand { get; }
+    /// <summary>Nearby result status.</summary>
+    public string NearbyStatus { get; private set; } = "Standort nur nach Aktion verwenden.";
+    /// <summary>Current nearby candidates.</summary>
+    public IReadOnlyList<Address> NearbyStops { get; private set; } = [];
+    /// <summary>Nearby provenance.</summary>
+    public ProviderResult<NearbyStopResult>? NearbyResult { get; private set; }
+
+    private async Task FindNearbyAsync()
+    {
+        if (location is null) return;
+        CancelNearbyPending();
+        Lookup.CancelPending();
+        var version = nearbyRevision;
+        using var source = new CancellationTokenSource(); nearbyRequest = source;
+        IsNearbyBusy = true; NearbyStatus = "Standort wird ermittelt …"; RefreshSearchBindings();
+        try
+        {
+            var position = await location.GetCurrentAsync(source.Token);
+            if (version != nearbyRevision) return;
+            if (!position.HasCurrentPosition) { SetNearbyFailure(position.FailureDescription); return; }
+            NearbyStatus = "Nahe Haltestellen werden geladen …"; RefreshSearchBindings();
+            var result = await nearby.NearbyAsync(position.Coordinate!, source.Token);
+            if (version != nearbyRevision) return;
+            if (result.ErrorCode is not null) { SetNearbyFailure("Nahe Haltestellen konnten nicht geladen werden."); return; }
+            NearbyResult = result;
+            NearbyStops = result.Items.Where(x => !string.IsNullOrWhiteSpace(x.Stop?.Id)).Select(x => new Address { Name = x.Stop!.Name, Stop = x.Stop, Coordinate = x.Stop.Coordinate }).ToArray();
+            nearbyActive = true;
+            NearbyStatus = NearbyStops.Count == 0 ? "Keine Haltestellen in der Nähe gefunden." : $"{NearbyStops.Count} nahe Haltestellen gefunden.";
+            NearbyStatus += position.AccuracyDescription;
+        }
+        catch (OperationCanceledException) { if (version == nearbyRevision) SetNearbyFailure("Umgebungssuche abgebrochen."); }
+        catch (Exception) { if (version == nearbyRevision) SetNearbyFailure("Nahe Haltestellen konnten nicht geladen werden. Bitte erneut versuchen."); }
+        finally { if (version == nearbyRevision) { nearbyRequest = null; IsNearbyBusy = false; RefreshSearchBindings(); } }
+    }
+
+    /// <summary>Describes only an actual provider-supplied distance for an active candidate.</summary>
+    /// <param name="candidate">Current list candidate.</param>
+    /// <returns>Distance or an explicit unknown label.</returns>
+    public string DistanceLabel(Address candidate)
+    {
+        if (!nearbyActive || !NearbyStops.Any(item => ReferenceEquals(item, candidate))) return "";
+        var distance = NearbyResult?.Items.FirstOrDefault(item => ReferenceEquals(item.Stop, candidate.Stop))?.DistanceMeters;
+        return distance is { } meters && double.IsFinite(meters) && meters >= 0
+            ? $" · Entfernung: {meters.ToString("0", System.Globalization.CultureInfo.GetCultureInfo("de-DE"))} m" : " · Entfernung unbekannt";
+    }
+
+    /// <summary>Cancels pending nearby work while preserving completed candidates.</summary>
+    public void CancelNearbyPending()
+    {
+        nearbyRevision++;
+        nearbyRequest?.Cancel(); nearbyRequest = null;
+        if (IsNearbyBusy) SetNearbyFailure("Umgebungssuche abgebrochen.");
+        IsNearbyBusy = false;
+        NearbyCommand.InvalidateExecution();
+        RefreshSearchBindings();
+    }
+
+    private void OnLookupChanged(object? sender, EventArgs args)
+    {
+        CancelNearbyPending();
+        nearbyActive = false; NearbyStops = []; NearbyResult = null;
+        NearbyStatus = "Standort nur nach Aktion verwenden.";
+        RefreshSearchBindings();
+    }
+
+    private void SetNearbyFailure(string description)
+    {
+        NearbyStatus = description + (Stops.Count > 0 ? " Vorherige Ergebnisse werden angezeigt; keine neue Umgebung ermittelt." : "");
+        RefreshSearchBindings();
+    }
+
+    private void RefreshSearchBindings()
+    {
+        Notify(nameof(Stops)); Notify(nameof(SearchStatus)); Notify(nameof(SearchMetadata));
+        Notify(nameof(NearbyStatus)); Notify(nameof(NearbyResult)); Notify(nameof(NearbyStops)); Notify(nameof(IsNearbyBusy));
+        NearbyCommand?.Refresh();
+    }
 
     /// <summary>Opens an actual candidate and loads its departures.</summary>
     /// <param name="candidate">Complete selected lookup record.</param>
     /// <returns>Navigation and initial update completion.</returns>
     public async Task OpenAsync(Address candidate)
     {
-        if (opening || !Stops.Contains(candidate) || candidate.Stop is null) return;
+        if (opening || !Stops.Any(item => ReferenceEquals(item, candidate)) || candidate.Stop is null) return;
         opening = true;
+        CancelNearbyPending();
         CancelPending();
-        Lookup.SelectAddress(candidate);
+        if (!nearbyActive) Lookup.SelectAddress(candidate);
         SelectedStop = candidate.Stop;
         Result = null;
         LastAttempt = null;

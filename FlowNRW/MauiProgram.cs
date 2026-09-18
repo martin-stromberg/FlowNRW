@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using FlowNRW.Core.Transit;
 using FlowNRW.Core.Presentation;
 using FlowNRW.Core.Maps;
+using FlowNRW.Services;
 
 namespace FlowNRW;
 
@@ -71,15 +72,18 @@ public static class MauiProgram
         builder.Services.AddTransient<IStopSearchService, StopSearchService>();
         builder.Services.AddTransient<IRoutingService, RoutingService>();
         builder.Services.AddTransient<IDepartureService, DepartureService>();
+        builder.Services.AddSingleton<ICurrentLocationService, MauiCurrentLocationService>();
 #if UI_TEST_FIXTURES
+        builder.Services.AddSingleton<UiTestLocationServices>();
+        builder.Services.AddSingleton<ICurrentLocationService>(services => services.GetRequiredService<UiTestLocationServices>());
         builder.Services.AddTransient<IStopSearchService, UiTestFixtureServices>();
         builder.Services.AddTransient<IRoutingService, UiTestFixtureServices>();
         builder.Services.AddTransient<IDepartureService, UiTestFixtureServices>();
 #endif
         builder.Services.AddSingleton<IJourneyNavigation, ShellJourneyNavigation>();
         builder.Services.AddSingleton(services => new JourneySearchViewModel(
-            new EndpointViewModel(services.GetRequiredService<IStopSearchService>(), providerOptions.MaxSearchLength),
-            new EndpointViewModel(services.GetRequiredService<IStopSearchService>(), providerOptions.MaxSearchLength),
+            new EndpointViewModel(services.GetRequiredService<IStopSearchService>(), providerOptions.MaxSearchLength, services.GetRequiredService<ICurrentLocationService>()),
+            new EndpointViewModel(services.GetRequiredService<IStopSearchService>(), providerOptions.MaxSearchLength, services.GetRequiredService<ICurrentLocationService>()),
             services.GetRequiredService<IRoutingService>(), services.GetRequiredService<IJourneyNavigation>()));
         builder.Services.AddSingleton<ResultsViewModel>();
         builder.Services.AddSingleton<JourneyDetailViewModel>();
@@ -90,7 +94,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<IDepartureNavigation, ShellDepartureNavigation>();
         builder.Services.AddSingleton(services => new StopMonitorViewModel(
             services.GetRequiredService<IStopSearchService>(), services.GetRequiredService<IDepartureService>(),
-            services.GetRequiredService<IDepartureNavigation>(), providerOptions.MaxSearchLength));
+            services.GetRequiredService<IDepartureNavigation>(), providerOptions.MaxSearchLength,
+            services.GetRequiredService<ICurrentLocationService>(), services.GetRequiredService<IStopSearchService>()));
         builder.Services.AddSingleton<StopSearchPage>();
         builder.Services.AddTransient<DeparturePage>();
         var mapOptions = new MapOptions

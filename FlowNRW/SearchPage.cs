@@ -13,7 +13,20 @@ public sealed class SearchPage : ContentPage
         this.model = model; BindingContext = model; Title = "Verbindung suchen";
         var content = new VerticalStackLayout { Padding = 16, Spacing = 16 };
         content.Children.Add(new Label { Text = "FlowNRW · Deine Verbindung", FontSize = 28, FontAttributes = FontAttributes.Bold });
-        content.Children.Add(new Label { Text = "Start und Ziel manuell wählen. Adresse, Haltestelle oder Koordinate." });
+        content.Children.Add(new Label { Text = "Start und Ziel wählen: Adresse, Haltestelle, Koordinate oder aktueller Standort." });
+#if UI_TEST_FIXTURES
+        Loaded += (_, _) =>
+        {
+            if (content.Children.Any(child => child.AutomationId == "LocationScenario")) return;
+            var fixture = Handler!.MauiContext!.Services.GetRequiredService<UiTestLocationServices>();
+            var scenario = new Entry { AutomationId = "LocationScenario", BindingContext = fixture };
+            scenario.SetBinding(Entry.TextProperty, nameof(fixture.Scenario));
+            var calls = new Label { AutomationId = "LocationCalls", BindingContext = fixture };
+            calls.SetBinding(Label.TextProperty, nameof(fixture.Calls));
+            content.Children.Insert(0, calls);
+            content.Children.Insert(0, scenario);
+        };
+#endif
         content.Children.Add(Endpoint(model.Origin, "Origin", "Start"));
         content.Children.Add(Endpoint(model.Destination, "Destination", "Ziel"));
         var search = new Button { Text = "Verbindungen suchen", AutomationId = "SearchJourneys", Command = model.SearchCommand };
@@ -41,6 +54,8 @@ public sealed class SearchPage : ContentPage
         coordinates.Children.Add(new Label { Text = "Länge (−180 bis 180)" });
         var longitude = new Entry { Placeholder = "z. B. 7,0116", AutomationId = prefix + "Longitude", Keyboard = Keyboard.Numeric }; longitude.SetBinding(Entry.TextProperty, nameof(endpoint.Longitude)); coordinates.Children.Add(longitude); layout.Children.Add(coordinates);
         layout.Children.Add(new Button { Text = "Suchen / Koordinate übernehmen", AutomationId = prefix + "Search", Command = endpoint.SearchCommand });
+        layout.Children.Add(new Button { Text = "Aktuellen Standort verwenden", AutomationId = prefix + "Location", Command = endpoint.LocationCommand, LineBreakMode = LineBreakMode.WordWrap });
+        var locationStatus = new Label { AutomationId = prefix + "LocationStatus" }; locationStatus.SetBinding(Label.TextProperty, nameof(endpoint.LocationStatus)); layout.Children.Add(locationStatus);
         var busy = new ActivityIndicator { AutomationId = prefix + "Busy" }; busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(endpoint.IsBusy)); layout.Children.Add(busy);
         var status = new Label { AutomationId = prefix + "Status" }; status.SetBinding(Label.TextProperty, nameof(endpoint.Status)); layout.Children.Add(status);
         var matches = new VerticalStackLayout { Spacing = 8, AutomationId = prefix + "Matches" }; layout.Children.Add(matches);

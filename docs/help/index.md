@@ -5,6 +5,7 @@
 ## Fahrplanauskunft
 
 - [Fahrplanauskunft](fahrplanauskunft/index.md) — Technische und fachliche Dokumentation der bundesweiten und regionalen ÖPNV-Datenversorgung.
+- [Standort](standort/index.md) — Aktueller Start/Ziel, nahe Haltestellen und Standortberechtigungen.
 
 ## Verbindungssuche
 
