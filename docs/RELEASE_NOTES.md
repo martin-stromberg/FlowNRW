@@ -6,7 +6,7 @@
 
 ## What's New
 
-- Explicit foreground location for journey endpoints and nearby stops, shared list/map selections and cancellation of superseded requests. Native Windows fixture tests pass; the real-location probe awaits approval, and iOS device acceptance remains with the user.
+- Explicit foreground location for journey endpoints and nearby stops, shared list/map selections and cancellation of superseded requests. Native Windows fixture tests and the authorized real-location probe pass; iOS device acceptance remains with the user.
 
 - Interactive stop maps and supplied journey geometries with native list access, manual map recovery and bounded HTTPS tile caching.
 
@@ -28,7 +28,7 @@
 
 ## Neuerungen
 
-- Expliziter Standort für Start/Ziel und nahe Haltestellen mit gemeinsamer Listen-/Kartenauswahl und Abbruch veralteter Anfragen. Native Windows-Fixturetests bestanden; echte Standortprobe wartet auf Freigabe, iOS-Geräteabnahme bleibt beim Nutzer.
+- Expliziter Standort für Start/Ziel und nahe Haltestellen mit gemeinsamer Listen-/Kartenauswahl und Abbruch veralteter Anfragen. Native Windows-Fixturetests und freigegebene echte Standortprobe bestanden; iOS-Geräteabnahme bleibt beim Nutzer.
 
 - Interaktive Haltestellenkarte und gelieferte Verbindungsverläufe mit nativer Listenalternative, Kartenfehlerbehandlung und begrenztem HTTPS-Kachelcache.
 

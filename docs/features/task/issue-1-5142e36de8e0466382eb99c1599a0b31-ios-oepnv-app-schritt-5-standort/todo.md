@@ -14,17 +14,17 @@ Basisbranch: `task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app`
 | [x] | Unabhängige Planprüfung | plan-check.md |
 | [x] | Planungscommit | ef228c9 |
 | [x] | Implementierung | Code |
-| [x] | Planreview | review.md, OS-Probe offen |
+| [x] | Planreview | review.md, vollständig umgesetzt |
 | [x] | Usabilityreview | review-usability.md |
 | [x] | Codereview | review-code.md |
-| [ ] | Tests einschließlich nativer UI/OS-Probe | test-results.md |
-| [x] | Iteration/Abschluss entscheiden | OS-Test wartet auf Freigabe, kein Abschluss |
-| [x] | Folgeaufgaben prüfen, bei Bedarf festhalten | continue.md |
+| [x] | Tests einschließlich nativer UI/OS-Probe | test-results.md |
+| [x] | Iteration/Abschluss entscheiden | Alle Prüfungen grün, unabhängige Abnahme erfüllt |
+| [x] | Folgeaufgaben prüfen, bei Bedarf festhalten | continue-done.md |
 | [x] | Dauerhafte Hilfe/iOS-Anleitung | docs/help |
 | [x] | README aktualisieren | README.md |
 | [x] | Release Notes aktualisieren | docs/RELEASE_NOTES.md |
-| [ ] | Feature-Artefakte nach vollständigem Abschluss archivieren/entfernen | Git |
-| [ ] | Abschlusscommit | Git |
+| [x] | Feature-Artefakte nach vollständigem Abschluss archivieren/entfernen | Archivierungscommit vor Entfernung |
+| [x] | Abschlusscommit | Produkt 5b96d81, Abschluss nach Archivierung |
 
 ## Fortsetzung 18.09.2026
 

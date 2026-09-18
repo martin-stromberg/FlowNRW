@@ -1,7 +1,7 @@
-## 2026-09-18 — Standort und nahe Haltestellen (OS-Probe noch offen)
+## 2026-09-18 — Standort und nahe Haltestellen
 
 - Standort als Start/Ziel sowie nahe Haltestellen in Liste und Karte ergänzt. Fehlgeschlagene Anfragen erhalten bestehende Auswahl; manuelle Änderungen und Navigation verwerfen verspätete Antworten.
-- 165 Coretests und native Windows-Standort-, Routing-, Monitor- und Karten-Fixtures bestanden. Echte Windows-Standortprobe durch automatische Freigabeprüfung wegen möglicher Positionsübermittlung blockiert; noch keine fachliche Schritt-Abnahme.
+- 165 Coretests und native Windows-Standort-, Routing-, Monitor- und Karten-Fixtures bestanden. Nach ausdrücklicher Nutzerfreigabe lieferte auch die echte Windows-Standortprobe eine Position; tatsächliche Nahbereichssuche und Monitorauswahl erfolgreich.
 - iOS-WhenInUse-Beschreibung, Berechtigungszustände und Geräteprüfanleitung ergänzt.
 
 ## 2026-09-17 — Interaktive Haltestellenkarte und Verbindungsverläufe

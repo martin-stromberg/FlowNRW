@@ -1,0 +1,5 @@
+PASS Release has no fixture scenario control
+PASS OS location accepted as endpoint (coordinates omitted)
+PASS Real nearby candidate opens monitor (identity omitted)
+OS RESULT current position and real nearby selection available; provider departure status not disclosed
+OS probe finished without storing coordinates, nearby identities or screenshots; this is separate from fixture coverage

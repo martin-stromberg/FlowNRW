@@ -16,7 +16,7 @@
 | 12 | E2E | Standort-Fixtures ausschließlich im UiTest-Build ergänzen | Erledigt | checks-2026-09-18.md |
 | 13 | E2E | Native Standort-/Nearby-Erfolgs- und Fehlerflüsse ausführen | Erledigt | checks-2026-09-18.md |
 | 14 | E2E | Native Revisions-/Navigations- und Regressionstests ausführen | Erledigt | checks-2026-09-18.md |
-| 15 | Plattformtest | Reale Windows-OS-Probe ohne sensible Protokolle ausführen | Blockiert | Automatische Freigabeprüfung vor Live-Aufruf |
+| 15 | Plattformtest | Reale Windows-OS-Probe ohne sensible Protokolle ausführen | Erledigt | native-location-os.txt, nach ausdrücklicher Nutzerfreigabe |
 | 16 | Qualität | Coverage, Format, XML-Prüfung und Release-Build ausführen | Erledigt | checks-2026-09-18.md |
 | 17 | Dokumentation | Hilfe, Datenschutz und iOS-Prüfanleitung erstellen | Erledigt | checks-2026-09-18.md |
 | 18 | Dokumentation | README/Release Notes/changes.log aktualisieren | Erledigt | checks-2026-09-18.md |
