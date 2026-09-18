@@ -66,3 +66,5 @@ Schritt2 konfliktfrei in Basisbranch integriert; integrierten Branch sicher gel�
 18.09.2026: Schritt5 implementiert; 165 Coretests/94,42% Abdeckung, Release und UiTest0/0, native Standort-/Routing-/Monitor-/Karten-Fixtures erfolgreich. Echte Windows-OS-Probe vor Start von automatischer Freigabeprüfung wegen sensibler Positionsübermittlung abgelehnt. Schritt5 Blockiert bis expliziter Freigabe; kein Merge/keine Projektabnahme. Unabhängige Adaptervorprüfung korrigiert, Gesamtprüfungen lokal nach erneutem Agentenlimit. Details blocked.md und Feature-continue.md.
 
 18.09.2026: Nutzer genehmigt tatsächlichen Standortabruf und Datenübermittlung ausdrücklich. Release-Live-Test erfolgreich: Windows liefert Position, reale nahe Haltestelle öffnet Monitor. Keine privaten Positionsdaten gespeichert. Blockade erledigt. Unabhängige Projektabnahme Runde1 für 5b96d81 vollständig erfüllt; keine Abweichungen, Klärungsrunden0. Archivierung und Merge freigegeben.
+
+18.09.2026: Schritt5 mit Abschluss ff060d5 konfliktfrei in den Projektbasisbranch integriert. Standortblockade entfernt, 5 von8 fertig. Schritt6 Favoriten/Startseitenmonitore In Arbeit, Klärungsrunden0/Abnahmerunden0.

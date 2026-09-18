@@ -8,10 +8,9 @@ Branch: `task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app`
 | 2 | Manuelle bundesweite Verbindungssuche mit NRW-Echtzeit | 1 | `task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app-schritt-2-verbindungssuche` | Fertig |
 | 3 | Haltestellensuche und manuell aktualisierter Abfahrtsmonitor | 2 | `task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app-schritt-3-abfahrtsmonitore` | Fertig |
 | 4 | Interaktive Haltestellenkarte und gelieferte Linienverläufe | 2, 3 | `task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app-schritt-4-umgebungskarte` | Fertig |
-| 5 | Aktueller Standort und nahe Haltestellen | 2, 3, 4 | `task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app-schritt-5-standort` | Blockiert |
-| 6 | Favoriten und nach Entfernung sortierte Startseitenmonitore | 3, 5 | `task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app-schritt-6-favoriten` | Offen |
+| 5 | Aktueller Standort und nahe Haltestellen | 2, 3, 4 | `task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app-schritt-5-standort` | Fertig |
+| 6 | Favoriten und nach Entfernung sortierte Startseitenmonitore | 3, 5 | `task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app-schritt-6-favoriten` | In Arbeit |
 | 7 | Konfigurierbare automatische Monitoraktualisierung | 3, 6 | `task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app-schritt-7-monitorintervalle` | Offen |
 | 8 | Hintergrundaktualisierung und Wiederaufnahme der vollständigen App | 2, 3, 4, 5, 6, 7 | `task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app-schritt-8-hintergrund` | Offen |
-
 
 
