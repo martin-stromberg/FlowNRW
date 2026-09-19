@@ -70,3 +70,5 @@ Schritt2 konfliktfrei in Basisbranch integriert; integrierten Branch sicher gel�
 18.09.2026: Schritt5 mit Abschluss ff060d5 konfliktfrei in den Projektbasisbranch integriert. Standortblockade entfernt, 5 von8 fertig. Schritt6 Favoriten/Startseitenmonitore In Arbeit, Klärungsrunden0/Abnahmerunden0.
 
 19.09.2026: Schritt6 Produktcommit 1edca4b, unabhängige Projektabnahme Runde1 vollständig erfüllt. 173 Coretests/92,57 % Coverage, native Favoriten mit vier Prozessstarts sowie alle Routing-/Monitor-/Karten-/Standortregressionen bestanden. Release/UiTest ohne Warnungen und Fehler, Format/XML bestanden. Keine fachlichen Klärungsrunden. Reviews über Git-Historie gesichert, dauerhafte Nachweise unter docs/help/favoriten/verification; Lifecycleabschluss und Merge freigegeben.
+
+19.09.2026: Schritt6 mit Abschluss71690db konfliktfrei integriert, integrierten Schrittbranch sicher gelöscht. 6 von8 fertig. Schritt7 Monitorintervalle In Arbeit, Klärungsrunden0/Abnahmerunden0.
