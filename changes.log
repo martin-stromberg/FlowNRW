@@ -1,3 +1,9 @@
+## 2026-09-19 — Favoriten und Startseitenmonitore
+
+- Technische Haltestellenfavoriten dauerhaft speichern und entfernen; neue Startseite mit unabhängigen Abfahrtstafeln und expliziter Luftliniensortierung.
+- Fehler erhalten gespeicherte Favoriten beziehungsweise letzte Abfahrten; entfernte Karten und alte Kartenauswahlen werden zuverlässig verworfen.
+- 173 Coretests und alle fünf nativen Windows-Testläufe bestanden, einschließlich vier echter Prozessstarts für Persistenz. iOS-Geräteabnahme bleibt beim Nutzer.
+
 ## 2026-09-18 — Standort und nahe Haltestellen
 
 - Standort als Start/Ziel sowie nahe Haltestellen in Liste und Karte ergänzt. Fehlgeschlagene Anfragen erhalten bestehende Auswahl; manuelle Änderungen und Navigation verwerfen verspätete Antworten.
