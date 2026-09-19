@@ -68,3 +68,5 @@ Schritt2 konfliktfrei in Basisbranch integriert; integrierten Branch sicher gel�
 18.09.2026: Nutzer genehmigt tatsächlichen Standortabruf und Datenübermittlung ausdrücklich. Release-Live-Test erfolgreich: Windows liefert Position, reale nahe Haltestelle öffnet Monitor. Keine privaten Positionsdaten gespeichert. Blockade erledigt. Unabhängige Projektabnahme Runde1 für 5b96d81 vollständig erfüllt; keine Abweichungen, Klärungsrunden0. Archivierung und Merge freigegeben.
 
 18.09.2026: Schritt5 mit Abschluss ff060d5 konfliktfrei in den Projektbasisbranch integriert. Standortblockade entfernt, 5 von8 fertig. Schritt6 Favoriten/Startseitenmonitore In Arbeit, Klärungsrunden0/Abnahmerunden0.
+
+19.09.2026: Schritt6 Produktcommit 1edca4b, unabhängige Projektabnahme Runde1 vollständig erfüllt. 173 Coretests/92,57 % Coverage, native Favoriten mit vier Prozessstarts sowie alle Routing-/Monitor-/Karten-/Standortregressionen bestanden. Release/UiTest ohne Warnungen und Fehler, Format/XML bestanden. Keine fachlichen Klärungsrunden. Reviews über Git-Historie gesichert, dauerhafte Nachweise unter docs/help/favoriten/verification; Lifecycleabschluss und Merge freigegeben.

@@ -3,6 +3,7 @@ using FlowNRW.Core.Transit;
 using FlowNRW.Core.Presentation;
 using FlowNRW.Core.Maps;
 using FlowNRW.Services;
+using FlowNRW.Core.Favorites;
 
 namespace FlowNRW;
 
@@ -98,6 +99,19 @@ public static class MauiProgram
             services.GetRequiredService<ICurrentLocationService>(), services.GetRequiredService<IStopSearchService>()));
         builder.Services.AddSingleton<StopSearchPage>();
         builder.Services.AddTransient<DeparturePage>();
+        builder.Services.AddSingleton<IFavoriteStore>(services =>
+        {
+#if UI_TEST_FIXTURES
+            var path = Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_FAVORITES")
+                ?? Path.Combine(FileSystem.CacheDirectory, "UiTest", "favorites.json");
+            return new UiTestFavoriteStore(new JsonFavoriteStore(path), services.GetRequiredService<UiTestLocationServices>());
+#else
+            return new JsonFavoriteStore(Path.Combine(FileSystem.AppDataDirectory, "favorites.json"));
+#endif
+        });
+        builder.Services.AddSingleton(services => new FavoriteHomeViewModel(services.GetRequiredService<IFavoriteStore>(),
+            () => services.GetRequiredService<IDepartureService>(), services.GetRequiredService<ICurrentLocationService>()));
+        builder.Services.AddSingleton<HomePage>();
         var mapOptions = new MapOptions
         {
             TileUrl = builder.Configuration["Map:TileUrl"] ?? "https://tile.openstreetmap.org/{z}/{x}/{y}.png",

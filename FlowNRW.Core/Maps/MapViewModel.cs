@@ -1,5 +1,6 @@
 using FlowNRW.Core.Presentation;
 using FlowNRW.Core.Transit;
+using FlowNRW.Core.Favorites;
 
 namespace FlowNRW.Core.Maps;
 
@@ -31,6 +32,7 @@ public sealed record MapStation(int Index, Address Candidate)
 public sealed class MapViewModel
 {
     private readonly StopMonitorViewModel monitor;
+    private Func<int, Task>? favoriteSelection;
     /// <summary>Creates the map session.</summary>
     /// <param name="monitor">Existing stop lookup and monitor session.</param>
     public MapViewModel(StopMonitorViewModel monitor) { this.monitor = monitor; Reset(); }
@@ -58,6 +60,20 @@ public sealed class MapViewModel
         Metadata = monitor.SearchMetadata;
         Status = Stations.Count == 0 ? "Keine Haltestellen vorhanden. Bitte zuerst suchen."
             : $"{Stations.Count} Haltestellen · {Stations.Count(item => item.Position is not null)} Kartenpositionen. Auswahl öffnet die Abfahrten.";
+    }
+
+    /// <summary>Captures current favorite cards while revalidating membership on selection.</summary>
+    /// <param name="home">Authoritative favorite session.</param>
+    public void ShowFavorites(FavoriteHomeViewModel home)
+    {
+        Reset();
+        var cards = home.Cards.ToArray();
+        Title = "Favoritenkarte";
+        Stations = cards.Select((card, index) => new MapStation(index, new Address { Name = card.Stop.Name, Stop = card.Stop, Coordinate = card.Stop.Coordinate })).ToArray();
+        Metadata = "Gespeicherte technische Haltestellen. Abfahrten werden nach Auswahl geladen.";
+        Status = Stations.Count == 0 ? "Keine Favoriten vorhanden. Bitte zuerst eine Haltestelle speichern."
+            : $"{Stations.Count} Favoriten · {Stations.Count(item => item.Position is not null)} Kartenpositionen. Auswahl öffnet die Abfahrten.";
+        favoriteSelection = index => monitor.OpenFavoriteAsync(home, cards[index]);
     }
 
     /// <summary>Captures one selected journey without fabricating missing segments.</summary>
@@ -97,7 +113,7 @@ public sealed class MapViewModel
     /// <param name="index">Local marker/list index.</param>
     /// <returns>Navigation completion.</returns>
     public Task SelectAsync(string session, int index) => session == Session && index >= 0 && index < Stations.Count
-        ? monitor.OpenAsync(Stations[index].Candidate) : Task.CompletedTask;
+        ? favoriteSelection is null ? monitor.OpenAsync(Stations[index].Candidate) : favoriteSelection(index) : Task.CompletedTask;
 
     /// <summary>Tests the supported Web Mercator latitude range.</summary>
     /// <param name="coordinate">Optional validated WGS84 coordinate.</param>
@@ -107,6 +123,7 @@ public sealed class MapViewModel
     private void Reset()
     {
         Session = Guid.NewGuid().ToString("N");
+        favoriteSelection = null;
         Stations = []; Segments = []; Endpoints = [];
     }
 }

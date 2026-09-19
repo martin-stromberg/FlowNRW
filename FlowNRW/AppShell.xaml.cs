@@ -9,10 +9,12 @@ public partial class AppShell : Shell
     /// Initializes a new instance of the <see cref="AppShell"/> class.
     /// </summary>
     /// <param name="search">Composed search page.</param>
-    public AppShell(SearchPage search)
+    /// <param name="home">Favorite departure boards.</param>
+    public AppShell(SearchPage search, HomePage home)
     {
         InitializeComponent();
-        Items.Add(new ShellContent { Title = "Suche", Route = "search", Content = search });
+        Items.Add(new ShellContent { Title = "Start", Route = "home", Content = home });
+        Routing.RegisterRoute("search", typeof(SearchPage));
         Routing.RegisterRoute("results", typeof(ResultsPage));
         Routing.RegisterRoute("detail", typeof(JourneyDetailPage));
         Routing.RegisterRoute("stops", typeof(StopSearchPage));
