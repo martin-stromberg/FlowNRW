@@ -1,0 +1,7 @@
+# Bestand Favoriten – 19.09.2026
+
+Schritte1–5 sind integriert. Shell startet SearchPage; Stops/Monitor/Map sind relative Detailrouten. StopMonitorViewModel validiert aktuelle Kandidaten per Referenz. DepartureService ist je Instanz latest-request-wins; parallele Favoriten benötigen eigene Instanzen. Source/Id/Dhid/Name/Coordinate am Stop sind vorhanden. DeparturePresentation und JourneyPresentation formatieren Echtzeit und Quelle. ICurrentLocationService liefert aktuelle explizit angeforderte Positionen, LocationResult validiert Frische.
+
+Keine Favoritenpersistenz oder Startseitenmonitore vorhanden. .NET10 Core kann einen JSON-Dateispeicher testen; MAUI liefert ausschließlich den AppData-Pfad. Sourcegenerated JSON für iOS verwenden. Persistiert werden nur technische Stops, keine Abfahrten oder aktuelle Nutzerposition. Native Windows-Harness startet derzeit bei OriginText und braucht neue Navigation über Home. UiTest-Servicekonfiguration und Szenarioeingaben dürfen ausschließlich dort existieren; Testdatei getrennt von Release.
+
+Core 165Tests, aktuelle native Routing/Monitor/Map/Location-Fixtures bestanden. Nutzer hat Live-Standortabruf samt Providerübermittlung erlaubt. Windows-CI erhalten, native iOS-Geräteprüfung beim Nutzer, kein IIS/Deployment. Fremde .gitignore und design-draft.zip nicht ändern. Planungsagent fiel am Nutzungslimit aus; getrennte lokale Phasen gemäß Skillfallback.
