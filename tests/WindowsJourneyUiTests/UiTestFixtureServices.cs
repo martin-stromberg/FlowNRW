@@ -2,6 +2,7 @@ using FlowNRW.Core.Transit;
 using FlowNRW.Core.Maps;
 using FlowNRW.Core.Presentation;
 using System.ComponentModel;
+using FlowNRW.Core.Favorites;
 
 namespace FlowNRW;
 
@@ -28,9 +29,12 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
     {
         var count = updates.GetValueOrDefault(stop.Name) + 1;
         updates[stop.Name] = count;
-        await Task.Delay(stop.Name.Contains("monitor-slow") ? 6000 : 700);
+        var scenario = location?.Scenario ?? "success";
+        location?.RecordDeparture(stop.Id);
+        var favoriteTarget = stop.Id == "fixture-favorite-far-0";
+        await Task.Delay(stop.Name.Contains("monitor-slow") || favoriteTarget && scenario == "favorite-slow" ? 6000 : 700);
         var sequence = stop.Name.Contains("monitor-sequence");
-        var error = stop.Name.Contains("monitor-error") || sequence && count == 3;
+        var error = stop.Name.Contains("monitor-error") || sequence && count == 3 || favoriteTarget && scenario == "favorite-error";
         var empty = stop.Name.Contains("monitor-empty") || sequence && count == 4;
         return new ProviderResult<StopEvent>
         {
@@ -106,9 +110,12 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
 
     private static Address Candidate(string text, int index)
     {
-        var coordinate = text.Contains("map-missing") ? null : new GeoCoordinate(51.45 + index * .01, 7.01);
+        var favorite = text.StartsWith("Favorite ", StringComparison.Ordinal);
+        var kind = favorite ? text[9..].ToLowerInvariant() : "";
+        var coordinate = text.Contains("map-missing") || kind == "missing" ? null :
+            new GeoCoordinate(kind == "far" ? 51.5 : kind == "near" ? 51.4555 : 51.45 + index * .01, 7.01);
         return new Address { Name = text + " Treffer " + index, Coordinate = coordinate,
-            Stop = text.Contains("Adresse") ? null : new Stop { Id = "fixture-" + index, Name = text, Source = "fixture", Dhid = "de:05113:001:" + index, Coordinate = coordinate } };
+            Stop = text.Contains("Adresse") ? null : new Stop { Id = favorite ? "fixture-favorite-" + kind + "-" + index : "fixture-" + index, Name = text, Source = "fixture", Dhid = "de:05113:001:" + index, Coordinate = coordinate } };
     }
 
     private static Journey Route(DateTimeOffset time, string line, Address origin, Address destination)
@@ -152,6 +159,21 @@ internal sealed class UiTestLocationServices : ICurrentLocationService, INotifyP
 {
     private string scenario = "success";
     private int calls;
+    private readonly Dictionary<string, int> departureCalls = [];
+
+    /// <summary>Per-stop invocation counts, available only in UiTest UI.</summary>
+    public string DepartureCalls
+    {
+        get { return string.Join(";", departureCalls.OrderBy(pair => pair.Key).Select(pair => pair.Key + "=" + pair.Value)); }
+    }
+
+    /// <summary>Records a native fixture departure request before its asynchronous completion.</summary>
+    /// <param name="stopId">Synthetic fixture identity.</param>
+    public void RecordDeparture(string stopId)
+    {
+        departureCalls[stopId] = departureCalls.GetValueOrDefault(stopId) + 1;
+        PropertyChanged?.Invoke(this, new(nameof(DepartureCalls)));
+    }
 
     /// <summary>Notifies native fixture controls of scenario and counter updates.</summary>
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -187,5 +209,21 @@ internal sealed class UiTestLocationServices : ICurrentLocationService, INotifyP
         if (status != LocationStatus.Success) return new(status);
         return new(LocationStatus.Success, new GeoCoordinate(selected == "new" ? 51.5 : 51.4556, 7.0116),
             DateTimeOffset.UtcNow, selected == "reduced" ? 1000 : 30, selected == "reduced");
+    }
+}
+/// <summary>UiTest-only storage fault injection wrapping the same JSON implementation as Release.</summary>
+/// <param name="inner">Isolated test file store.</param>
+/// <param name="scenario">Shared explicit fixture control.</param>
+/// <returns>Storage fixture with genuine underlying persistence.</returns>
+internal sealed class UiTestFavoriteStore(IFavoriteStore inner, UiTestLocationServices scenario) : IFavoriteStore
+{
+    /// <inheritdoc />
+    public Task<IReadOnlyList<Stop>> LoadAsync(CancellationToken cancellationToken = default) => inner.LoadAsync(cancellationToken);
+
+    /// <inheritdoc />
+    public Task SaveAsync(IReadOnlyList<Stop> stops, CancellationToken cancellationToken = default)
+    {
+        if (scenario.Scenario == "store-error") throw new IOException("Synthetic UiTest write failure.");
+        return inner.SaveAsync(stops, cancellationToken);
     }
 }

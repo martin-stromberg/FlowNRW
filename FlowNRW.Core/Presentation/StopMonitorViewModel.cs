@@ -1,4 +1,5 @@
 using FlowNRW.Core.Transit;
+using FlowNRW.Core.Favorites;
 
 namespace FlowNRW.Core.Presentation;
 
@@ -168,11 +169,24 @@ public sealed class StopMonitorViewModel : ObservableObject
     public async Task OpenAsync(Address candidate)
     {
         if (opening || !Stops.Any(item => ReferenceEquals(item, candidate)) || candidate.Stop is null) return;
+        if (!nearbyActive) Lookup.SelectAddress(candidate);
+        await OpenStopAsync(candidate.Stop);
+    }
+
+    /// <summary>Opens an exact currently saved favorite without weakening search membership.</summary>
+    /// <param name="home">Authoritative favorite session.</param>
+    /// <param name="card">Current saved card instance.</param>
+    /// <returns>Navigation and first departure refresh completion.</returns>
+    public Task OpenFavoriteAsync(FavoriteHomeViewModel home, FavoriteMonitorViewModel card) => home.Contains(card)
+        ? OpenStopAsync(card.Stop) : Task.CompletedTask;
+
+    private async Task OpenStopAsync(Stop stop)
+    {
+        if (opening) return;
         opening = true;
         CancelNearbyPending();
         CancelPending();
-        if (!nearbyActive) Lookup.SelectAddress(candidate);
-        SelectedStop = candidate.Stop;
+        SelectedStop = stop;
         Result = null;
         LastAttempt = null;
         SetStatus("Abfahrten werden geladen …");

@@ -1,7 +1,13 @@
-﻿param([string]$Exe, [switch]$Inspect, [string]$ScreenshotDirectory, [switch]$Monitors, [switch]$LiveMonitors, [switch]$Maps, [switch]$LiveMaps, [switch]$Locations, [switch]$LiveLocations)
+﻿param([string]$Exe, [switch]$Inspect, [string]$ScreenshotDirectory, [switch]$Monitors, [switch]$LiveMonitors, [switch]$Maps, [switch]$LiveMaps, [switch]$Locations, [switch]$LiveLocations, [switch]$Favorites)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
+$previousFavoritePath = $env:FLOWNRW_UI_TEST_FAVORITES
+if ($Favorites) {
+    $testDirectory = Join-Path (Get-Location) ('artifacts/tests/favorites/' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $testDirectory -Force | Out-Null
+    $env:FLOWNRW_UI_TEST_FAVORITES = Join-Path $testDirectory 'favorites.json'
+}
 $app = Start-Process -FilePath $Exe -PassThru -WindowStyle Hidden
 try {
     $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty, $app.Id)
@@ -62,9 +68,137 @@ public static class NativeWindowCapture {
             $bitmap.Save((Join-Path $ScreenshotDirectory ($name + '.png')), [Drawing.Imaging.ImageFormat]::Png)
         } finally { $graphics.Dispose(); $bitmap.Dispose() }
     }
-    Wait 'OriginText' | Out-Null
-    if (!$LiveLocations) { Snapshot 'native-search' }
-    if ($LiveLocations) {
+    Wait 'OpenJourneySearch' | Out-Null
+    if (!$Favorites) { Click 'OpenJourneySearch'; Wait 'OriginText' | Out-Null }
+    if (!$LiveLocations -and !$Favorites) { Snapshot 'native-search' }
+    if ($Favorites) {
+        function FavoriteCount([int]$expected) { Status 'FavoriteCount' ('\b' + $expected + '\b'); Assert ($true) ('Favorite count is ' + $expected) }
+        function HomeReady { Wait 'OpenHomeStops' | Out-Null; Wait 'HomeStatus' | Out-Null; Start-Sleep -Milliseconds 500 }
+        function BackHome { Back; Back; HomeReady }
+        function FindFavoriteMonitor([string]$query) {
+            Click 'OpenHomeStops'; SetText 'StopQuery' $query; Click 'FindStops'; Click 'StopMatch0'
+            Status 'MonitorStatus' 'manuell aktualisiert'
+        }
+        function AddFavorite([string]$query) {
+            FindFavoriteMonitor $query
+            Click 'ToggleFavorite'; Status 'FavoriteToggleStatus' 'hinzugefügt|gespeichert'
+            BackHome
+        }
+        function FavoriteIndex([string]$name) {
+            for ($index = 0; $index -lt 100; $index++) {
+                $element = Find ('FavoriteName' + $index)
+                if (!$element) { break }
+                if ($element.Current.Name -eq $name) { return $index }
+            }
+            throw ('Favorite card missing: ' + $name)
+        }
+        function DepartureCount([string]$id) {
+            $counter = Name 'FavoriteCalls'
+            if ($counter -match ('(?:^|;)' + [Regex]::Escape($id) + '=(\d+)(?:;|$)')) { return [int]$Matches[1] }
+            return 0
+        }
+        function RestartFavorites {
+            if (!$script:app.HasExited) { Stop-Process -Id $script:app.Id; $script:app.WaitForExit() }
+            $script:app = Start-Process -FilePath $Exe -PassThru -WindowStyle Hidden
+            $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty, $script:app.Id)
+            $script:window = $null
+            for ($attempt = 0; $attempt -lt 100 -and !$script:window; $attempt++) {
+                Start-Sleep -Milliseconds 200
+                $script:window = [System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Children, $condition)
+            }
+            if (!$script:window) { throw 'Restarted favorite fixture window missing' }
+            HomeReady
+            Write-Output 'PASS new application process opened the same isolated favorite file'
+        }
+        HomeReady; FavoriteCount 0
+        Contains 'HomeStatus' 'Keine Favoriten|keine Favoriten|Haltestelle'
+        Assert ((Wait 'OpenHomeStops').Current.IsEnabled) 'Empty home offers actual stop lookup'
+        FindFavoriteMonitor 'Favorite Far'
+        SetText 'FavoriteScenario' 'store-error'; Click 'ToggleFavorite'
+        Status 'FavoriteToggleStatus' 'fehlgeschlagen|nicht gespeichert|Speicherfehler'
+        Contains 'ToggleFavorite' 'hinzufügen|speichern'
+        SetText 'FavoriteScenario' 'success'; Click 'ToggleFavorite'; Status 'FavoriteToggleStatus' 'hinzugefügt|gespeichert'
+        BackHome; FavoriteCount 1
+        Contains 'FavoriteName0' 'Favorite Far'; Status 'FavoriteStatus0' 'manuell aktualisiert'
+        Contains 'FavoriteDeparture0_0' 'RE 1'; Contains 'FavoriteMetadata0' 'Quelle:.*Datenalter:.*Fallback'
+        Contains 'FavoriteDistance0' 'unbekannt'
+        FindFavoriteMonitor 'Favorite Far'; Contains 'ToggleFavorite' 'entfernen'
+        BackHome; FavoriteCount 1
+        RestartFavorites; FavoriteCount 1; Contains 'FavoriteName0' 'Favorite Far'
+        Contains 'FavoriteDistance0' 'unbekannt'
+        Write-Output 'PASS failed add is not reported as saved; retry, duplicate recognition and process persistence'
+        AddFavorite 'Favorite Near'; FavoriteCount 2
+        AddFavorite 'Favorite Missing'; FavoriteCount 3
+        Contains 'FavoriteName0' 'Favorite Far'; Contains 'FavoriteName1' 'Favorite Near'; Contains 'FavoriteName2' 'Favorite Missing'
+        SetText 'HomeScenario' 'success'; Click 'SortFavorites'; Status 'HomeLocationStatus' 'sortiert|aktualisiert|Entfernung'
+        Status 'FavoriteName0' 'Favorite Near'; Contains 'FavoriteName1' 'Favorite Far'; Contains 'FavoriteName2' 'Favorite Missing'
+        Assert ((Name 'FavoriteDistance0') -notmatch 'unbekannt') 'Known favorite coordinates provide actual calculated distance'
+        Contains 'FavoriteDistance2' 'unbekannt'
+        SetText 'HomeScenario' 'denied'; Click 'SortFavorites'; Status 'HomeLocationStatus' 'nicht erlaubt'
+        Contains 'FavoriteName0' 'Favorite Far'; Contains 'FavoriteName1' 'Favorite Near'; Contains 'FavoriteDistance0' 'unbekannt'
+        SetText 'HomeScenario' 'unavailable'; Click 'SortFavorites'; Status 'HomeLocationStatus' 'Keine aktuelle Position'
+        Contains 'FavoriteName0' 'Favorite Far'; Contains 'FavoriteDistance1' 'unbekannt'
+        Write-Output 'PASS explicit distance sorting, unknown positions and stable fallback order without location'
+        SetText 'HomeScenario' 'success'
+        $far = FavoriteIndex 'Favorite Far'; $near = FavoriteIndex 'Favorite Near'
+        Status ('FavoriteStatus' + $far) 'manuell aktualisiert'
+        $beforeFar = DepartureCount 'fixture-favorite-far-0'; $beforeNear = DepartureCount 'fixture-favorite-near-0'
+        SetText 'HomeScenario' 'favorite-slow'
+        Click ('RefreshFavorite' + $far)
+        $repeat = Wait ('RefreshFavorite' + $far)
+        if ($repeat.Current.IsEnabled) { $repeat.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
+        Assert ((DepartureCount 'fixture-favorite-far-0') -eq ($beforeFar + 1)) 'Double refresh starts one request for the busy card'
+        Click ('RefreshFavorite' + $near)
+        Status ('FavoriteStatus' + $near) 'manuell aktualisiert'
+        Assert ((DepartureCount 'fixture-favorite-near-0') -eq ($beforeNear + 1)) 'Another favorite refreshes independently while first is loading'
+        Status ('FavoriteStatus' + $far) 'manuell aktualisiert'
+        $retained = Name ('FavoriteDeparture' + $far + '_0')
+        SetText 'HomeScenario' 'favorite-error'; Click ('RefreshFavorite' + $far)
+        Status ('FavoriteStatus' + $far) 'Letzte bekannte|letzte bekannte|fehlgeschlagen'
+        Assert ((Name ('FavoriteDeparture' + $far + '_0')) -eq $retained) 'Failed card refresh keeps last known departures'
+        Click ('RefreshFavorite' + $near); Status ('FavoriteStatus' + $near) 'manuell aktualisiert'
+        SetText 'HomeScenario' 'success'; Click ('RefreshFavorite' + $far); Status ('FavoriteStatus' + $far) 'manuell aktualisiert'
+        Click ('OpenFavorite' + $far); Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorStop' 'Favorite Far'; Back; HomeReady
+        Click 'HomeMap'; Status 'MapDataStatus' '3 Favoriten.*2 Kartenpositionen'; Click 'ShowMapList'; Click 'MapStation0'
+        Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorStop' 'Favorite Far'; Back; Back; HomeReady
+        Click 'OpenJourneySearch'; SelectEndpoint 'Origin' 'Essen'; SelectEndpoint 'Destination' 'Berlin'
+        Click 'SearchJourneys'; Click 'Journey0'; Wait 'JourneyDetailSection1' | Out-Null
+        Back; Back; Back; HomeReady
+        Write-Output 'PASS independent monitor refreshes, failure retention and monitor/map/routing navigation'
+        Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class FavoriteKeyboard {
+ [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+ [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+}
+"@
+        Add-Type -AssemblyName System.Windows.Forms
+        $bounds = $script:window.Current.BoundingRectangle
+        $transform = $script:window.GetCurrentPattern([System.Windows.Automation.TransformPattern]::Pattern)
+        $transform.Resize(430,900)
+        $handle = [IntPtr]$script:window.Current.NativeWindowHandle
+        [FavoriteKeyboard]::SetForegroundWindow($handle) | Out-Null
+        (Wait 'SortFavorites').SetFocus(); Start-Sleep -Milliseconds 200
+        if ([FavoriteKeyboard]::GetForegroundWindow() -ne $handle) { throw 'Own favorite window must be foreground for keyboard input' }
+        [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+        Status 'HomeLocationStatus' 'sortiert|aktualisiert|Entfernung'
+        Assert ((Wait 'SortFavorites').Current.BoundingRectangle.Width -le 430) 'Favorite sorting control fits narrow viewport and accepts keyboard'
+        Snapshot 'native-favorites-narrow'; $transform.Resize($bounds.Width,$bounds.Height)
+        SetText 'HomeScenario' 'store-error'; $missing = FavoriteIndex 'Favorite Missing'
+        Click ('RemoveFavorite' + $missing); Status 'HomeStatus' 'fehlgeschlagen|nicht gespeichert|nicht entfernt|Speicherfehler'
+        FavoriteCount 3; Assert ((FavoriteIndex 'Favorite Missing') -ge 0) 'Failed remove keeps saved favorite visible'
+        SetText 'HomeScenario' 'success'; Click ('RemoveFavorite' + $missing); FavoriteCount 2
+        RestartFavorites; FavoriteCount 2
+        Assert ($null -eq (Find 'FavoriteName2')) 'Successful remove persists into a new process'
+        Contains 'FavoriteName0' 'Favorite Far'; Contains 'FavoriteName1' 'Favorite Near'
+        SetText 'HomeScenario' 'favorite-slow'; Click 'RefreshFavorite0'; Click 'RemoveFavorite0'; FavoriteCount 1
+        Start-Sleep -Seconds 6
+        Contains 'FavoriteName0' 'Favorite Near'; Assert ($null -eq (Find 'FavoriteName1')) 'Late removed-card response cannot recreate favorite'
+        SetText 'HomeScenario' 'success'; Click 'RemoveFavorite0'; FavoriteCount 0
+        RestartFavorites; FavoriteCount 0; Contains 'HomeStatus' 'Keine Favoriten|keine Favoriten|Haltestelle'
+        Write-Output 'PASS native favorites: add/failure/retry, duplicate, four process starts, sorting/fallback, independent refresh, removal/failure/retry, empty home, navigation and keyboard'
+    } elseif ($LiveLocations) {
         # Never capture screenshots, raw UI names, endpoint values or returned stop identities here.
         Assert ($null -eq (Find 'LocationScenario')) 'Release has no fixture scenario control'
         Click 'OriginLocation'
@@ -462,5 +596,8 @@ public static class MapPointer {
         Back; Assert ((Name 'Journey0') -eq $newResult) 'LatestRouteWins: newest result unchanged'; Contains 'ResultsMetadata' 'New Route'
         Write-Output 'PASS all fixture native UI scenarios'
     }
-} finally { if (!$app.HasExited) { Stop-Process -Id $app.Id } }
+} finally {
+    if (!$app.HasExited) { Stop-Process -Id $app.Id }
+    if ($Favorites) { $env:FLOWNRW_UI_TEST_FAVORITES = $previousFavoritePath }
+}
 
