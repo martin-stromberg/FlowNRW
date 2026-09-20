@@ -4,6 +4,7 @@ using FlowNRW.Core.Presentation;
 using FlowNRW.Core.Maps;
 using FlowNRW.Services;
 using FlowNRW.Core.Favorites;
+using FlowNRW.Core.Refresh;
 
 namespace FlowNRW;
 
@@ -99,6 +100,20 @@ public static class MauiProgram
             services.GetRequiredService<ICurrentLocationService>(), services.GetRequiredService<IStopSearchService>()));
         builder.Services.AddSingleton<StopSearchPage>();
         builder.Services.AddTransient<DeparturePage>();
+        builder.Services.AddSingleton<ForegroundState>();
+        builder.Services.AddSingleton<IRefreshSettingsStore>(services =>
+        {
+#if UI_TEST_FIXTURES
+            var path = Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_REFRESH_SETTINGS")
+                ?? Path.Combine(FileSystem.CacheDirectory, "UiTest", "refresh-settings.json");
+            return new UiTestRefreshSettingsStore(new JsonRefreshSettingsStore(path), services.GetRequiredService<UiTestLocationServices>());
+#else
+            var path = Path.Combine(FileSystem.AppDataDirectory, "refresh-settings.json");
+            return new JsonRefreshSettingsStore(path);
+#endif
+        });
+        builder.Services.AddSingleton<RefreshSettingsViewModel>();
+        builder.Services.AddTransient<RefreshSettingsPage>();
         builder.Services.AddSingleton<IFavoriteStore>(services =>
         {
 #if UI_TEST_FIXTURES

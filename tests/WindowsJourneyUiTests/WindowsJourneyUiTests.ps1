@@ -3,6 +3,11 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 $previousFavoritePath = $env:FLOWNRW_UI_TEST_FAVORITES
+$previousRefreshPath = $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS
+$refreshTestDirectory = Join-Path (Get-Location) ('artifacts/tests/refresh-regression/' + [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $refreshTestDirectory -Force | Out-Null
+$env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = Join-Path $refreshTestDirectory 'refresh-settings.json'
+[IO.File]::WriteAllText($env:FLOWNRW_UI_TEST_REFRESH_SETTINGS, '0')
 if ($Favorites) {
     $testDirectory = Join-Path (Get-Location) ('artifacts/tests/favorites/' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $testDirectory -Force | Out-Null
@@ -27,6 +32,19 @@ try {
     }
     function Click([string]$id) { (Wait $id).GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 150 }
     function SetText([string]$id, [string]$value) { (Wait $id).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($value); Start-Sleep -Milliseconds 100 }
+    function ChooseInterval([string]$text) {
+        Click 'RefreshInterval'
+        for ($i = 0; $i -lt 50; $i++) {
+            $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, $text)
+            $item = $script:window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)
+            if ($item) {
+                try { $item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds 150; return }
+                catch { }
+            }
+            Start-Sleep -Milliseconds 100
+        }
+        throw "Missing refresh interval $text"
+    }
     function Name([string]$id) { return (Wait $id).Current.Name }
     function Assert([bool]$value, [string]$message) { if (!$value) { throw $message }; Write-Output "PASS $message" }
     function Back { Click 'NavigationViewBackButton' }
@@ -599,5 +617,6 @@ public static class MapPointer {
 } finally {
     if (!$app.HasExited) { Stop-Process -Id $app.Id }
     if ($Favorites) { $env:FLOWNRW_UI_TEST_FAVORITES = $previousFavoritePath }
+    $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = $previousRefreshPath
 }
 

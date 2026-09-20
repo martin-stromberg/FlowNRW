@@ -49,7 +49,13 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
 
     /// <summary>Refreshes without discarding last known data on a failed request.</summary>
     /// <returns>Request completion.</returns>
-    public async Task RefreshAsync()
+    public Task RefreshAsync() => RefreshCoreAsync(false);
+
+    /// <summary>Refreshes from a foreground interval without labelling it as a manual action.</summary>
+    /// <returns>Update completion.</returns>
+    public Task RefreshAutomaticallyAsync() => RefreshCoreAsync(true);
+
+    private async Task RefreshCoreAsync(bool automatic)
     {
         if (IsBusy) return;
         var version = ++revision;
@@ -69,7 +75,7 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
                     Items = result.Items.Where(item => EffectiveTime(item) is not { } time || time >= started)
                         .OrderBy(item => EffectiveTime(item) ?? DateTimeOffset.MaxValue).ToArray()
                 };
-                Status = Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · manuell aktualisiert.";
+                Status = Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · {(automatic ? "automatisch" : "manuell")} aktualisiert.";
             }
         }
         catch (OperationCanceledException) { if (version == revision) Status = "Aktualisierung abgebrochen."; }

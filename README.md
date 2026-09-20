@@ -10,6 +10,7 @@ FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahr
 ## Aktueller Funktionsstand
 
 - Startseite mit dauerhaft gespeicherten Favoriten, unabhängigen Abfahrtstafeln und expliziter Entfernungssortierung. [Bedienung und Speicherung](docs/help/favoriten/index.md).
+- Vordergrundmonitore können mit Aus/30/60/120/300 Sekunden automatisch aktualisiert werden; manuelle Aktualisierung und sichere Fehlerzustände bleiben verfügbar. Hintergrundbetrieb folgt in Schritt 8. [Intervalle](docs/help/favoriten/intervalle.md).
 
 - Adress-, Haltestellen- und Koordinatenauflösung einschließlich naher Haltestellen.
 - Verbindungs- und Abfahrtsservices mit Umstiegen, Fußwegen, Linien, Betreibern, Geometrien und verfügbaren Soll-/Ist-Daten.

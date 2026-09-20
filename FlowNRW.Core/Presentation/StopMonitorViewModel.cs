@@ -205,7 +205,13 @@ public sealed class StopMonitorViewModel : ObservableObject
 
     /// <summary>Refreshes without discarding the last successful data on errors.</summary>
     /// <returns>Refresh completion.</returns>
-    public async Task RefreshAsync()
+    public Task RefreshAsync() => RefreshCoreAsync(false);
+
+    /// <summary>Refreshes from a foreground interval while retaining the existing busy and revision guards.</summary>
+    /// <returns>Automatic update completion.</returns>
+    public Task RefreshAutomaticallyAsync() => RefreshCoreAsync(true);
+
+    private async Task RefreshCoreAsync(bool automatic)
     {
         if (SelectedStop is null || IsBusy) return;
         var version = ++revision;
@@ -229,7 +235,7 @@ public sealed class StopMonitorViewModel : ObservableObject
                     Items = result.Items.Where(item => EffectiveTime(item) is not { } time || time >= started)
                         .OrderBy(item => EffectiveTime(item) ?? DateTimeOffset.MaxValue).ToArray()
                 };
-                SetStatus(Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · manuell aktualisiert.");
+                SetStatus(Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · {(automatic ? "automatisch" : "manuell")} aktualisiert.");
             }
         }
         catch (OperationCanceledException)
