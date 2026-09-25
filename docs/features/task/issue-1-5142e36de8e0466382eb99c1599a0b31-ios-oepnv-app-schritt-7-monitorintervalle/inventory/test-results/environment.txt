@@ -1,9 +1,0 @@
-Time: 2026-09-19T13:40:43.8433274+02:00
-Branch: task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app-schritt-7-monitorintervalle
-Commit: f4414d645424bc5e6b1c09e9cdefcd6dd9e2449d
-CWD: D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31
-Working tree:
- M .gitignore
-?? design-draft.zip
-?? docs/features/task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app-schritt-7-monitorintervalle/
-10.0.401
