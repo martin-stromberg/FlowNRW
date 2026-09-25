@@ -22,7 +22,8 @@ public sealed class RefreshSettingsPage : ContentPage
         Title = "Automatische Aktualisierung";
         interval = new Picker
         {
-            Title = "Aktualisierungsintervall", AutomationId = "RefreshInterval",
+            Title = "Aktualisierungsintervall",
+            AutomationId = "RefreshInterval",
             ItemsSource = new[] { "Aus", "30 Sekunden", "60 Sekunden", "2 Minuten", "5 Minuten" }
         };
         interval.SelectedIndexChanged += (_, _) =>
@@ -39,7 +40,8 @@ public sealed class RefreshSettingsPage : ContentPage
         {
             Content = new VerticalStackLayout
             {
-                Padding = 16, Spacing = 16,
+                Padding = 16,
+                Spacing = 16,
                 Children =
                 {
                     new Label { Text = "Abfahrten automatisch laden", FontSize = 24, FontAttributes = FontAttributes.Bold },

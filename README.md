@@ -10,7 +10,7 @@ FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahr
 ## Aktueller Funktionsstand
 
 - Startseite mit dauerhaft gespeicherten Favoriten, unabhängigen Abfahrtstafeln und expliziter Entfernungssortierung. [Bedienung und Speicherung](docs/help/favoriten/index.md).
-- Vordergrundmonitore können mit Aus/30/60/120/300 Sekunden automatisch aktualisiert werden; manuelle Aktualisierung und sichere Fehlerzustände bleiben verfügbar. Hintergrundbetrieb folgt in Schritt 8. [Intervalle](docs/help/favoriten/intervalle.md).
+- Vordergrundmonitore können mit Aus/30/60/120/300 Sekunden automatisch aktualisiert werden (Standard 60). Die Auswahl wird erst nach erfolgreichem Speichern wirksam; Navigation und Fensterdeaktivierung stoppen automatische Abrufe. Manuelle Aktualisierung bleibt verfügbar. [Bedienung, Speicherung und iOS-Prüfung](docs/help/monitorintervalle/index.md).
 
 - Adress-, Haltestellen- und Koordinatenauflösung einschließlich naher Haltestellen.
 - Verbindungs- und Abfahrtsservices mit Umstiegen, Fußwegen, Linien, Betreibern, Geometrien und verfügbaren Soll-/Ist-Daten.
@@ -73,7 +73,7 @@ dotnet build FlowNRW/FlowNRW.csproj -t:Run -f net10.0-windows10.0.19041.0
 oder `FlowNRW.sln` in Visual Studio öffnen, `FlowNRW` als Startprojekt und
 "Windows Machine" als Ziel wählen, F5.
 
-Unter Windows startet die manuelle Verbindungssuche. Start und Ziel suchen und je einen Treffer auswählen oder Koordinaten übernehmen; „Verbindungen suchen“ öffnet Ergebnisse und anschließend Details. Debug und Release verwenden reale Provider. Standortfreigabe ist nicht erforderlich.
+Unter Windows startet die Favoritenübersicht. „Verbindung suchen“ öffnet die Start-/Zielsuche; „Haltestelle hinzufügen“ führt zu Suche und Abfahrtsmonitor. Über „Aktualisierung einstellen“ lässt sich das gemeinsame Vordergrundintervall speichern. Für Verbindungen Start und Ziel suchen und je einen Treffer auswählen oder Koordinaten übernehmen; „Verbindungen suchen“ öffnet Ergebnisse und anschließend Details. Debug und Release verwenden reale Provider. Manuelle Suche benötigt keine Standortfreigabe.
 
 Release-Build wie in CI (self-contained, unpackaged):
 
@@ -126,7 +126,7 @@ dotnet build FlowNRW.sln -c Release -p:TreatWarningsAsErrors=true
 dotnet test FlowNRW.Tests/FlowNRW.Tests.csproj -c Release --no-build --collect:"XPlat Code Coverage"
 ```
 
-Die aktuelle [Verifikation vom 16.09.2026](docs/help/verbindungssuche/verification/checks-2026-09-16.md) weist 118 bestandene Tests und 97,01 % Core-Zeilenabdeckung (715/737), Windows-Releasebuild ohne Warnungen/Fehler, native UI-Fixture-Abläufe und separate reale NRW-/bundesweite Bedienproben nach. [UI-Harness ausführen](tests/WindowsJourneyUiTests/README.md). `UiTest` ist ein isolierter Fixture-Build; nur reguläre Releaseartefakte ausliefern. Native iOS-Prüfung und spätere IIS-Download-/Startprüfung sind noch offen. Die bestehenden Release-Skripttests laufen mit `npm run test:release-version`.
+Die historische [Verifikation der Verbindungssuche vom 16.09.2026](docs/help/verbindungssuche/verification/checks-2026-09-16.md) dokumentiert den damaligen Build-/Teststand und separate echte Bedienproben. Nachweise gelten jeweils für den dort genannten Stand; sie sind keine Abnahme späterer Funktionen. [UI-Harness ausführen](tests/WindowsJourneyUiTests/README.md). `UiTest` ist ein isolierter Fixture-Build; nur reguläre Releaseartefakte ausliefern. Die native iOS-Geräteprüfung bleibt beim Nutzer. Die bestehenden Release-Skripttests laufen mit `npm run test:release-version`.
 
 ## CI/CD
 
@@ -135,7 +135,8 @@ Die vorhandene GitHub-Actions-Konfiguration behält Windows-Build/Release sowie 
 ## Roadmap
 
 - Native iOS-Ausführung anhand der Prüfliste durch den Nutzer; die Plattformbasis ist implementiert.
-- Abfahrtsmonitor und weitere Ansichten folgen in späteren Projektschritten.
+- Hintergrundaktualisierung und Wiederaufnahme folgen in Schritt 8; die aktuelle Intervallsteuerung gilt für aktive Fenster im Vordergrund.
+- Die abschließende Gestaltung und visuelle Abnahme anhand des gelieferten Entwurfs folgen verbindlich in Schritt 9. [Design-Abnahmekriterien](docs/design/acceptance.md).
 
 Weitere Verkehrsverbünde sowie spätere Sharing-/Push-Funktionen bleiben Erweiterungspunkte. Sie sind in der technischen Dokumentation beschrieben, aber nicht als aktuelle Produktfunktion implementiert.
 

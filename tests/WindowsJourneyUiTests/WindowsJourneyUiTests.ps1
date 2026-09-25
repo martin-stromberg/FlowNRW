@@ -30,21 +30,24 @@ try {
         for ($i = 0; $i -lt 100; $i++) { $e = Find $id; if ($e) { return $e }; Start-Sleep -Milliseconds 100 }
         throw "Missing $id"
     }
-    function Click([string]$id) { (Wait $id).GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 150 }
-    function SetText([string]$id, [string]$value) { (Wait $id).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($value); Start-Sleep -Milliseconds 100 }
-    function ChooseInterval([string]$text) {
-        Click 'RefreshInterval'
-        for ($i = 0; $i -lt 50; $i++) {
-            $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, $text)
-            $item = $script:window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)
-            if ($item) {
-                try { $item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds 150; return }
-                catch { }
-            }
-            Start-Sleep -Milliseconds 100
+    function Click([string]$id) {
+        $target = Wait $id
+        for ($attempt = 0; $attempt -lt 100 -and !$target.Current.IsEnabled; $attempt++) {
+            Start-Sleep -Milliseconds 100; $target = Wait $id
         }
-        throw "Missing refresh interval $text"
+        if (!$target.Current.IsEnabled) { throw "Native action remains disabled: $id" }
+        $bounds = $target.Current.BoundingRectangle; $viewport = $script:window.Current.BoundingRectangle
+        if ($target.Current.IsOffscreen -or $bounds.Top -lt $viewport.Top -or $bounds.Bottom -gt $viewport.Bottom) {
+            $scroll = $null
+            if ($target.TryGetCurrentPattern([System.Windows.Automation.ScrollItemPattern]::Pattern, [ref]$scroll)) { $scroll.ScrollIntoView() }
+            else { $target.SetFocus() }
+            Start-Sleep -Milliseconds 150; $target = Wait $id
+        }
+        try { $target.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
+        catch { throw ("Native Invoke failed for $id (enabled=" + $target.Current.IsEnabled + ', offscreen=' + $target.Current.IsOffscreen + '): ' + $_.Exception.Message) }
+        Start-Sleep -Milliseconds 150
     }
+    function SetText([string]$id, [string]$value) { (Wait $id).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($value); Start-Sleep -Milliseconds 100 }
     function Name([string]$id) { return (Wait $id).Current.Name }
     function Assert([bool]$value, [string]$message) { if (!$value) { throw $message }; Write-Output "PASS $message" }
     function Back { Click 'NavigationViewBackButton' }
@@ -210,7 +213,15 @@ public static class FavoriteKeyboard {
         RestartFavorites; FavoriteCount 2
         Assert ($null -eq (Find 'FavoriteName2')) 'Successful remove persists into a new process'
         Contains 'FavoriteName0' 'Favorite Far'; Contains 'FavoriteName1' 'Favorite Near'
-        SetText 'HomeScenario' 'favorite-slow'; Click 'RefreshFavorite0'; Click 'RemoveFavorite0'; FavoriteCount 1
+        Status 'FavoriteStatus0' 'manuell aktualisiert'; Status 'FavoriteStatus1' 'manuell aktualisiert'
+        SetText 'HomeScenario' 'favorite-slow'; Click 'RefreshFavorite0'; Status 'FavoriteStatus0' 'werden aktualisiert'
+        Write-Output ('DIAGNOSTIC before removal: ' + (Name 'HomeStatus') + '; calls=' + (Name 'FavoriteCalls'))
+        $remove = Wait 'RemoveFavorite0'
+        Write-Output ('DIAGNOSTIC remove enabled=' + $remove.Current.IsEnabled + '; offscreen=' + $remove.Current.IsOffscreen + '; bounds=' + $remove.Current.BoundingRectangle)
+        Click 'RemoveFavorite0'
+        Start-Sleep -Milliseconds 500
+        Write-Output ('DIAGNOSTIC after removal: ' + (Name 'HomeStatus') + '; count=' + (Name 'FavoriteCount'))
+        FavoriteCount 1
         Start-Sleep -Seconds 6
         Contains 'FavoriteName0' 'Favorite Near'; Assert ($null -eq (Find 'FavoriteName1')) 'Late removed-card response cannot recreate favorite'
         SetText 'HomeScenario' 'success'; Click 'RemoveFavorite0'; FavoriteCount 0

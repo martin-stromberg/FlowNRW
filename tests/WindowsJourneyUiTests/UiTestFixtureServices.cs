@@ -230,8 +230,6 @@ internal sealed class UiTestFavoriteStore(IFavoriteStore inner, UiTestLocationSe
 }
 
 /// <summary>UiTest-only interval storage failure switch.</summary>
-/// <param name="inner">Real bounded settings store.</param>
-/// <param name="scenario">Fixture scenario controller.</param>
 internal sealed class UiTestRefreshSettingsStore : IRefreshSettingsStore
 {
     private readonly IRefreshSettingsStore inner;

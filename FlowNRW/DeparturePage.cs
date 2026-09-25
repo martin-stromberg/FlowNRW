@@ -4,7 +4,7 @@ using FlowNRW.Core.Refresh;
 
 namespace FlowNRW;
 
-/// <summary>Manually refreshed departure board retaining the last known data on errors.</summary>
+/// <summary>Departure board with manual and foreground refresh, retaining known data on errors.</summary>
 public sealed class DeparturePage : ContentPage
 {
     private readonly StopMonitorViewModel model;
@@ -56,12 +56,15 @@ public sealed class DeparturePage : ContentPage
             scenario.SetBinding(Entry.TextProperty, nameof(fixture.Scenario)); layout.Children.Insert(0, scenario);
             var calls = new Label { AutomationId = "FavoriteCalls", BindingContext = fixture };
             calls.SetBinding(Label.TextProperty, nameof(fixture.DepartureCalls)); layout.Children.Insert(1, calls);
+            var activity = new Label { AutomationId = "RefreshForeground", BindingContext = foreground };
+            activity.SetBinding(Label.TextProperty, nameof(foreground.IsActive)); layout.Children.Insert(2, activity);
         };
 #endif
         layout.Children.Add(new Button { Text = "Aktualisieren", AutomationId = "RefreshDepartures", Command = model.RefreshCommand });
         layout.Children.Add(new Button
         {
-            Text = "Aktualisierung einstellen", AutomationId = "OpenRefreshSettings",
+            Text = "Aktualisierung einstellen",
+            AutomationId = "OpenRefreshSettings",
             Command = new AsyncRelayCommand(() => Shell.Current.GoToAsync("refresh-settings"), () => true,
                 _ => Title = "Einstellungen konnten nicht geöffnet werden")
         });

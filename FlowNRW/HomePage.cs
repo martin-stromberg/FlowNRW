@@ -167,14 +167,20 @@ public sealed class HomePage : ContentPage
             card.PropertyChanged += changed;
             unsubscribe.Add(() => card.PropertyChanged -= changed);
             RenderDepartures(); layout.Children.Add(departures);
-            layout.Children.Add(new Button { Text = "Aktualisieren", AutomationId = "RefreshFavorite" + index, Command = card.RefreshCommand });
+            var refreshButton = new Button { Text = "Aktualisieren", AutomationId = "RefreshFavorite" + index, Command = card.RefreshCommand };
+            layout.Children.Add(refreshButton);
+            unsubscribe.Add(() => refreshButton.Command = null);
             var open = new AsyncRelayCommand(() => monitor.OpenFavoriteAsync(model, card), () => model.Contains(card),
                 _ => Title = "Monitor konnte nicht geöffnet werden");
             var remove = new AsyncRelayCommand(() => model.RemoveAsync(card), () => !model.IsSaving && model.Contains(card),
                 _ => Title = "Favorit konnte nicht entfernt werden");
             actions.Add(open); actions.Add(remove);
-            layout.Children.Add(new Button { Text = "Abfahrtsmonitor öffnen", AutomationId = "OpenFavorite" + index, Command = open });
-            layout.Children.Add(new Button { Text = "Favorit entfernen", AutomationId = "RemoveFavorite" + index, Command = remove });
+            var openButton = new Button { Text = "Abfahrtsmonitor öffnen", AutomationId = "OpenFavorite" + index, Command = open };
+            layout.Children.Add(openButton);
+            unsubscribe.Add(() => openButton.Command = null);
+            var removeButton = new Button { Text = "Favorit entfernen", AutomationId = "RemoveFavorite" + index, Command = remove };
+            layout.Children.Add(removeButton);
+            unsubscribe.Add(() => removeButton.Command = null);
             cards.Children.Add(new Border { Padding = 16, Stroke = Color.FromArgb("#C7D7EC"), Content = layout });
         }
     }
