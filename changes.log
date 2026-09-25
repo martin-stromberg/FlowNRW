@@ -1,3 +1,9 @@
+## 2026-09-24 — Automatische Vordergrundaktualisierung
+
+- Einzel- und Favoritenmonitore erhalten ein gemeinsam gespeichertes Intervall: Aus, 30 oder 60 Sekunden, 2 oder 5 Minuten; Standard 60 Sekunden. Erst erfolgreiches Speichern verändert den wirksamen Wert.
+- Automatische Aktualisierung endet bei Seitenwechsel und Fensterdeaktivierung. Favoritentafeln bleiben unabhängig; manuelle und automatische Aktionen starten pro Monitor keine parallelen Doppelabrufe.
+- Bei Aktualisierungsfehlern bleiben letzte bekannte Daten mit ihrem Datenstand erhalten. Bedienung, Speicherfehler und manuelle iOS-Geräteprüfung sind dokumentiert; Hintergrundbetrieb und visuelle Gesamtabnahme bleiben getrennte Folgeschritte.
+
 ## 2026-09-19 — Favoriten und Startseitenmonitore
 
 - Technische Haltestellenfavoriten dauerhaft speichern und entfernen; neue Startseite mit unabhängigen Abfahrtstafeln und expliziter Luftliniensortierung.

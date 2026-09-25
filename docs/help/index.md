@@ -10,3 +10,8 @@
 ## Verbindungssuche
 
 - [Verbindungssuche](verbindungssuche/index.md) — Manuelle Start-/Zielwahl, Ergebnisse und Verbindungsdetails mit verfügbarer Echtzeit.
+
+## Abfahrten und Einstellungen
+
+- [Automatische Monitoraktualisierung](monitorintervalle/index.md) — Gespeicherte Vordergrundintervalle, manuelle Aktualisierung und Fehlerhilfe.
+- [Favoriten auf der Startseite](favoriten/index.md) — Gespeicherte Haltestellen mit unabhängigen Abfahrtstafeln und Entfernungssortierung.

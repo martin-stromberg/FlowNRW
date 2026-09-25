@@ -10,4 +10,4 @@ Jede Tafel lässt sich separat über **Aktualisieren** laden. Ein langsamer Abru
 
 **Favorit entfernen** löscht eine Station. Im Einzelmonitor kann ein gespeicherter Favorit ebenfalls entfernt werden. Erst nach erfolgreicher Speicherung bestätigt die App die Änderung. Bei Speicherfehlern bleibt der bisherige Bestand erhalten; die Aktion kann erneut ausgeführt werden.
 
-Die Startseite lädt fehlende Tafeln beim Öffnen. Eine regelmäßige automatische Aktualisierung folgt im nächsten Projektschritt.
+Die Startseite lädt fehlende Tafeln beim Öffnen. Über **Aktualisierung einstellen** lässt sich die [automatische Vordergrundaktualisierung](intervalle.md) konfigurieren.

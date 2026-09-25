@@ -3,6 +3,7 @@ using FlowNRW.Core.Maps;
 using FlowNRW.Core.Presentation;
 using System.ComponentModel;
 using FlowNRW.Core.Favorites;
+using FlowNRW.Core.Refresh;
 
 namespace FlowNRW;
 
@@ -32,9 +33,9 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
         var scenario = location?.Scenario ?? "success";
         location?.RecordDeparture(stop.Id);
         var favoriteTarget = stop.Id == "fixture-favorite-far-0";
-        await Task.Delay(stop.Name.Contains("monitor-slow") || favoriteTarget && scenario == "favorite-slow" ? 6000 : 700);
+        await Task.Delay(stop.Name.Contains("monitor-slow") || scenario == "refresh-slow" || favoriteTarget && scenario == "favorite-slow" ? 6000 : 700);
         var sequence = stop.Name.Contains("monitor-sequence");
-        var error = stop.Name.Contains("monitor-error") || sequence && count == 3 || favoriteTarget && scenario == "favorite-error";
+        var error = stop.Name.Contains("monitor-error") || scenario == "refresh-error" || sequence && count == 3 || favoriteTarget && scenario == "favorite-error";
         var empty = stop.Name.Contains("monitor-empty") || sequence && count == 4;
         return new ProviderResult<StopEvent>
         {
@@ -225,5 +226,29 @@ internal sealed class UiTestFavoriteStore(IFavoriteStore inner, UiTestLocationSe
     {
         if (scenario.Scenario == "store-error") throw new IOException("Synthetic UiTest write failure.");
         return inner.SaveAsync(stops, cancellationToken);
+    }
+}
+
+/// <summary>UiTest-only interval storage failure switch.</summary>
+internal sealed class UiTestRefreshSettingsStore : IRefreshSettingsStore
+{
+    private readonly IRefreshSettingsStore inner;
+    private readonly UiTestLocationServices scenario;
+
+    /// <summary>Creates the fixture wrapper.</summary>
+    /// <param name="inner">Real bounded settings store.</param>
+    /// <param name="scenario">Fixture scenario controller.</param>
+    public UiTestRefreshSettingsStore(IRefreshSettingsStore inner, UiTestLocationServices scenario)
+    {
+        this.inner = inner; this.scenario = scenario;
+    }
+    /// <inheritdoc />
+    public Task<int?> LoadAsync(CancellationToken cancellationToken = default) => inner.LoadAsync(cancellationToken);
+
+    /// <inheritdoc />
+    public Task SaveAsync(int seconds, CancellationToken cancellationToken = default)
+    {
+        if (scenario.Scenario == "refresh-store-error") throw new IOException("Synthetic UiTest settings write failure.");
+        return inner.SaveAsync(seconds, cancellationToken);
     }
 }
