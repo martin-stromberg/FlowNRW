@@ -84,3 +84,5 @@ Schritt2 konfliktfrei in Basisbranch integriert; integrierten Branch sicher gel�
 Gesamtabschluss/Aufräumen erst nach erfülltem Schritt9. Die unabhängige Prüfung des erweiterten Plans ist vollständig; siehe project-plan-check.md und archivierten Vorgänger project-plan-check.4.md.
 
 25.09.2026: Schritt7 mit Produktfix 3c062ed und unabhängiger Projektabnahme Runde1 vollständig erfüllt. 210 Coretests/92,77 % Abdeckung, Release/UiTest ohne Warnungen und Fehler; native Intervalle, Favoriten, Routing und Monitore bestanden. Fehler beim Entfernen ladender Favoriten durch verwaiste WinUI-Commandbindungen behoben und nativ nachgeprüft. Format/XML/Diff bestanden. Dauerhafte Nachweise unter docs/help/monitorintervalle/verification. Keine fachlichen Klärungsrunden; Abschluss und Merge freigegeben.
+
+25.09.2026: Schritt7 mit Abschluss 34b0b76 konfliktfrei integriert. 7 von9 Schritten fertig. Schritt8 Hintergrundaktualisierung/Wiederaufnahme In Arbeit, Klärungsrunden0/Abnahmerunden0. Visuelle Gesamtabnahme bleibt Schritt9.
