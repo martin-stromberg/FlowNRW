@@ -112,3 +112,6 @@ Weitere konkrete Implementierungsentscheidungen gehören nach Bestandsaufnahme i
 ## Verbindliche Ergänzungen und technische Einordnung
 
 Am 16.09.2026 zieht der Nutzer die lokale IIS-Präsentation zurück und verlangt die direkte Fortsetzung der App-Anforderungen. Bereits bestehende IIS-Inhalte werden nicht weiter bearbeitet. Kleinere Entwicklungsschritte, Windows-GitHub-Actions und die bestätigte Windows-/iOS-Prüfaufteilung bleiben bestehen.
+## Verbindliche Designklarstellung – 24.09.2026
+
+Der Nutzer bestätigt: Die fertige App muss modern wie der gelieferte Designentwurf aussehen. Der bisherige Projektplan benannte den Draft bereits; eine pauschale Aussage, er sei ignoriert worden, ist unzutreffend. Es fehlte eine konkrete abschließende visuelle Abnahme. Verbindliche Referenzen, auf den issue.md-Kernumfang begrenzte Entscheidungen und überprüfbare Bild-/Bedienkriterien stehen in docs/design/acceptance.md. Ein eigener abschließender Designschritt ist vor Gesamtabschluss verpflichtend. Funktionale Abnahmen der Schritte1–6 bleiben gültig; sie sind keine Behauptung einer bereits erfüllten visuellen Gesamtabnahme. Windows-/iOS-Prüfaufteilung und Ausschluss von IIS/Deployment bleiben unverändert.

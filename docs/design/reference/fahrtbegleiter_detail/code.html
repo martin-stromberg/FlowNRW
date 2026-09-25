@@ -1,0 +1,334 @@
+<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@700&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-tertiary-container": "#fffbff", "secondary-fixed-dim": "#53e16f", "on-primary-container": "#fefcff", "on-secondary-container": "#00732a", "primary-fixed": "#d8e2ff", "on-primary-fixed-variant": "#004493", "error-container": "#ffdad6", "secondary": "#006e28", "on-tertiary": "#ffffff", "on-surface-variant": "#414755", "inverse-primary": "#adc6ff", "primary-container": "#0070eb", "on-tertiary-fixed-variant": "#6a3b00", "surface-container-highest": "#e3e2e7", "surface-bright": "#faf9fe", "tertiary-fixed-dim": "#ffb874", "surface-container": "#eeedf3", "outline-variant": "#c1c6d7", "tertiary-fixed": "#ffdcbf", "on-error": "#ffffff", "surface-variant": "#e3e2e7", "primary": "#0058bc", "surface-dim": "#dad9df", "on-error-container": "#93000a", "on-tertiary-fixed": "#2d1600", "surface-container-lowest": "#ffffff", "surface-container-low": "#f4f3f8", "on-primary": "#ffffff", "on-surface": "#1a1b1f", "surface-tint": "#005bc1", "inverse-surface": "#2f3034", "inverse-on-surface": "#f1f0f5", "outline": "#717786", "on-secondary": "#ffffff", "on-background": "#1a1b1f", "on-primary-fixed": "#001a41", "tertiary-container": "#ac6300", "tertiary": "#894d00", "on-secondary-fixed": "#002107", "primary-fixed-dim": "#adc6ff", "secondary-fixed": "#72fe88", "background": "#faf9fe", "secondary-container": "#6ffb85", "on-secondary-fixed-variant": "#00531c", "surface": "#faf9fe", "error": "#ba1a1a", "surface-container-high": "#e9e7ed" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "safe-bottom-tab": "84px", "spacing-4xs": "2px", "screen-margin-pad": "24px", "spacing-xs": "12px", "spacing-3xs": "4px", "card-gutter": "12px", "spacing-2xl": "40px", "spacing-md": "20px", "spacing-2xs": "8px", "spacing-lg": "24px", "spacing-sm": "16px", "screen-margin-phone": "16px", "spacing-xl": "32px" }, fontFamily: { "body": ["Inter"], "large-title-mobile": ["Inter"], "live-time-delay": ["JetBrains Mono"], "caption-2": ["Inter"], "live-time-primary": ["JetBrains Mono"], "platform-badge": ["Inter"], "caption-1": ["Inter"], "title-1": ["Inter"], "large-title": ["Inter"], "title-2": ["Inter"], "subhead": ["Inter"], "footnote": ["Inter"], "headline": ["Inter"], "title-3": ["Inter"], "callout": ["Inter"] }, fontSize: { "body": ["17px", { "lineHeight": "22px", "fontWeight": "400" }], "large-title-mobile": ["28px", { "lineHeight": "34px", "fontWeight": "700" }], "live-time-delay": ["14px", { "lineHeight": "18px", "fontWeight": "700" }], "caption-2": ["11px", { "lineHeight": "13px", "fontWeight": "600" }], "live-time-primary": ["18px", { "lineHeight": "22px", "fontWeight": "700" }], "platform-badge": ["13px", { "lineHeight": "16px", "fontWeight": "700" }], "caption-1": ["12px", { "lineHeight": "16px", "fontWeight": "500" }], "title-1": ["28px", { "lineHeight": "34px", "fontWeight": "700" }], "large-title": ["34px", { "lineHeight": "41px", "fontWeight": "700" }], "title-2": ["22px", { "lineHeight": "28px", "fontWeight": "700" }], "subhead": ["15px", { "lineHeight": "20px", "fontWeight": "400" }], "footnote": ["13px", { "lineHeight": "18px", "fontWeight": "400" }], "headline": ["17px", { "lineHeight": "22px", "fontWeight": "600" }], "title-3": ["20px", { "lineHeight": "25px", "fontWeight": "600" }], "callout": ["16px", { "lineHeight": "21px", "fontWeight": "400" }] } } } };</script></head><body class="bg-surface font-body text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-50 bg-surface/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-screen-margin-phone flex items-center justify-between"><div class="flex items-center gap-spacing-2xs"><img alt="FlowNRW Icon" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9boNo21WPnHKzZyWA1OKDEgxQZYIzPRl-apDHvVh5vsFhjoRznVHFOBm_AU8d3LaUZecoikod6R-phwu0cZIzzCI6-z2xy97rB7iMMG81v2FwdYkSDC9OOYiK3b021RFDCdo3hw0H0-RcW4v7X13s1rxxhcQ3M5XIWTvSRwzZdyd8YwG7yG8ldxy6yCC1m-qGD9Y7EtAxFs12Ry3KhUprpG7EryhyaX7uxJ-4qmM5aSaemHYvEu8VnsbyBChnWYmXUQk"><div class="flex flex-col"><div class="flex items-center gap-spacing-3xs"><span class="font-headline text-headline text-on-surface leading-none">FlowNRW</span><span class="px-spacing-3xs py-spacing-4xs rounded-full bg-secondary-container text-on-secondary-container font-caption-2 text-caption-2 uppercase tracking-wide flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>Echtzeit aktiv</span></div><span class="font-caption-2 text-caption-2 text-on-surface-variant leading-none mt-spacing-4xs">Fahrtbegleiter</span></div></div><div class="flex items-center gap-spacing-2xs"><button aria-label="Schnellsuche" class="w-11 h-11 flex items-center justify-center rounded-full bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface"><span class="material-symbols-outlined text-[20px]">tune</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 pb-safe-bottom-tab bg-surface min-h-screen"><div class="flex flex-col w-full">
+<!-- Sub-Header / iOS Back Navigation Bar -->
+<div class="px-screen-margin-phone py-spacing-xs flex items-center justify-between bg-surface/90 backdrop-blur-md sticky top-16 z-40">
+<a class="flex items-center gap-1 text-primary active:opacity-60 transition-opacity" href="#">
+<span class="material-symbols-outlined text-[24px]">chevron_left</span>
+<span class="font-body text-body">Verbindungen</span>
+</a>
+<div class="flex flex-col items-center">
+<div class="flex items-center gap-spacing-3xs">
+<span class="px-spacing-3xs py-spacing-4xs rounded bg-[#BA1B1D] text-on-primary font-caption-2 text-caption-2 uppercase font-bold tracking-wider">RE 1</span>
+<span class="font-headline text-headline text-on-surface">RRX</span>
+</div>
+<div class="flex items-center gap-1 mt-spacing-4xs">
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+<span class="font-caption-2 text-caption-2 text-tertiary font-bold">Fahrt läuft • +2 Min</span>
+</div>
+</div>
+<button aria-label="Route pinnen" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">bookmark</span>
+</button>
+</div>
+<div class="px-screen-margin-phone flex flex-col gap-spacing-md pt-spacing-2xs">
+<!-- Top Trip Hero Card -->
+<div class="bg-surface-container-lowest rounded-xl p-spacing-sm shadow-sm flex flex-col gap-spacing-sm">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-caption-1 text-caption-1 text-on-surface-variant">Linie &amp; Zugnummer</span>
+<span class="font-title-3 text-title-3 text-on-surface">National Express • RE 10123</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-caption-1 text-caption-1 text-on-surface-variant">Reisedauer</span>
+<span class="font-live-time-primary text-live-time-primary text-primary">35 Min</span>
+</div>
+</div>
+<!-- Route Overview Nodes -->
+<div class="flex items-center justify-between pt-spacing-2xs">
+<div class="flex flex-col">
+<span class="font-title-3 text-title-3 text-on-surface">Düsseldorf Hbf</span>
+<div class="flex items-center gap-spacing-3xs">
+<span class="font-live-time-delay text-live-time-delay text-on-surface-variant line-through">14:32</span>
+<span class="font-live-time-primary text-live-time-primary text-tertiary">14:35</span>
+<span class="px-spacing-3xs py-spacing-4xs rounded bg-surface-container text-on-surface font-caption-2 text-caption-2 ml-1">Gl. 16</span>
+</div>
+</div>
+<div class="flex flex-col items-center px-spacing-2xs">
+<div class="w-16 h-1 bg-surface-container-highest rounded-full relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 bg-primary w-2/5 rounded-full"></div>
+</div>
+<span class="material-symbols-outlined text-[18px] text-primary mt-1">trending_flat</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-title-3 text-title-3 text-on-surface">Köln Hbf</span>
+<div class="flex items-center gap-spacing-3xs">
+<span class="font-live-time-delay text-live-time-delay text-on-surface-variant line-through">15:08</span>
+<span class="font-live-time-primary text-live-time-primary text-tertiary">15:10</span>
+<span class="px-spacing-3xs py-spacing-4xs rounded bg-surface-container text-on-surface font-caption-2 text-caption-2 ml-1">Gl. 4</span>
+</div>
+</div>
+</div>
+<!-- Waggon Formation & Capacity Mini-Widget -->
+<div class="bg-surface-container-low rounded-lg p-spacing-xs flex flex-col gap-spacing-2xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">train</span>
+<span class="font-caption-1 text-caption-1">Wagenreihung &amp; Komfort (Doppelstock Desiro HC)</span>
+</div>
+<span class="font-caption-2 text-caption-2 text-secondary font-bold">Hohe Pünktlichkeit</span>
+</div>
+<!-- Train Carriages graphic -->
+<div class="flex items-center gap-1.5 pt-1 overflow-x-auto">
+<!-- Car 1 (1. Klasse) -->
+<div class="flex-1 min-w-[70px] bg-surface-container-highest rounded p-1 flex flex-col items-center gap-0.5">
+<div class="flex items-center justify-between w-full px-1">
+<span class="font-caption-2 text-caption-2 text-tertiary font-bold">1. Kl.</span>
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">airline_seat_recline_extra</span>
+<span class="font-caption-2 text-[9px] text-on-surface-variant">Wagen 1</span>
+</div>
+<!-- Car 2 (Fahrrad & Rollstuhl) -->
+<div class="flex-1 min-w-[70px] bg-secondary-container/40 rounded p-1 flex flex-col items-center gap-0.5">
+<div class="flex items-center justify-between w-full px-1">
+<span class="font-caption-2 text-caption-2 text-on-secondary-container font-bold">Mehrzweck</span>
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+</div>
+<div class="flex items-center gap-1 text-on-secondary-container">
+<span class="material-symbols-outlined text-[14px]">pedal_bike</span>
+<span class="material-symbols-outlined text-[14px]">accessible</span>
+</div>
+<span class="font-caption-2 text-[9px] text-on-secondary-container">Wagen 2</span>
+</div>
+<!-- Car 3 (2. Klasse - Mittel) -->
+<div class="flex-1 min-w-[70px] bg-surface-container-highest rounded p-1 flex flex-col items-center gap-0.5">
+<div class="flex items-center justify-between w-full px-1">
+<span class="font-caption-2 text-caption-2 text-on-surface font-bold">2. Kl.</span>
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">group</span>
+<span class="font-caption-2 text-[9px] text-on-surface-variant">Wagen 3</span>
+</div>
+<!-- Car 4 (2. Klasse - Hinten) -->
+<div class="flex-1 min-w-[70px] bg-surface-container-highest rounded p-1 flex flex-col items-center gap-0.5">
+<div class="flex items-center justify-between w-full px-1">
+<span class="font-caption-2 text-caption-2 text-on-surface font-bold">2. Kl.</span>
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">group</span>
+<span class="font-caption-2 text-[9px] text-on-surface-variant">Wagen 4</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Live NRW Operational Alert Banner -->
+<div class="bg-tertiary-fixed rounded-xl p-spacing-sm flex items-start gap-spacing-xs shadow-sm">
+<div class="w-8 h-8 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center flex-shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[18px]">info</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline text-headline text-on-tertiary-fixed">Echtzeit-Hinweis NRW</span>
+<p class="font-subhead text-subhead text-on-tertiary-fixed-variant mt-0.5">
+          Verzögerung wegen vorausfahrendem Güterzug zwischen Düsseldorf und Langenfeld. Anschlüsse in Köln Hbf werden planmäßig erreicht.
+        </p>
+</div>
+</div>
+<!-- Interactive Vertical Station Run List -->
+<div class="bg-surface-container-lowest rounded-xl p-spacing-sm shadow-sm flex flex-col">
+<div class="flex items-center justify-between pb-spacing-sm">
+<span class="font-headline text-headline text-on-surface">Haltestellen-Fahrplan</span>
+<span class="font-caption-1 text-caption-1 text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">sensors</span> GPS Live-Sync
+        </span>
+</div>
+<div class="flex flex-col relative pl-2">
+<!-- Station 1: Düsseldorf Hbf (Past) -->
+<div class="flex items-start gap-spacing-sm relative pb-7">
+<!-- Continuous Rail Line -->
+<div class="absolute left-[13px] top-6 bottom-0 w-1 bg-surface-container-highest"></div>
+<!-- Station Bullet -->
+<div class="w-7 h-7 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center z-10 flex-shrink-0">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<!-- Station Content -->
+<div class="flex flex-col flex-1 opacity-70">
+<div class="flex items-baseline justify-between">
+<span class="font-headline text-headline text-on-surface">Düsseldorf Hbf</span>
+<div class="flex items-baseline gap-1">
+<span class="font-caption-1 text-caption-1 text-on-surface-variant line-through">14:32</span>
+<span class="font-live-time-primary text-live-time-primary text-on-surface">14:35</span>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-caption-1 text-caption-1 text-on-surface-variant">Gleis 16</span>
+<span class="font-caption-2 text-caption-2 text-on-surface-variant uppercase tracking-wider bg-surface-container px-1.5 py-0.5 rounded">Abgefahren</span>
+</div>
+</div>
+</div>
+<!-- Station 2: Düsseldorf-Benrath (Current Active Position) -->
+<div class="flex items-start gap-spacing-sm relative pb-7">
+<!-- Rail Line split for active gradient -->
+<div class="absolute left-[13px] top-6 bottom-0 w-1 bg-gradient-to-b from-primary to-surface-container-highest"></div>
+<!-- Pulsing Live Dot Container -->
+<div class="relative z-10 flex-shrink-0 flex items-center justify-center w-7 h-7">
+<span class="absolute inline-flex h-full w-full rounded-full bg-primary/20 animate-ping"></span>
+<div class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined text-[16px] animate-pulse">train</span>
+</div>
+</div>
+<!-- Content -->
+<div class="flex flex-col flex-1 bg-primary/5 p-spacing-2xs rounded-lg">
+<div class="flex items-baseline justify-between">
+<div class="flex items-center gap-1.5">
+<span class="font-headline text-headline text-primary font-bold">Düsseldorf-Benrath</span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-caption-1 text-caption-1 text-on-surface-variant line-through">14:40</span>
+<span class="font-live-time-primary text-live-time-primary text-tertiary">14:42</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1">
+<span class="font-caption-1 text-caption-1 text-on-surface-variant">Gleis 2</span>
+<span class="px-spacing-3xs py-spacing-4xs rounded bg-primary text-on-primary font-caption-2 text-caption-2 font-bold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span> Aktueller Halt
+              </span>
+</div>
+</div>
+</div>
+<!-- Station 3: Leverkusen Mitte (Next upcoming) -->
+<div class="flex items-start gap-spacing-sm relative pb-7">
+<div class="absolute left-[13px] top-6 bottom-0 w-1 bg-surface-container-highest"></div>
+<div class="w-7 h-7 rounded-full bg-surface-container-lowest border-2 border-primary text-primary flex items-center justify-center z-10 flex-shrink-0 shadow-xs">
+<div class="w-2.5 h-2.5 rounded-full bg-primary"></div>
+</div>
+<div class="flex flex-col flex-1">
+<div class="flex items-baseline justify-between">
+<span class="font-headline text-headline text-on-surface">Leverkusen Mitte</span>
+<div class="flex items-baseline gap-1">
+<span class="font-caption-1 text-caption-1 text-on-surface-variant line-through">14:54</span>
+<span class="font-live-time-primary text-live-time-primary text-tertiary">14:56</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-0.5">
+<span class="font-caption-1 text-caption-1 text-on-surface-variant">Gleis 3</span>
+<span class="font-footnote text-footnote text-primary font-semibold">In 14 Min</span>
+</div>
+</div>
+</div>
+<!-- Station 4: Köln-Mülheim -->
+<div class="flex items-start gap-spacing-sm relative pb-7">
+<div class="absolute left-[13px] top-6 bottom-0 w-1 bg-surface-container-highest"></div>
+<div class="w-7 h-7 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center z-10 flex-shrink-0">
+<div class="w-2 h-2 rounded-full bg-outline"></div>
+</div>
+<div class="flex flex-col flex-1">
+<div class="flex items-baseline justify-between">
+<span class="font-headline text-headline text-on-surface">Köln-Mülheim</span>
+<span class="font-live-time-primary text-live-time-primary text-on-surface">15:02</span>
+</div>
+<span class="font-caption-1 text-caption-1 text-on-surface-variant mt-0.5">Gleis 2</span>
+</div>
+</div>
+<!-- Station 5: Köln Messe/Deutz -->
+<div class="flex items-start gap-spacing-sm relative pb-7">
+<div class="absolute left-[13px] top-6 bottom-0 w-1 bg-surface-container-highest"></div>
+<div class="w-7 h-7 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center z-10 flex-shrink-0">
+<div class="w-2 h-2 rounded-full bg-outline"></div>
+</div>
+<div class="flex flex-col flex-1">
+<div class="flex items-baseline justify-between">
+<span class="font-headline text-headline text-on-surface">Köln Messe/Deutz</span>
+<span class="font-live-time-primary text-live-time-primary text-on-surface">15:05</span>
+</div>
+<span class="font-caption-1 text-caption-1 text-on-surface-variant mt-0.5">Gleis 11</span>
+</div>
+</div>
+<!-- Station 6: Köln Hbf (Destination & Connections) -->
+<div class="flex items-start gap-spacing-sm relative">
+<div class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center z-10 flex-shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[16px]">pin_drop</span>
+</div>
+<div class="flex flex-col flex-1">
+<div class="flex items-baseline justify-between">
+<span class="font-headline text-headline text-on-surface font-bold">Köln Hbf</span>
+<div class="flex items-baseline gap-1">
+<span class="font-caption-1 text-caption-1 text-on-surface-variant line-through">15:08</span>
+<span class="font-live-time-primary text-live-time-primary text-tertiary">15:10</span>
+</div>
+</div>
+<span class="font-caption-1 text-caption-1 text-on-surface-variant mt-0.5">Ankunft an Gleis 4</span>
+<!-- Transfer Opportunity Card -->
+<div class="mt-spacing-2xs p-spacing-xs bg-surface-container rounded-lg flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="px-spacing-3xs py-spacing-4xs rounded bg-[#008D43] text-on-primary font-caption-2 text-caption-2 uppercase font-bold">S 19</span>
+<span class="font-footnote text-footnote text-on-surface font-medium">Richtung Düren</span>
+</div>
+<span class="font-caption-2 text-caption-2 text-secondary font-bold">In 8 Min (Gl. 10)</span>
+</div>
+<span class="font-caption-2 text-caption-2 text-on-surface-variant">Umstieg bequem machbar via Personenunterführung Süd</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Live Action Buttons / Assistant Sheet Area -->
+<div class="bg-surface-container-lowest rounded-xl p-spacing-sm shadow-sm flex flex-col gap-spacing-sm mb-spacing-md">
+<!-- Toggle Umstiegs-Alarm -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-spacing-xs">
+<div class="w-9 h-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">alarm</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline text-headline text-on-surface">Umstiegs-Alarm</span>
+<span class="font-caption-1 text-caption-1 text-on-surface-variant">Vibration 5 Min vor Ausstieg &amp; Gleiswechsel</span>
+</div>
+</div>
+<!-- Native iOS Switch Styled Input -->
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" id="alarmToggle" type="checkbox">
+<div class="w-13 h-7 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[3px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-secondary"></div>
+</label>
+</div>
+<!-- Action Row: Share and Report -->
+<div class="grid grid-cols-2 gap-spacing-xs pt-1">
+<button class="flex items-center justify-center gap-1.5 h-11 rounded-lg bg-surface-container hover:bg-surface-container-high active:scale-[0.98] transition-all text-on-surface font-footnote text-footnote font-semibold" id="shareBtn">
+<span class="material-symbols-outlined text-[18px]">share</span>
+<span class="">Fahrt teilen</span>
+</button>
+<button class="flex items-center justify-center gap-1.5 h-11 rounded-lg bg-primary text-on-primary active:scale-[0.98] transition-all font-footnote text-footnote font-semibold shadow-sm">
+<span class="material-symbols-outlined text-[18px]">notifications_active</span>
+<span class="">Live-Update</span>
+</button>
+</div>
+</div>
+</div>
+<script>
+    (function() {
+      // Micro-interaction: Toggle Alarm state
+      const toggle = document.getElementById('alarmToggle');
+      if (toggle) {
+        toggle.addEventListener('change', (e) => {
+          if (e.target.checked) {
+            console.log('Fahrtbegleiter: Umstiegs-Alarm aktiv.');
+          } else {
+            console.log('Fahrtbegleiter: Umstiegs-Alarm stummgeschaltet.');
+          }
+        });
+      }
+
+      // Micro-interaction: Native Web Share simulation
+      const shareBtn = document.getElementById('shareBtn');
+      if (shareBtn) {
+        shareBtn.addEventListener('click', () => {
+          if (navigator.share) {
+            navigator.share({
+              title: 'RE 1 (RRX) Fahrtverlauf',
+              text: 'Ich bin unterwegs mit RE 1 (10123) von Düsseldorf Hbf nach Köln Hbf. Aktueller Halt: Düsseldorf-Benrath (+2 Min).',
+              url: window.location.href
+            }).catch(() => {});
+          } else {
+            const originalText = shareBtn.innerHTML;
+            shareBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check</span><span>Link kopiert!</span>';
+            setTimeout(() => {
+              shareBtn.innerHTML = originalText;
+            }, 2000);
+          }
+        });
+      }
+    })();
+  </script>
+</div></main><nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface/85 backdrop-blur-xl shadow-[0_-1px_10px_rgba(0,0,0,0.05)]" data-active-classes="text-primary"><div class="flex justify-around items-center h-16 px-spacing-2xs"><a class="flex flex-col items-center justify-center gap-spacing-4xs min-w-[64px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="abfahrten" href="#"><span class="material-symbols-outlined text-[24px]">schedule</span><span class="font-caption-2 text-caption-2">Abfahrten</span></a><a class="flex flex-col items-center justify-center gap-spacing-4xs min-w-[64px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="verbindungen" href="#"><span class="material-symbols-outlined text-[24px]">directions_transit</span><span class="font-caption-2 text-caption-2">Verbindungen</span></a><a aria-current="page" class="flex flex-col items-center justify-center gap-spacing-4xs min-w-[64px] min-h-[44px] transition-colors text-primary" data-path="fahrtbegleiter" href="#"><span class="material-symbols-outlined text-[24px]">alt_route</span><span class="font-caption-2 text-caption-2">Fahrtbegleiter</span></a><a class="flex flex-col items-center justify-center gap-spacing-4xs min-w-[64px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="haltestellen" href="#"><span class="material-symbols-outlined text-[24px]">map</span><span class="font-caption-2 text-caption-2">Haltestellen</span></a></div></nav>
+
+</body></html>

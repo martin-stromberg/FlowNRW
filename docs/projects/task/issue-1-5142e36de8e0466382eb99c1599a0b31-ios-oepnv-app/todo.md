@@ -72,3 +72,13 @@ Schritt2 konfliktfrei in Basisbranch integriert; integrierten Branch sicher gel�
 19.09.2026: Schritt6 Produktcommit 1edca4b, unabhängige Projektabnahme Runde1 vollständig erfüllt. 173 Coretests/92,57 % Coverage, native Favoriten mit vier Prozessstarts sowie alle Routing-/Monitor-/Karten-/Standortregressionen bestanden. Release/UiTest ohne Warnungen und Fehler, Format/XML bestanden. Keine fachlichen Klärungsrunden. Reviews über Git-Historie gesichert, dauerhafte Nachweise unter docs/help/favoriten/verification; Lifecycleabschluss und Merge freigegeben.
 
 19.09.2026: Schritt6 mit Abschluss71690db konfliktfrei integriert, integrierten Schrittbranch sicher gelöscht. 6 von8 fertig. Schritt7 Monitorintervalle In Arbeit, Klärungsrunden0/Abnahmerunden0.
+## Designklarstellung – 24.09.2026
+
+6 von9 Schritten fachlich fertig; Schritt7 bleibt In Arbeit, Schritte8 und9 Offen. HTML-/Markdown-Draft war in Entscheidung2 bereits berücksichtigt, jedoch ohne konkrete visuelle Gesamtabnahme. Nutzerbestätigung präzisiert die finale Erscheinung. docs/design/acceptance.md legt Tokens, Konfliktentscheidungen und eine tatsächliche Screenshotmatrix fest; Schritt9 ist verpflichtendes Abschlusskriterium nach8. Keine bisherigen fachlichen Abnahmen aufgehoben.
+
+- [x] Tatsächliche Designreferenzen und Kernumfang abgeglichen
+- [x] Visuelle Abnahmekriterien und Schritt9 geplant
+- [x] Aktualisierten Projektplan einschließlich Designumfang unabhängig prüfen
+- [ ] Schritt9 implementieren und unabhängig visuell/fachlich abnehmen
+
+Gesamtabschluss/Aufräumen erst nach erfülltem Schritt9. Die unabhängige Prüfung des erweiterten Plans ist vollständig; siehe project-plan-check.md und archivierten Vorgänger project-plan-check.4.md.
