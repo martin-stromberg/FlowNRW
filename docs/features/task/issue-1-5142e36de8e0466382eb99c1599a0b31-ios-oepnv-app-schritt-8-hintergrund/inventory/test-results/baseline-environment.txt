@@ -1,0 +1,12 @@
+OS=  build 
+PowerShell=7.6.6
+SDK=10.0.401
+Runtime=Microsoft.NETCore.App 10.0.12 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+Node=v24.15.0
+NPM=11.12.1
+Branch=task/issue-1-5142e36de8e0466382eb99c1599a0b31-ios-oepnv-app-schritt-8-hintergrund
+Commit=d8c606d033f1d0943fe4858e827dc77e5ad5bd94
+BaselineCoreStart=2026-09-25T12:24:29.4156996+02:00
+BaselineCoreEnd=2026-09-25T12:24:31.9884026+02:00
+InitialUncommitted=design-draft.zip; feature requirement.md
+CodeTreeMatchesStep7VerificationCommit=3c062ed8f0da8f766637d2d05e31f2a3b89fe76b
