@@ -136,7 +136,7 @@ Die vorhandene GitHub-Actions-Konfiguration behält Windows-Build/Release sowie 
 ## Roadmap
 
 - Native iOS-Ausführung anhand der Prüfliste durch den Nutzer; die Plattformbasis ist implementiert.
-- Hintergrundaktualisierung und Wiederaufnahme sind implementiert; finale Schritt-8-Abnahme und native iOS-Geräteprüfung stehen noch aus.
+- Hintergrundaktualisierung und Wiederaufnahme sind implementiert und lokal abgenommen; native iOS-Geräteprüfung steht noch aus.
 - Die abschließende Gestaltung und visuelle Abnahme anhand des gelieferten Entwurfs folgen verbindlich in Schritt 9. [Design-Abnahmekriterien](docs/design/acceptance.md).
 
 Weitere Verkehrsverbünde sowie spätere Sharing-/Push-Funktionen bleiben Erweiterungspunkte. Sie sind in der technischen Dokumentation beschrieben, aber nicht als aktuelle Produktfunktion implementiert.

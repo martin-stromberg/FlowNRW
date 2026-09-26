@@ -21,8 +21,8 @@
 | [x] | 12 | Dokumentation | docs/help |
 | [x] | 12b | README | README.md |
 | [x] | 12c | Release Notes | docs/RELEASE_NOTES.md |
-| [ ] | – | Feature-Verzeichnis löschen | – |
-| [ ] | – | Commit durchführen | – |
+| [x] | – | Feature-Verzeichnis löschen | – |
+| [x] | – | Commit durchführen | – |
 
 25.09.2026: Bestandsaufnahme abgeschlossen; 210 Core- und 26 Release-Skripttests bestanden. Delegierte Agenten danach am Nutzungslimit ausgefallen; Planung und getrennte lokale Planprüfung gemäß Skillfallback abgeschlossen und committed. Keine fachlichen Rückfragen. Implementierung begonnen: Frischeregel, abbrechbare Monitorpfade und begrenzter Favoritenbatch/Lifecycle-Kern. Zwischenprüfung 221 Coretests bestanden; noch keine UI-/iOS-Anbindung oder finale Abnahme dieses Schritts.
 
