@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory=$true)][string]$Exe, [string]$ScreenshotDirectory, [switch]$FavoriteTimersOnly)
+﻿param([Parameter(Mandatory=$true)][string]$Exe, [string]$ScreenshotDirectory)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
@@ -133,99 +133,96 @@ function Snapshot([string]$name) {
         $bitmap.Save((Join-Path $ScreenshotDirectory ($name + '.png')),[Drawing.Imaging.ImageFormat]::Png)
     } finally { $graphics.Dispose(); $bitmap.Dispose() }
 }
-try {
-    Write-Output 'Native refresh tests use actual 30-second waits; all paths and data are isolated fixtures.'
-    StartApp
-    if (!$FavoriteTimersOnly) {
-    Click 'OpenRefreshSettings'; AwaitText 'RefreshIntervalStatus' 'alle 60 Sekunden'
-    Assert ((Name 'RefreshSettingsStatus') -match 'Standard.*60') 'Absent settings use documented 60-second default'
-    $bounds = $script:window.Current.BoundingRectangle
-    $transform = $script:window.GetCurrentPattern([System.Windows.Automation.TransformPattern]::Pattern)
-    $transform.Resize(430,900); ChooseInterval 30
-    Assert ((WaitElement 'RefreshInterval').Current.BoundingRectangle.Width -le 430) 'Native interval selector fits narrow viewport'
-    (WaitElement 'SaveRefreshSettings').SetFocus(); RequireForeground; [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
-    AwaitText 'RefreshSettingsStatus' 'gespeichert\.'; AwaitText 'RefreshIntervalStatus' 'alle 30 Sekunden'
-    Snapshot 'native-refresh-settings-narrow'; $transform.Resize($bounds.Width,$bounds.Height)
-    Back; StartApp; AwaitText 'RefreshIntervalStatus' 'alle 30 Sekunden'
-    Assert ($true) '30-second preference survives a new process'
-    OpenStop 'Refresh Station'
-    $stop = 'fixture-0'; $initial = Count $stop; $first = Name 'Departure0'
-    $clock = [Diagnostics.Stopwatch]::StartNew()
-    AwaitCount $stop ($initial + 1); AwaitText 'MonitorStatus' 'automatisch aktualisiert'
-    Assert ($clock.Elapsed.TotalSeconds -ge 27) 'First automatic request waited a complete productive interval, without accelerated fixture clock'
-    Assert ((Name 'Departure0') -ne $first) 'Automatic request changes displayed departure stand without manual click'
-    SetText 'FavoriteScenario' 'refresh-slow'
-    $before = Count $stop; AwaitCount $stop ($before + 1)
-    $manual = WaitElement 'RefreshDepartures'
-    if ($manual.Current.IsEnabled) { $manual.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
-    else { Assert ($true) 'Manual action is guarded while automatic request runs' }
-    Hold 7; Assert ((Count $stop) -eq ($before + 1)) 'Manual/automatic overlap starts exactly one request'
-    AwaitText 'MonitorStatus' 'automatisch aktualisiert'
-    $retained = Name 'Departure0'; $metadata = Name 'MonitorMetadata'
-    SetText 'FavoriteScenario' 'refresh-error'; $before = Count $stop; AwaitCount $stop ($before + 1)
-    AwaitText 'MonitorStatus' 'Letzte bekannte'
-    Assert ((Name 'Departure0') -eq $retained) 'Automatic failure retains last known departures'
-    Assert ((Name 'MonitorMetadata') -match 'Datenalter:.*Fallback') 'Failure retains explicit source, age and fallback state'
-    Hold 3; Assert ((Count $stop) -eq ($before + 1)) 'Failed refresh does not create an immediate retry loop'
-    SetText 'FavoriteScenario' 'success'; Click 'RefreshDepartures'; AwaitText 'MonitorStatus' 'manuell aktualisiert'
-    $before = Count $stop
-    Click 'OpenRefreshSettings'; Foreground; Hold 35; Back; Foreground
-    Assert ((Count $stop) -eq $before) 'Settings navigation stops the invisible monitor for more than one interval'
-    Settings 0; $before = Count $stop; Hold 35
-    Assert ((Count $stop) -eq $before) 'Off disables the automatic monitor loop'
-    Click 'RefreshDepartures'; AwaitText 'MonitorStatus' 'manuell aktualisiert'
-    Assert ((Count $stop) -eq ($before + 1)) 'Manual refresh still works while automatic mode is off'
-    Settings 30; Hold 10; Settings 60; $before = Count $stop; Hold 35
-    Assert ((Count $stop) -eq $before) 'Interval change cancels the previous 30-second schedule'
-    Click 'OpenRefreshSettings'; ChooseInterval 30; SetText 'RefreshSettingsScenario' 'refresh-store-error'
-    Click 'SaveRefreshSettings'; AwaitText 'RefreshSettingsStatus' 'nicht gespeichert'
-    Assert ((Name 'RefreshIntervalStatus') -match 'alle 60 Sekunden') 'Storage failure preserves effective interval'
-    SetText 'RefreshSettingsScenario' 'success'; Click 'SaveRefreshSettings'; AwaitText 'RefreshSettingsStatus' 'gespeichert\.'
-    Back; Foreground; $before = Count $stop
-    $handle = [IntPtr]$script:window.Current.NativeWindowHandle
-    [RefreshWindow]::ShowWindow($handle,6) | Out-Null; Start-Sleep -Milliseconds 300
-    Hold 35 $false
-    Assert ((Count $stop) -eq $before) 'Deactivated own window does not refresh'
+function PauseAndResume([int]$seconds = 1) {
+    [RefreshWindow]::ShowWindow([IntPtr]$script:window.Current.NativeWindowHandle,6) | Out-Null
+    Start-Sleep -Milliseconds 300
+    Hold $seconds $false
     Foreground
-    AwaitCount $stop ($before + 1) 5; AwaitText 'MonitorStatus' 'automatisch aktualisiert'
-    Hold 3; Assert ((Count $stop) -eq ($before + 1)) 'Reactivation starts one schedule without catch-up bursts'
-    SetText 'FavoriteScenario' 'refresh-slow'; $before = Count $stop; AwaitCount $stop ($before + 1)
-    Back; Back; Foreground
-    Click 'OpenJourneySearch'; Hold 35; Back; Foreground
-    Assert ((Count $stop) -eq ($before + 1)) 'Page departure cancels slow work and search has no invisible monitor loop'
-    StartApp; AwaitText 'RefreshIntervalStatus' 'alle 30 Sekunden'
-    Assert ($true) 'Retry-saved interval survives another process'
-    } else { Settings 30 }
+}
+function RouteCount { return [int](Name 'RouteCalls') }
+try {
+    StartApp
+    Settings 300
+    SetText 'HomeScenario' 'resume-fresh'
+    OpenStop 'Resume Station'
+    $stop = 'fixture-0'; $before = Count $stop
+    PauseAndResume
+    Hold 2
+    Assert ((Count $stop) -eq $before) 'Fresh monitor resumes without another request'
+    $old = Name 'Departure0'
+    PauseAndResume 35
+    AwaitCount $stop ($before + 1) 5
+    AwaitText 'MonitorStatus' 'automatisch aktualisiert'
+    Assert ((Name 'Departure0') -ne $old) 'Expired monitor updates immediately on resume without waiting 300 seconds'
+    Hold 2
+    Assert ((Count $stop) -eq ($before + 1)) 'Resume produces no duplicate monitor request'
+    SetText 'FavoriteScenario' 'success'
+    Click 'RefreshDepartures'; AwaitText 'MonitorStatus' 'manuell aktualisiert'
+    $old = Name 'Departure0'; $before = Count $stop
+    SetText 'FavoriteScenario' 'refresh-error'
+    PauseAndResume
+    AwaitText 'MonitorStatus' 'Letzte bekannte'
+    Assert ((Count $stop) -eq ($before + 1) -and (Name 'Departure0') -eq $old) 'Resume error retains visible previous departures'
+    SetText 'FavoriteScenario' 'refresh-slow'
+    $before = Count $stop; PauseAndResume; AwaitCount $stop ($before + 1) 5
+    PauseAndResume; AwaitCount $stop ($before + 2) 5
+    AwaitText 'MonitorStatus' 'automatisch aktualisiert'
+    Assert ((Name 'Departure0') -match ('Stand ' + ($before + 2) + '\b')) 'Rapid reactivation displays only the newest slow request'
+    Hold 2
+    Assert ((Count $stop) -eq ($before + 2)) 'Rapid reactivation does not create another timer or request'
+    $before = Count $stop; PauseAndResume; AwaitCount $stop ($before + 1) 5
+    Back; Hold 7
+    Assert ($null -ne (Find 'StopQuery') -and $null -eq (Find 'MonitorStop')) 'Leaving slow resume cannot reopen the old monitor'
+    Back; Foreground
+    SetText 'HomeScenario' 'success'
     AddFavorite 'Favorite Far'; AddFavorite 'Favorite Near'
-    AwaitText 'FavoriteStatus0' 'manuell aktualisiert'; AwaitText 'FavoriteStatus1' 'manuell aktualisiert'
+    AwaitText 'FavoriteStatus0' 'aktualisiert'; AwaitText 'FavoriteStatus1' 'aktualisiert'
     SetText 'HomeScenario' 'favorite-slow'
     $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'
-    AwaitCount 'fixture-favorite-near-0' ($near + 1)
+    PauseAndResume
+    AwaitCount 'fixture-favorite-far-0' ($far + 1) 5
     AwaitText 'FavoriteStatus1' 'automatisch aktualisiert'
-    Assert ((Name 'FavoriteStatus0') -match 'werden aktualisiert') 'Slow favorite remains loading while another automatic favorite completed'
-    Assert ((Count 'fixture-favorite-far-0') -eq ($far + 1)) 'Each active card has one independent automatic request'
-    $manual = WaitElement 'RefreshFavorite0'
-    if ($manual.Current.IsEnabled) { $manual.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
+    Assert ((Name 'FavoriteStatus0') -match 'werden aktualisiert') 'Slow favorite does not block another resume card'
     AwaitText 'FavoriteStatus0' 'automatisch aktualisiert'
-    Assert ((Count 'fixture-favorite-far-0') -eq ($far + 1)) 'Favorite manual/automatic overlap is guarded'
-    $retained = Name 'FavoriteDeparture0_0'
-    SetText 'HomeScenario' 'favorite-error'; $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'
-    AwaitCount 'fixture-favorite-far-0' ($far + 1)
+    $old = Name 'FavoriteDeparture0_0'
+    SetText 'HomeScenario' 'favorite-error'; PauseAndResume
     AwaitText 'FavoriteStatus0' 'Letzte bekannte'
-    Assert ((Name 'FavoriteDeparture0_0') -eq $retained) 'Automatic favorite failure retains prior data'
-    Assert ((Count 'fixture-favorite-near-0') -gt $near) 'Another favorite continues despite the failed card'
-    SetText 'HomeScenario' 'success'; Click 'RefreshFavorite0'; AwaitText 'FavoriteStatus0' 'manuell aktualisiert'
-    Settings 0; $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'; Hold 35
-    Assert ((Count 'fixture-favorite-far-0') -eq $far -and (Count 'fixture-favorite-near-0') -eq $near) 'Off stops all favorite schedules'
-    Settings 30
-    for ($round=0; $round -lt 3; $round++) { Click 'OpenJourneySearch'; Back; Foreground }
+    AwaitText 'FavoriteStatus1' 'automatisch aktualisiert'
+    Assert ((Name 'FavoriteDeparture0_0') -eq $old) 'Favorite resume failure retains old data'
+    Settings 0
     $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'
-    AwaitCount 'fixture-favorite-far-0' ($far + 1); AwaitCount 'fixture-favorite-near-0' ($near + 1)
-    AwaitText 'FavoriteStatus0' 'automatisch aktualisiert'; AwaitText 'FavoriteStatus1' 'automatisch aktualisiert'
-    Hold 3
-    Assert ((Count 'fixture-favorite-far-0') -eq ($far + 1) -and (Count 'fixture-favorite-near-0') -eq ($near + 1)) 'Repeated page navigation does not multiply favorite timers'
-    if ($FavoriteTimersOnly) { Write-Output 'PASS native favorite timer regression: real30s, independent cards, overlap, error retention, Off and navigation' }
-    else { Write-Output 'PASS all native refresh scenarios: real timing, persistence, off/change, navigation/activity, independent cards, overlap, retained errors and storage retry' }
+    PauseAndResume; Hold 2
+    Assert ((Count 'fixture-favorite-far-0') -eq $far -and (Count 'fixture-favorite-near-0') -eq $near) 'Off suppresses automatic favorite resume'
+    SetText 'HomeScenario' 'success'
+    Click 'RefreshFavorite0'; AwaitText 'FavoriteStatus0' 'manuell aktualisiert'
+    Assert ((Count 'fixture-favorite-far-0') -eq ($far + 1)) 'Manual refresh remains usable with automatic resume off'
+    Settings 300
+    Click 'OpenJourneySearch'; SetText 'LocationScenario' 'resume-route-stale'
+    SetText 'OriginText' 'Resume Origin'; Click 'OriginSearch'; Click 'OriginMatch0'
+    SetText 'DestinationText' 'Resume Destination'; Click 'DestinationSearch'; Click 'DestinationMatch0'
+    Click 'SearchJourneys'; AwaitText 'ResultsStatus' 'automatisch aktualisiert'
+    $before = RouteCount; PauseAndResume
+    AwaitText 'ResultsStatus' 'automatisch aktualisiert'
+    Assert ((RouteCount) -eq ($before + 1) -and $null -ne (Find 'Journey0')) 'Visible route results resume once without navigation'
+    Click 'Journey0'; AwaitText 'DetailStatus' 'automatisch aktualisiert'
+    $before = RouteCount; SetText 'LifecycleScenario' 'resume-route-error'; PauseAndResume
+    AwaitText 'DetailStatus' 'Letzte bekannte'
+    Assert ((RouteCount) -eq ($before + 1) -and (Name 'JourneyDetailSection0') -notmatch 'Keine Verbindung') 'Journey details retain data and page on resume failure'
+    SetText 'LifecycleScenario' 'resume-route-stale'; PauseAndResume
+    AwaitText 'DetailStatus' 'automatisch aktualisiert'
+    Assert ((WaitElement 'ShowJourneyMap').Current.IsEnabled) 'Uniquely identified journey remains selected after resume'
+    SetText 'LifecycleScenario' 'resume-route-fresh'; PauseAndResume
+    AwaitText 'DetailStatus' 'automatisch aktualisiert'
+    $before = RouteCount; PauseAndResume; Hold 2
+    Assert ((RouteCount) -eq $before) 'Fresh journey details resume without another provider request'
+    SetText 'LifecycleScenario' 'resume-route-stale'
+    PauseAndResume 35
+    AwaitText 'DetailStatus' 'automatisch aktualisiert'
+    SetText 'LifecycleScenario' 'resume-route-missing'; PauseAndResume
+    AwaitText 'DetailStatus' 'nicht mehr eindeutig'
+    Assert (!(WaitElement 'ShowJourneyMap').Current.IsEnabled) 'Missing prior journey is not replaced silently'
+    Snapshot 'native-lifecycle-detail'
+    Write-Output 'PASS native lifecycle: fresh/expired monitor, failure retention, cancellation, independent favorites, off/manual, results and detail identity'
 } finally {
     if ($script:app -and !$script:app.HasExited) { Stop-Process -Id $script:app.Id }
     $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = $previousSettings

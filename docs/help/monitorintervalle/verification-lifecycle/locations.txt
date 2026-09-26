@@ -1,0 +1,36 @@
+PASS LocationCalls contains ^0$
+PASS LocationCalls contains ^0$
+PASS manual route and navigation do not request location
+PASS OriginSelection contains Aktueller Standort
+PASS DestinationSelection contains Aktueller Standort
+PASS LocationCalls contains ^2$
+PASS OriginLocationStatus contains ungefähr|Genauigkeit|ungenau
+PASS Failed location retains completed endpoint: denied
+PASS Location retry enabled: denied
+PASS Failed location retains completed endpoint: disabled
+PASS Location retry enabled: disabled
+PASS Failed location retains completed endpoint: unsupported
+PASS Location retry enabled: unsupported
+PASS Failed location retains completed endpoint: timeout
+PASS Location retry enabled: timeout
+PASS Failed location retains completed endpoint: unavailable
+PASS Location retry enabled: unavailable
+PASS Failed location retains completed endpoint: error
+PASS Location retry enabled: error
+PASS fixture permission revocation, failure states, retained selection and manual recovery
+PASS OriginSelection contains Newest manual endpoint
+PASS Page exit cancels pending location state
+PASS late endpoint responses and page exit do not overwrite new input
+PASS Location action fits narrow viewport
+PASS StopMatch0 contains Umgebung Süd
+PASS StopMatch0 contains 225
+PASS StopMatch1 contains Umgebung Nord
+PASS StopMatch1 contains unbekannt
+PASS StopSearchMetadata contains Nearby.*Datenalter:.*Fallback
+Nearby action fits narrow viewport
+In D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\tests\WindowsJourneyUiTests\WindowsJourneyUiTests.ps1:52 Zeichen:70
++ ... ool]$value, [string]$message) { if (!$value) { throw $message }; Writ ...
++                                                    ~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Nearby action fits narrow viewport:String) [], RuntimeException
+    + FullyQualifiedErrorId : Nearby action fits narrow viewport
+ 

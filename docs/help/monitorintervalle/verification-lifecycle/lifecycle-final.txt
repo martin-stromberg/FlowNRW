@@ -1,0 +1,60 @@
+PASS Effective saved interval 300
+WAIT real time 0/1 seconds
+WAIT real time 0/2 seconds
+PASS Fresh monitor resumes without another request
+WAIT real time 0/35 seconds
+WAIT real time 5/35 seconds
+WAIT real time 10/35 seconds
+WAIT real time 15/35 seconds
+WAIT real time 20/35 seconds
+WAIT real time 25/35 seconds
+WAIT real time 30/35 seconds
+PASS Exactly expected request count for fixture-0: 2
+PASS Expired monitor updates immediately on resume without waiting 300 seconds
+WAIT real time 0/2 seconds
+PASS Resume produces no duplicate monitor request
+WAIT real time 0/1 seconds
+PASS Resume error retains visible previous departures
+WAIT real time 0/1 seconds
+PASS Exactly expected request count for fixture-0: 5
+WAIT real time 0/1 seconds
+PASS Exactly expected request count for fixture-0: 6
+PASS Rapid reactivation displays only the newest slow request
+WAIT real time 0/2 seconds
+PASS Rapid reactivation does not create another timer or request
+WAIT real time 0/1 seconds
+PASS Exactly expected request count for fixture-0: 7
+WAIT real time 0/7 seconds
+WAIT real time 5/7 seconds
+PASS Leaving slow resume cannot reopen the old monitor
+WAIT real time 0/1 seconds
+PASS Exactly expected request count for fixture-favorite-far-0: 4
+PASS Slow favorite does not block another resume card
+WAIT real time 0/1 seconds
+PASS Favorite resume failure retains old data
+PASS Effective saved interval 0
+WAIT real time 0/1 seconds
+WAIT real time 0/2 seconds
+PASS Off suppresses automatic favorite resume
+PASS Manual refresh remains usable with automatic resume off
+PASS Effective saved interval 300
+WAIT real time 0/1 seconds
+PASS Visible route results resume once without navigation
+WAIT real time 0/1 seconds
+PASS Journey details retain data and page on resume failure
+WAIT real time 0/1 seconds
+PASS Uniquely identified journey remains selected after resume
+WAIT real time 0/1 seconds
+WAIT real time 0/1 seconds
+WAIT real time 0/2 seconds
+PASS Fresh journey details resume without another provider request
+WAIT real time 0/35 seconds
+WAIT real time 5/35 seconds
+WAIT real time 10/35 seconds
+WAIT real time 15/35 seconds
+WAIT real time 20/35 seconds
+WAIT real time 25/35 seconds
+WAIT real time 30/35 seconds
+WAIT real time 0/1 seconds
+PASS Missing prior journey is not replaced silently
+PASS native lifecycle: fresh/expired monitor, failure retention, cancellation, independent favorites, off/manual, results and detail identity

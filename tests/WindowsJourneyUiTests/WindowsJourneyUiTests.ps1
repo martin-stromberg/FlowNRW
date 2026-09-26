@@ -28,6 +28,8 @@ try {
     }
     function Wait([string]$id) {
         for ($i = 0; $i -lt 100; $i++) { $e = Find $id; if ($e) { return $e }; Start-Sleep -Milliseconds 100 }
+        Write-Output ('DIAGNOSTIC missing ' + $id + '; visible page markers: ' + ((@('OriginText','StopQuery','MonitorStop','MapCanvas','Journey0','JourneyDetailSection0') | Where-Object { $null -ne (Find $_) }) -join ', '))
+        Snapshot ('failure-missing-' + $id)
         throw "Missing $id"
     }
     function Click([string]$id) {
@@ -51,6 +53,16 @@ try {
     function Name([string]$id) { return (Wait $id).Current.Name }
     function Assert([bool]$value, [string]$message) { if (!$value) { throw $message }; Write-Output "PASS $message" }
     function Back { Click 'NavigationViewBackButton' }
+    function AssertNarrowAction([string]$id, [string]$message) {
+        # Resize returns before WinUI has completed its layout pass.
+        $width = 0
+        for ($attempt = 0; $attempt -lt 50; $attempt++) {
+            $width = (Wait $id).Current.BoundingRectangle.Width
+            if ($width -gt 0 -and $width -le 430) { break }
+            Start-Sleep -Milliseconds 100
+        }
+        Assert ($width -gt 0 -and $width -le 430) ($message + " (width=$width)")
+    }
     function Contains([string]$id, [string]$pattern) { Assert ((Name $id) -match $pattern) "$id contains $pattern" }
     function Status([string]$id, [string]$pattern) {
         for ($j = 0; $j -lt 120; $j++) { if ((Name $id) -match $pattern) { return }; Start-Sleep -Milliseconds 100 }
@@ -352,7 +364,7 @@ public static class LocationPointer {
         $transform = $script:window.GetCurrentPattern([System.Windows.Automation.TransformPattern]::Pattern)
         $transform.Resize(430,900)
         SetText 'LocationScenario' 'success'; LocationKeyboard 'OriginLocation'; Status 'OriginLocationStatus' 'übernommen'
-        Assert ((Wait 'OriginLocation').Current.BoundingRectangle.Width -le 430) 'Location action fits narrow viewport'
+        AssertNarrowAction 'OriginLocation' 'Location action fits narrow viewport'
         Snapshot 'native-location-narrow'
         $transform.Resize($bounds.Width,$bounds.Height)
         Click 'OpenStopSearch'
@@ -363,7 +375,7 @@ public static class LocationPointer {
         $bounds = $script:window.Current.BoundingRectangle
         $transform = $script:window.GetCurrentPattern([System.Windows.Automation.TransformPattern]::Pattern)
         $transform.Resize(430,900)
-        Assert ((Wait 'FindNearbyStops').Current.BoundingRectangle.Width -le 430) 'Nearby action fits narrow viewport'
+        AssertNarrowAction 'FindNearbyStops' 'Nearby action fits narrow viewport'
         Snapshot 'native-nearby-narrow'
         $transform.Resize($bounds.Width,$bounds.Height)
         Click 'StopMatch0'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-nearby-0'
@@ -486,9 +498,11 @@ public static class MapPointer {
         Back
         SetText 'StopQuery' '<img src=x onerror=alert(1)>'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
         Status 'MapStatus' 'Basiskarte geladen\.'; Click 'ShowMapList'; Contains 'MapStation0' 'onerror'
-        Click 'MapStation0'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorStop' 'onerror'; Back; Back
+        Click 'MapStation0'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorStop' 'onerror'
+        Back; Status 'MapStatus' 'Basiskarte geladen\.'; Back; Wait 'StopQuery' | Out-Null
         SetText 'StopQuery' 'map-slow'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
-        Back; SetText 'StopQuery' 'Newest map'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
+        Wait 'MapCanvas' | Out-Null; Back; Wait 'StopQuery' | Out-Null
+        SetText 'StopQuery' 'Newest map'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
         Status 'MapStatus' 'Basiskarte geladen\.'; Start-Sleep -Seconds 6; Contains 'MapMetadata' 'Newest map'; Back; Back
         SelectEndpoint 'Origin' 'Essen'; SelectEndpoint 'Destination' 'Berlin'; Click 'SearchJourneys'; Click 'Journey0'
         Click 'ShowJourneyMap'; Status 'MapStatus' 'Basiskarte geladen\.'; Contains 'MapDataStatus' 'Teilweiser Verlauf'; Contains 'MapSegment0' 'RE 1.*3 gelieferte Punkte'; Contains 'MapSegment1' 'Fußweg.*2 gelieferte Punkte'

@@ -17,19 +17,23 @@ public sealed class DeparturePage : ContentPage
     private readonly RefreshLoop refreshLoop;
     private bool active;
     private long appearance;
+    private readonly RefreshFreshness freshness;
+    private CancellationTokenSource? resume;
 
     /// <summary>Creates the departure board.</summary>
     /// <param name="model">Shared monitor session.</param>
     /// <param name="favorites">Persisted technical stop selections.</param>
     /// <param name="settings">Shared refresh interval.</param>
     /// <param name="foreground">Active window state.</param>
+    /// <param name="freshness">Shared realtime age policy.</param>
     public DeparturePage(StopMonitorViewModel model, FavoriteHomeViewModel favorites,
-        RefreshSettingsViewModel settings, ForegroundState foreground)
+        RefreshSettingsViewModel settings, ForegroundState foreground, RefreshFreshness freshness)
     {
         this.model = model;
         this.favorites = favorites;
         this.settings = settings;
         this.foreground = foreground;
+        this.freshness = freshness;
         refreshLoop = new RefreshLoop(model.RefreshAutomaticallyAsync, model.CancelPending);
         BindingContext = model;
         SetBinding(TitleProperty, new Binding(nameof(model.Title)));
@@ -104,6 +108,8 @@ public sealed class DeparturePage : ContentPage
     {
         active = false;
         appearance++;
+        resume?.Cancel();
+        resume = null;
         settings.Changed -= SettingsChanged;
         foreground.PropertyChanged -= ForegroundChanged;
         refreshLoop.Stop();
@@ -123,11 +129,35 @@ public sealed class DeparturePage : ContentPage
 
     private void SettingsChanged(object? sender, EventArgs args) => ReconcileRefreshLoop();
 
-    private void ForegroundChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args) => ReconcileRefreshLoop();
+    private async void ForegroundChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+    {
+        if (!foreground.IsActive)
+        {
+            resume?.Cancel();
+            resume = null;
+            refreshLoop.Stop();
+            model.CancelPending();
+            return;
+        }
+        if (!active || !settings.IsLoaded || settings.IntervalSeconds == 0 || resume is not null) return;
+        using var source = new CancellationTokenSource();
+        resume = source;
+        try { await model.RefreshIfStaleAsync(freshness, source.Token); }
+        catch (OperationCanceledException) { }
+        catch (Exception) { Title = "Aktualisierung fehlgeschlagen"; }
+        finally
+        {
+            if (ReferenceEquals(resume, source))
+            {
+                resume = null;
+                ReconcileRefreshLoop();
+            }
+        }
+    }
 
     private void ReconcileRefreshLoop()
     {
-        if (active && foreground.IsActive && settings.IsLoaded) refreshLoop.Start(settings.IntervalSeconds);
+        if (active && foreground.IsActive && settings.IsLoaded && resume is null) refreshLoop.Start(settings.IntervalSeconds);
         else refreshLoop.Stop();
     }
 

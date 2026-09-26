@@ -1,0 +1,133 @@
+Native refresh tests use actual 30-second waits; all paths and data are isolated fixtures.
+PASS Absent settings use documented 60-second default
+PASS Native interval selector fits narrow viewport
+PASS 30-second preference survives a new process
+WAIT next real timer request 0 seconds
+WAIT next real timer request 5 seconds
+WAIT next real timer request 10 seconds
+WAIT next real timer request 15 seconds
+WAIT next real timer request 20 seconds
+WAIT next real timer request 25 seconds
+PASS Exactly expected request count for fixture-0: 2
+PASS First automatic request waited a complete productive interval, without accelerated fixture clock
+PASS Automatic request changes displayed departure stand without manual click
+WAIT next real timer request 0 seconds
+WAIT next real timer request 5 seconds
+WAIT next real timer request 10 seconds
+WAIT next real timer request 15 seconds
+WAIT next real timer request 20 seconds
+WAIT next real timer request 25 seconds
+PASS Exactly expected request count for fixture-0: 3
+PASS Manual action is guarded while automatic request runs
+WAIT real time 0/7 seconds
+WAIT real time 5/7 seconds
+PASS Manual/automatic overlap starts exactly one request
+WAIT next real timer request 0 seconds
+WAIT next real timer request 5 seconds
+WAIT next real timer request 10 seconds
+WAIT next real timer request 15 seconds
+WAIT next real timer request 20 seconds
+WAIT next real timer request 25 seconds
+PASS Exactly expected request count for fixture-0: 4
+PASS Automatic failure retains last known departures
+PASS Failure retains explicit source, age and fallback state
+WAIT real time 0/3 seconds
+PASS Failed refresh does not create an immediate retry loop
+WAIT real time 0/35 seconds
+WAIT real time 5/35 seconds
+WAIT real time 10/35 seconds
+WAIT real time 15/35 seconds
+WAIT real time 20/35 seconds
+WAIT real time 25/35 seconds
+WAIT real time 30/35 seconds
+PASS Settings navigation stops the invisible monitor for more than one interval
+PASS Effective saved interval 0
+WAIT real time 0/35 seconds
+WAIT real time 5/35 seconds
+WAIT real time 10/35 seconds
+WAIT real time 15/35 seconds
+WAIT real time 20/35 seconds
+WAIT real time 25/35 seconds
+WAIT real time 30/35 seconds
+PASS Off disables the automatic monitor loop
+PASS Manual refresh still works while automatic mode is off
+PASS Effective saved interval 30
+WAIT real time 0/10 seconds
+WAIT real time 5/10 seconds
+PASS Effective saved interval 60
+WAIT real time 0/35 seconds
+WAIT real time 5/35 seconds
+WAIT real time 10/35 seconds
+WAIT real time 15/35 seconds
+WAIT real time 20/35 seconds
+WAIT real time 25/35 seconds
+WAIT real time 30/35 seconds
+PASS Interval change cancels the previous 30-second schedule
+PASS Storage failure preserves effective interval
+WAIT real time 0/35 seconds
+WAIT real time 5/35 seconds
+WAIT real time 10/35 seconds
+WAIT real time 15/35 seconds
+WAIT real time 20/35 seconds
+WAIT real time 25/35 seconds
+WAIT real time 30/35 seconds
+PASS Deactivated own window does not refresh
+PASS Exactly expected request count for fixture-0: 7
+WAIT real time 0/3 seconds
+PASS Reactivation starts one schedule without catch-up bursts
+WAIT next real timer request 0 seconds
+WAIT next real timer request 5 seconds
+WAIT next real timer request 10 seconds
+WAIT next real timer request 15 seconds
+WAIT next real timer request 20 seconds
+WAIT next real timer request 25 seconds
+PASS Exactly expected request count for fixture-0: 8
+WAIT real time 0/35 seconds
+WAIT real time 5/35 seconds
+WAIT real time 10/35 seconds
+WAIT real time 15/35 seconds
+WAIT real time 20/35 seconds
+WAIT real time 25/35 seconds
+WAIT real time 30/35 seconds
+PASS Page departure cancels slow work and search has no invisible monitor loop
+PASS Retry-saved interval survives another process
+WAIT next real timer request 0 seconds
+WAIT next real timer request 5 seconds
+WAIT next real timer request 10 seconds
+WAIT next real timer request 15 seconds
+WAIT next real timer request 20 seconds
+WAIT next real timer request 25 seconds
+PASS Exactly expected request count for fixture-favorite-near-0: 3
+PASS Slow favorite remains loading while another automatic favorite completed
+PASS Each active card has one independent automatic request
+PASS Favorite manual/automatic overlap is guarded
+WAIT next real timer request 0 seconds
+WAIT next real timer request 5 seconds
+WAIT next real timer request 10 seconds
+WAIT next real timer request 15 seconds
+WAIT next real timer request 20 seconds
+WAIT next real timer request 25 seconds
+PASS Exactly expected request count for fixture-favorite-far-0: 5
+PASS Automatic favorite failure retains prior data
+PASS Another favorite continues despite the failed card
+PASS Effective saved interval 0
+WAIT real time 0/35 seconds
+WAIT real time 5/35 seconds
+WAIT real time 10/35 seconds
+WAIT real time 15/35 seconds
+WAIT real time 20/35 seconds
+WAIT real time 25/35 seconds
+WAIT real time 30/35 seconds
+PASS Off stops all favorite schedules
+PASS Effective saved interval 30
+WAIT next real timer request 0 seconds
+WAIT next real timer request 5 seconds
+WAIT next real timer request 10 seconds
+WAIT next real timer request 15 seconds
+WAIT next real timer request 20 seconds
+WAIT next real timer request 25 seconds
+PASS Exactly expected request count for fixture-favorite-far-0: 7
+PASS Exactly expected request count for fixture-favorite-near-0: 5
+WAIT real time 0/3 seconds
+PASS Repeated page navigation does not multiply favorite timers
+PASS all native refresh scenarios: real timing, persistence, off/change, navigation/activity, independent cards, overlap, retained errors and storage retry

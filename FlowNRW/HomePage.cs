@@ -18,6 +18,8 @@ public sealed class HomePage : ContentPage
     private bool active;
     private readonly RefreshSettingsViewModel settings;
     private readonly ForegroundState foreground;
+    private readonly RefreshFreshness freshness;
+    private CancellationTokenSource? resume;
     private readonly Dictionary<FavoriteMonitorViewModel, RefreshLoop> refreshLoops = [];
 
     /// <summary>Creates the home view.</summary>
@@ -26,13 +28,15 @@ public sealed class HomePage : ContentPage
     /// <param name="map">Validated favorite map snapshots.</param>
     /// <param name="settings">Persisted refresh interval.</param>
     /// <param name="foreground">Active window state.</param>
+    /// <param name="freshness">Shared realtime age policy.</param>
     public HomePage(FavoriteHomeViewModel model, StopMonitorViewModel monitor, MapViewModel map,
-        RefreshSettingsViewModel settings, ForegroundState foreground)
+        RefreshSettingsViewModel settings, ForegroundState foreground, RefreshFreshness freshness)
     {
         this.model = model;
         this.monitor = monitor;
         this.settings = settings;
         this.foreground = foreground;
+        this.freshness = freshness;
         BindingContext = model;
         Title = "Meine Haltestellen";
         var layout = new VerticalStackLayout { Padding = 16, Spacing = 12 };
@@ -57,7 +61,7 @@ public sealed class HomePage : ContentPage
             if (args.PropertyName == nameof(model.Cards))
             {
                 RenderCards();
-                if (active) _ = RefreshMissingAsync();
+                if (active && foreground.IsActive && resume is null) _ = RefreshMissingAsync();
                 ReconcileRefreshLoops();
             }
             count.Text = $"{model.Cards.Count} Favoriten";
@@ -93,7 +97,8 @@ public sealed class HomePage : ContentPage
             if (version != appearance) return;
             await model.LoadAsync();
             if (version != appearance) return;
-            RenderCards(); ReconcileRefreshLoops(); await model.RefreshMissingAsync();
+            RenderCards(); ReconcileRefreshLoops();
+            if (foreground.IsActive) await model.RefreshMissingAsync();
         }
         catch (Exception) { Title = "Favoriten konnten nicht geladen werden"; }
     }
@@ -103,6 +108,8 @@ public sealed class HomePage : ContentPage
     {
         appearance++;
         active = false;
+        resume?.Cancel();
+        resume = null;
         settings.Changed -= SettingsChanged;
         foreground.PropertyChanged -= ForegroundChanged;
         ReconcileRefreshLoops();
@@ -115,11 +122,35 @@ public sealed class HomePage : ContentPage
 
     private void SettingsChanged(object? sender, EventArgs args) => ReconcileRefreshLoops();
 
-    private void ForegroundChanged(object? sender, PropertyChangedEventArgs args) => ReconcileRefreshLoops();
+    private async void ForegroundChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (!foreground.IsActive)
+        {
+            resume?.Cancel();
+            resume = null;
+            ReconcileRefreshLoops();
+            model.CancelPending();
+            return;
+        }
+        if (!active || !settings.IsLoaded || settings.IntervalSeconds == 0 || resume is not null) return;
+        using var source = new CancellationTokenSource();
+        resume = source;
+        try { await model.RefreshStaleAsync(freshness, source.Token); }
+        catch (OperationCanceledException) { }
+        catch (Exception) { Title = "Aktualisierung fehlgeschlagen"; }
+        finally
+        {
+            if (ReferenceEquals(resume, source))
+            {
+                resume = null;
+                ReconcileRefreshLoops();
+            }
+        }
+    }
 
     private void ReconcileRefreshLoops()
     {
-        var running = active && foreground.IsActive && settings.IsLoaded;
+        var running = active && foreground.IsActive && settings.IsLoaded && resume is null;
         foreach (var obsolete in refreshLoops.Keys.Where(card => !running || !model.Contains(card)).ToArray())
         {
             refreshLoops[obsolete].Dispose();

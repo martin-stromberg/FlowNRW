@@ -11,6 +11,7 @@ FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahr
 
 - Startseite mit dauerhaft gespeicherten Favoriten, unabhängigen Abfahrtstafeln und expliziter Entfernungssortierung. [Bedienung und Speicherung](docs/help/favoriten/index.md).
 - Vordergrundmonitore können mit Aus/30/60/120/300 Sekunden automatisch aktualisiert werden (Standard 60). Die Auswahl wird erst nach erfolgreichem Speichern wirksam; Navigation und Fensterdeaktivierung stoppen automatische Abrufe. Manuelle Aktualisierung bleibt verfügbar. [Bedienung, Speicherung und iOS-Prüfung](docs/help/monitorintervalle/index.md).
+- Wiederaufnahme erneuert veraltete sichtbare Abfahrten und Verbindungen ohne Seitensprung. iOS-Hintergrundaktualisierung für Favoriten ist registriert und zeitlich begrenzt; ihre native Geräteabnahme steht aus. **Aus** deaktiviert auch automatische Resume-/Hintergrundabrufe. [Ablauf und Grenzen](docs/help/monitorintervalle/ablauf-technisch.md).
 
 - Adress-, Haltestellen- und Koordinatenauflösung einschließlich naher Haltestellen.
 - Verbindungs- und Abfahrtsservices mit Umstiegen, Fußwegen, Linien, Betreibern, Geometrien und verfügbaren Soll-/Ist-Daten.
@@ -135,7 +136,7 @@ Die vorhandene GitHub-Actions-Konfiguration behält Windows-Build/Release sowie 
 ## Roadmap
 
 - Native iOS-Ausführung anhand der Prüfliste durch den Nutzer; die Plattformbasis ist implementiert.
-- Hintergrundaktualisierung und Wiederaufnahme folgen in Schritt 8; die aktuelle Intervallsteuerung gilt für aktive Fenster im Vordergrund.
+- Hintergrundaktualisierung und Wiederaufnahme sind implementiert; finale Schritt-8-Abnahme und native iOS-Geräteprüfung stehen noch aus.
 - Die abschließende Gestaltung und visuelle Abnahme anhand des gelieferten Entwurfs folgen verbindlich in Schritt 9. [Design-Abnahmekriterien](docs/design/acceptance.md).
 
 Weitere Verkehrsverbünde sowie spätere Sharing-/Push-Funktionen bleiben Erweiterungspunkte. Sie sind in der technischen Dokumentation beschrieben, aber nicht als aktuelle Produktfunktion implementiert.

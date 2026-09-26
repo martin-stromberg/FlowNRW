@@ -38,3 +38,5 @@ Keine.
 ## Hinweise
 
 Getrennte lokale Gegenprüfungsphase am 25.09.2026, da beide delegierten Lifecycle-Agenten am Nutzungslimit ausgefallen sind. Dies ist keine unabhängige Agentenprüfung. Anforderung, Bestandsaufnahme samt vier Detaildateien, Produktquellen und Plan wurden abgeglichen. Hintergrundregistrierung muss vor Abschluss des iOS-Starts erfolgen; Abschluss/Expiration müssen genau einmal greifen. Provider-Zusammenfassung allein ist wegen zeitabhängiger Requestkeys kein Koordinationsersatz; der Plan benennt ausdrücklich Busy-/Lifecycle-Schutz. Dynamisches Rendern der bisher statischen Ergebnis-/Detailseiten ist im Plan enthalten.
+
+26.09.2026: Kartenabsatz im Plan gegen MapViewModel/MapPage und Schrittanforderung präzisiert: bestehende Geometriesnapshots bleiben unveränderlich, Basiskacheln werden nach Resume neu geladen; aktuelle Fahrtgeometrie stammt beim erneuten Öffnen aus der erneuerten Detailauswahl. Alle geforderten Echtzeitansichten (Monitore/Favoriten/Ergebnisse/Details) bleiben im Resume-Testumfang. Kein fachlicher Scope entfällt; Status Plan vollständig bleibt bestehen. Lokaler Abgleich, keine neue unabhängige Prüfung behauptet.

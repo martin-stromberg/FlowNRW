@@ -1,6 +1,7 @@
 using System.Globalization;
 using FlowNRW.Core.Presentation;
 using FlowNRW.Core.Transit;
+using FlowNRW.Core.Refresh;
 
 namespace FlowNRW.Core.Favorites;
 
@@ -55,16 +56,28 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
     /// <returns>Update completion.</returns>
     public Task RefreshAutomaticallyAsync() => RefreshCoreAsync(true);
 
-    private async Task RefreshCoreAsync(bool automatic)
+    /// <summary>Renews expired data without creating a concurrent request or discarding retained data.</summary>
+    /// <param name="freshness">Shared realtime freshness policy.</param>
+    /// <param name="cancellationToken">Page or background execution lifetime.</param>
+    /// <returns>Refresh completion, or immediate completion for fresh data.</returns>
+    public Task RefreshIfStaleAsync(RefreshFreshness freshness, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Notify(nameof(Metadata));
+        return freshness.IsStale(Result) ? RefreshCoreAsync(true, cancellationToken) : Task.CompletedTask;
+    }
+
+    private async Task RefreshCoreAsync(bool automatic, CancellationToken cancellationToken = default)
     {
         if (IsBusy) return;
         var version = ++revision;
-        using var source = new CancellationTokenSource(); request = source;
+        using var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken); request = source;
         IsBusy = true; Status = "Abfahrten werden aktualisiert …"; RefreshBindings();
         try
         {
             var started = DateTimeOffset.Now;
-            var result = await departures.DeparturesAsync(Stop, started, source.Token);
+            var result = await departures.DeparturesAsync(Stop, started, source.Token).WaitAsync(source.Token);
+            source.Token.ThrowIfCancellationRequested();
             if (version != revision) return;
             LastAttempt = result;
             if (result.ErrorCode is not null) SetFailure();

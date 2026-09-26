@@ -13,5 +13,5 @@
 
 ## Abfahrten und Einstellungen
 
-- [Automatische Monitoraktualisierung](monitorintervalle/index.md) — Gespeicherte Vordergrundintervalle, manuelle Aktualisierung und Fehlerhilfe.
+- [Automatische Monitoraktualisierung](monitorintervalle/index.md) — Gespeicherte Vordergrundintervalle, Wiederaufnahme, iOS-Hintergrundgrenzen und Fehlerhilfe.
 - [Favoriten auf der Startseite](favoriten/index.md) — Gespeicherte Haltestellen mit unabhängigen Abfahrtstafeln und Entfernungssortierung.
