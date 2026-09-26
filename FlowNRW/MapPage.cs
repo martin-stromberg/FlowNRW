@@ -2,6 +2,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using FlowNRW.Core.Maps;
 using FlowNRW.Core.Presentation;
+using FlowNRW.Core.Refresh;
+using System.ComponentModel;
 
 namespace FlowNRW;
 
@@ -11,6 +13,7 @@ public sealed class MapPage : ContentPage
     private readonly MapViewModel model;
     private readonly IMapTileService tiles;
     private readonly MapOptions options;
+    private readonly ForegroundState foreground;
     private readonly HybridWebView map = new() { HybridRoot = "map", DefaultFile = "index.html", HeightRequest = 430, AutomationId = "MapCanvas" };
     private readonly Label status = new() { Text = "Karte wird geladen …", AutomationId = "MapStatus" };
     private CancellationTokenSource? lifetime;
@@ -25,8 +28,10 @@ public sealed class MapPage : ContentPage
     /// <param name="model">Selected stop or journey snapshot.</param>
     /// <param name="tiles">Bounded tile gateway.</param>
     /// <param name="options">Provider and projection limits.</param>
-    public MapPage(MapViewModel model, IMapTileService tiles, MapOptions options)
+    /// <param name="foreground">Shared active-window state.</param>
+    public MapPage(MapViewModel model, IMapTileService tiles, MapOptions options, ForegroundState foreground)
     {
+        this.foreground = foreground;
         this.model = model; this.tiles = tiles; this.options = options;
         Title = model.Title;
         var layout = new VerticalStackLayout { Padding = 16, Spacing = 12 };
@@ -73,6 +78,7 @@ public sealed class MapPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        foreground.PropertyChanged += ForegroundChanged;
         lifetime = new();
         if (ready) _ = InitializeSafelyAsync();
         _ = CheckStartupAsync(lifetime.Token);
@@ -81,8 +87,24 @@ public sealed class MapPage : ContentPage
     /// <inheritdoc />
     protected override void OnDisappearing()
     {
+        foreground.PropertyChanged -= ForegroundChanged;
         lifetime?.Cancel(); lifetime?.Dispose(); lifetime = null;
         base.OnDisappearing();
+    }
+
+    private void ForegroundChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (!foreground.IsActive)
+        {
+            lifetime?.Cancel();
+            status.Text = "Kartenabrufe pausiert. Beim Zurückkehren wird die Karte neu geladen.";
+        }
+        else
+        {
+            lifetime?.Dispose(); lifetime = new();
+            if (ready) _ = InitializeSafelyAsync();
+            else _ = CheckStartupAsync(lifetime.Token);
+        }
     }
 
     private async Task CheckStartupAsync(CancellationToken token)
@@ -99,7 +121,7 @@ public sealed class MapPage : ContentPage
 
     private Task InitializeAsync()
     {
-        if (lifetime is null) return Task.CompletedTask;
+        if (lifetime is null || !foreground.IsActive) return Task.CompletedTask;
         lifetime.Cancel(); lifetime.Dispose(); lifetime = new();
         status.Text = "Basiskarte wird geladen …";
         var markers = new JsonArray();
@@ -139,6 +161,7 @@ public sealed class MapPage : ContentPage
             var root = document.RootElement;
             var type = root.GetProperty("type").GetString();
             if (type == "ready") { ready = true; await InitializeAsync(); return; }
+            if (token.IsCancellationRequested || !foreground.IsActive) return;
             if (root.GetProperty("session").GetString() != model.Session) return;
 #if UI_TEST_FIXTURES
             if (type == "view") { viewport.Text = root.GetProperty("lat").GetRawText() + ";" + root.GetProperty("lon").GetRawText() + ";" + root.GetProperty("zoom").GetRawText(); return; }

@@ -101,6 +101,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<StopSearchPage>();
         builder.Services.AddTransient<DeparturePage>();
         builder.Services.AddSingleton<ForegroundState>();
+        builder.Services.AddSingleton<RefreshFreshness>();
+        builder.Services.AddSingleton<RefreshLifecycle>();
         builder.Services.AddSingleton<IRefreshSettingsStore>(services =>
         {
 #if UI_TEST_FIXTURES

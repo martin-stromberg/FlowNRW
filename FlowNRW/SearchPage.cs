@@ -1,4 +1,6 @@
 using FlowNRW.Core.Presentation;
+using FlowNRW.Core.Refresh;
+using System.ComponentModel;
 
 namespace FlowNRW;
 
@@ -6,10 +8,13 @@ namespace FlowNRW;
 public sealed class SearchPage : ContentPage
 {
     private readonly JourneySearchViewModel model;
+    private readonly ForegroundState foreground;
     /// <summary>Creates the native search view.</summary>
     /// <param name="model">Retained search session.</param>
-    public SearchPage(JourneySearchViewModel model)
+    /// <param name="foreground">Shared active-window state.</param>
+    public SearchPage(JourneySearchViewModel model, ForegroundState foreground)
     {
+        this.foreground = foreground;
         this.model = model; BindingContext = model; Title = "Verbindung suchen";
         var content = new VerticalStackLayout { Padding = 16, Spacing = 16 };
         content.Children.Add(new Label { Text = "FlowNRW · Deine Verbindung", FontSize = 28, FontAttributes = FontAttributes.Bold });
@@ -37,7 +42,11 @@ public sealed class SearchPage : ContentPage
         Content = new ScrollView { Content = content };
     }
     /// <inheritdoc />
-    protected override void OnDisappearing() { base.OnDisappearing(); model.Origin.CancelPending(); model.Destination.CancelPending(); model.CancelPending(); }
+    protected override void OnAppearing() { base.OnAppearing(); foreground.PropertyChanged += ForegroundChanged; }
+    /// <inheritdoc />
+    protected override void OnDisappearing() { foreground.PropertyChanged -= ForegroundChanged; base.OnDisappearing(); CancelPending(); }
+    private void ForegroundChanged(object? sender, PropertyChangedEventArgs args) { if (!foreground.IsActive) CancelPending(); }
+    private void CancelPending() { model.Origin.CancelPending(); model.Destination.CancelPending(); model.CancelPending(); }
     private static Border Endpoint(EndpointViewModel endpoint, string prefix, string title)
     {
         var layout = new VerticalStackLayout { Spacing = 8, BindingContext = endpoint };

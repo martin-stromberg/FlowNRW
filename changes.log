@@ -1,3 +1,9 @@
+## 2026-09-26 — Wiederaufnahme und begrenzte Hintergrundaktualisierung
+
+- Veraltete sichtbare Abfahrten und Verbindungsergebnisse nach Wiederaufnahme erneuern; eindeutige Fahrtauswahl beibehalten, unsichere Zuordnung verständlich zur Neuauswahl markieren. Fehler erhalten letzte Daten.
+- iOS-Hintergrundaufgabe für Favoriten registrieren: ein Lauf, höchstens vier parallele Abrufe und 20 Sekunden Zeitbudget. Vordergrundwechsel und OS-Expiration brechen ab; keine Standortabfrage oder zusätzliche Datenhistorie.
+- Aus deaktiviert automatische Wiederaufnahme- und Hintergrundabrufe. Manuelle Aktualisierung bleibt verfügbar. Native iOS-Abnahme bleibt beim Nutzer; konkrete Prüfanleitung ergänzt.
+
 ## 2026-09-24 — Automatische Vordergrundaktualisierung
 
 - Einzel- und Favoritenmonitore erhalten ein gemeinsam gespeichertes Intervall: Aus, 30 oder 60 Sekunden, 2 oder 5 Minuten; Standard 60 Sekunden. Erst erfolgreiches Speichern verändert den wirksamen Wert.

@@ -18,9 +18,13 @@ Jede Favoritentafel aktualisiert unabhängig. **Aktualisieren** bleibt auch bei 
 
 ## Vordergrund und Navigation
 
-Automatische Abrufe laufen nur auf der geöffneten Monitor- oder Startseite im aktiven App-Fenster. Der Wechsel zur Suche, zu Einstellungen oder in ein anderes Fenster beendet die automatische Aktualisierung. Auch ein noch sichtbares Windows-Fenster ist nach dem Wechsel in eine andere Anwendung nicht mehr aktiv. Bei Rückkehr beginnt eine neue volle Wartezeit.
+Die Intervallabrufe laufen nur auf der geöffneten Monitor- oder Startseite im aktiven App-Fenster. Der Wechsel zur Suche, zu Einstellungen oder in ein anderes Fenster beendet sie. Auch ein noch sichtbares Windows-Fenster ist nach dem Wechsel in eine andere Anwendung nicht mehr aktiv.
 
-Diese Funktion verspricht keine regelmäßige Aktualisierung bei gesperrtem Gerät oder im Hintergrund. Die getrennte Hintergrund- und Wiederaufnahmefunktion ist noch nicht Bestandteil dieses Schritts.
+Beim erneuten Aktivieren prüft die App die angezeigten Abfahrten oder Verbindungen: Frische Daten bleiben erhalten, veraltete Daten werden bei eingeschalteter Automatik sofort erneuert. Danach beginnt für Monitore wieder die volle Intervallwartezeit. **Aus** verhindert auch diese automatische Erneuerung. Die Standortfreigabe wird dabei nicht erneut angefordert.
+
+In den Verbindungsdetails bleibt dieselbe Fahrt nur ausgewählt, wenn sie eindeutig wiedergefunden wurde. Andernfalls erscheint **Die gewählte Verbindung ist nicht mehr eindeutig bestätigt. Bitte in der Ergebnisliste neu auswählen.** Über **Zurück** eine aktuelle Verbindung wählen. Fehler behalten die letzten bekannten Daten und kennzeichnen sie entsprechend.
+
+Auf iOS kann das System gespeicherte Favoriten gelegentlich im Hintergrund aktualisieren. Zeitpunkt und Ausführung sind nicht garantiert; ein gesperrtes Gerät wird nicht im gewählten Vordergrundtakt aktualisiert. **Aus** unterbindet diese automatischen Datenabrufe ebenfalls. Quelle und Datenstand bleiben für die Beurteilung der Angaben entscheidend.
 
 ## Wenn etwas nicht funktioniert
 

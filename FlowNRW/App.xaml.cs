@@ -9,16 +9,16 @@ namespace FlowNRW;
 public partial class App : Application
 {
     private readonly AppShell shell;
-    private readonly ForegroundState foreground;
+    private readonly RefreshLifecycle lifecycle;
     /// <summary>
     /// Initializes a new instance of the <see cref="App"/> class.
     /// </summary>
     /// <param name="shell">Composed navigation shell.</param>
-    /// <param name="foreground">Shared active-window state.</param>
-    public App(AppShell shell, ForegroundState foreground)
+    /// <param name="lifecycle">Shared foreground and background ownership.</param>
+    public App(AppShell shell, RefreshLifecycle lifecycle)
     {
         this.shell = shell;
-        this.foreground = foreground;
+        this.lifecycle = lifecycle;
         InitializeComponent();
     }
 
@@ -26,9 +26,11 @@ public partial class App : Application
     protected override Window CreateWindow(IActivationState? activationState)
     {
         var window = new Window(shell);
-        window.Activated += (_, _) => foreground.IsActive = true;
-        window.Deactivated += (_, _) => foreground.IsActive = false;
-        window.Destroying += (_, _) => foreground.IsActive = false;
+        window.Activated += (_, _) => lifecycle.SetActive(true);
+        window.Deactivated += (_, _) => lifecycle.SetActive(false);
+        window.Stopped += (_, _) => lifecycle.SetActive(false);
+        window.Resumed += (_, _) => lifecycle.SetActive(true);
+        window.Destroying += (_, _) => lifecycle.SetActive(false);
         return window;
     }
 }

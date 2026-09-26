@@ -49,7 +49,8 @@ public sealed class RefreshSettingsPage : ContentPage
                     interval,
                     new Button { Text = "Speichern", AutomationId = "SaveRefreshSettings", Command = save },
                     status, current,
-                    new Label { Text = "Standard: 60 Sekunden. Mindestens 30 Sekunden begrenzen die Datenabrufe. Während eines laufenden Abrufs wird keine zweite Anfrage gestartet." }
+                    new Label { Text = "Standard: 60 Sekunden. Mindestens 30 Sekunden begrenzen die Datenabrufe. Während eines laufenden Abrufs wird keine zweite Anfrage gestartet." },
+                    new Label { AutomationId = "RefreshLifecycleHelp", Text = "Beim Zurückkehren werden veraltete Daten erneuert. Aus deaktiviert auch diese automatische Aktualisierung. Auf iOS kann das System gespeicherte Favoriten gelegentlich im Hintergrund aktualisieren; Zeitpunkt und Ausführung sind nicht garantiert. Bitte immer Quelle und Datenstand beachten." }
                 }
             }
         };

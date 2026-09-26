@@ -1,0 +1,13 @@
+  Wiederherzustellende Projekte werden ermittelt...
+  "D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Core\FlowNRW.Core.csproj" wiederhergestellt (in 63 ms.).
+  "D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Tests\FlowNRW.Tests.csproj" wiederhergestellt (in 150 ms.).
+  "D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW\FlowNRW.csproj" wiederhergestellt (in 192 ms.).
+  FlowNRW.Core -> D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Core\bin\Release\net10.0\FlowNRW.Core.dll
+  FlowNRW.Tests -> D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Tests\bin\Release\net10.0\FlowNRW.Tests.dll
+  FlowNRW -> D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW\bin\Release\net10.0-windows10.0.19041.0\win-x64\FlowNRW.dll
+
+Der Buildvorgang wurde erfolgreich ausgeführt.
+    0 Warnung(en)
+    0 Fehler
+
+Verstrichene Zeit 00:00:02.91

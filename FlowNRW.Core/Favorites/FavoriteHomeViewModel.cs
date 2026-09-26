@@ -1,5 +1,6 @@
 using FlowNRW.Core.Presentation;
 using FlowNRW.Core.Transit;
+using FlowNRW.Core.Refresh;
 
 namespace FlowNRW.Core.Favorites;
 
@@ -40,14 +41,16 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     public AsyncRelayCommand LocationCommand { get; }
 
     /// <summary>Loads saved cards once; failed loads remain retryable without overwriting the file.</summary>
+    /// <param name="cancellationToken">Lifetime of an optional bounded background load.</param>
     /// <returns>Load completion.</returns>
-    public async Task LoadAsync()
+    public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
-        await persistence.WaitAsync();
+        await persistence.WaitAsync(cancellationToken);
         try
         {
             if (loaded) return;
-            var stops = await store.LoadAsync();
+            var stops = await store.LoadAsync(cancellationToken).WaitAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             var unique = stops.DistinctBy(stop => (stop.Source, stop.Id)).ToArray();
             if (unique.Length > 100 || unique.Any(stop => string.IsNullOrWhiteSpace(stop.Id) || string.IsNullOrWhiteSpace(stop.Source)))
                 throw new InvalidDataException("Invalid favorite identity.");
@@ -55,6 +58,7 @@ public sealed class FavoriteHomeViewModel : ObservableObject
             loaded = true;
             SortCards(); SetStatus(EmptyOrCount());
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception) { SetStatus("Favoriten konnten nicht geladen werden. Gespeicherte Daten bleiben unverändert; bitte erneut versuchen."); }
         finally { persistence.Release(); }
     }
@@ -62,6 +66,26 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     /// <summary>Starts independent initial loads without repeating completed successful card requests.</summary>
     /// <returns>All initial requests finishing or being cancelled.</returns>
     public Task RefreshMissingAsync() => Task.WhenAll(Cards.Where(card => card.Result is null && !card.IsBusy).Select(card => card.RefreshAsync()));
+
+    /// <summary>Renews current stale cards in bounded batches without accessing position or writing favorites.</summary>
+    /// <param name="freshness">Shared realtime freshness policy.</param>
+    /// <param name="cancellationToken">Visible page or background execution lifetime.</param>
+    /// <returns>Whether all eligible cards finished with a current successful response.</returns>
+    public async Task<bool> RefreshStaleAsync(RefreshFreshness freshness, CancellationToken cancellationToken = default)
+    {
+        await LoadAsync(cancellationToken);
+        if (!loaded) return false;
+        var successful = true;
+        foreach (var batch in Cards.ToArray().Chunk(4))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var current = batch.Where(Contains).ToArray();
+            await Task.WhenAll(current.Select(card => card.RefreshIfStaleAsync(freshness, cancellationToken)));
+            cancellationToken.ThrowIfCancellationRequested();
+            successful &= current.Where(Contains).All(card => !card.IsBusy && card.LastAttempt?.ErrorCode is null && !freshness.IsStale(card.Result));
+        }
+        return successful;
+    }
 
     /// <summary>Checks the complete technical namespace and provider identifier.</summary>
     /// <param name="stop">Identity to check.</param>

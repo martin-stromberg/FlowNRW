@@ -1,5 +1,6 @@
 using FlowNRW.Core.Transit;
 using FlowNRW.Core.Favorites;
+using FlowNRW.Core.Refresh;
 
 namespace FlowNRW.Core.Presentation;
 
@@ -211,11 +212,22 @@ public sealed class StopMonitorViewModel : ObservableObject
     /// <returns>Automatic update completion.</returns>
     public Task RefreshAutomaticallyAsync() => RefreshCoreAsync(true);
 
-    private async Task RefreshCoreAsync(bool automatic)
+    /// <summary>Renews expired retained data through the existing duplicate-protected refresh path.</summary>
+    /// <param name="freshness">Shared realtime freshness policy.</param>
+    /// <param name="cancellationToken">Visible page lifetime.</param>
+    /// <returns>Refresh completion, or immediate completion for fresh data.</returns>
+    public Task RefreshIfStaleAsync(RefreshFreshness freshness, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Notify(nameof(Metadata));
+        return freshness.IsStale(Result) ? RefreshCoreAsync(true, cancellationToken) : Task.CompletedTask;
+    }
+
+    private async Task RefreshCoreAsync(bool automatic, CancellationToken cancellationToken = default)
     {
         if (SelectedStop is null || IsBusy) return;
         var version = ++revision;
-        using var source = new CancellationTokenSource();
+        using var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         request = source;
         IsBusy = true;
         SetStatus("Abfahrten werden aktualisiert …");
@@ -223,7 +235,8 @@ public sealed class StopMonitorViewModel : ObservableObject
         try
         {
             var started = DateTimeOffset.Now;
-            var result = await departures.DeparturesAsync(SelectedStop, started, source.Token);
+            var result = await departures.DeparturesAsync(SelectedStop, started, source.Token).WaitAsync(source.Token);
+            source.Token.ThrowIfCancellationRequested();
             if (version != revision) return;
             LastAttempt = result;
             if (result.ErrorCode is not null)

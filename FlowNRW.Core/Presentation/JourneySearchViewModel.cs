@@ -1,4 +1,5 @@
 using FlowNRW.Core.Transit;
+using FlowNRW.Core.Refresh;
 
 namespace FlowNRW.Core.Presentation;
 
@@ -73,6 +74,64 @@ public sealed class JourneySearchViewModel : ObservableObject
     {
         if (!Journeys.Contains(journey)) return;
         SelectedJourney = journey; Notify(nameof(SelectedJourney)); await navigation.ShowDetailAsync();
+    }
+
+    /// <summary>Renews expired visible results without navigating or guessing the previously selected trip.</summary>
+    /// <param name="freshness">Shared realtime age policy.</param>
+    /// <param name="cancellationToken">Visible page lifetime.</param>
+    /// <returns>Refresh completion with errors represented in the retained session.</returns>
+    public async Task RefreshIfStaleAsync(RefreshFreshness freshness, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Notify(nameof(Metadata));
+        if (Result is null || !freshness.IsStale(Result) || !CanSearch) return;
+        var previous = Result;
+        var selected = SelectedJourney;
+        var version = ++revision;
+        using var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        request = source;
+        IsBusy = true;
+        SetStatus("Verbindungen werden aktualisiert …");
+        Refresh();
+        try
+        {
+            var result = await routing.RouteAsync(Origin.SelectedAddress!, Destination.SelectedAddress!, DateTimeOffset.Now, source.Token).WaitAsync(source.Token);
+            source.Token.ThrowIfCancellationRequested();
+            if (version != revision) return;
+            if (result.ErrorCode is not null)
+            {
+                SetStatus("Aktualisierung fehlgeschlagen. Letzte bekannte Verbindungen werden angezeigt; bitte Datenstand beachten.");
+                return;
+            }
+            var matches = selected is null ? [] : result.Items.Where(item => SameJourney(selected, item)).ToArray();
+            SelectedJourney = matches.Length == 1 && previous.Items.Count(item => SameJourney(item, matches[0])) == 1 ? matches[0] : null;
+            Result = result;
+            SetStatus(selected is not null && SelectedJourney is null
+                ? "Die gewählte Verbindung ist nicht mehr eindeutig bestätigt. Bitte in der Ergebnisliste neu auswählen."
+                : result.Items.Count == 0 ? "Keine aktuellen Verbindungen gefunden. Bitte erneut suchen."
+                : $"{result.Items.Count} Verbindungen automatisch aktualisiert.");
+        }
+        catch (OperationCanceledException) { if (version == revision) SetStatus("Aktualisierung abgebrochen. Letzte bekannte Verbindungen bleiben sichtbar."); }
+        catch (Exception) { if (version == revision) SetStatus("Aktualisierung fehlgeschlagen. Letzte bekannte Verbindungen werden angezeigt; bitte Datenstand beachten."); }
+        finally
+        {
+            if (version == revision) { request = null; IsBusy = false; Refresh(); }
+        }
+    }
+
+    private static bool SameJourney(Journey left, Journey right) => left.Legs.Count > 0 && left.Legs.Count == right.Legs.Count
+        && left.Legs.Zip(right.Legs).All(pair => SameEvent(pair.First.Departure, pair.Second.Departure)
+            && SameEvent(pair.First.Arrival, pair.Second.Arrival));
+
+    private static bool SameEvent(StopEvent left, StopEvent right)
+    {
+        var first = left.Identity;
+        var second = right.Identity;
+        return !string.IsNullOrWhiteSpace(first.Source) && first.Source == second.Source
+            && !string.IsNullOrWhiteSpace(first.TripId) && first.TripId == second.TripId
+            && !string.IsNullOrWhiteSpace(first.Stop.Source) && first.Stop.Source == second.Stop.Source
+            && !string.IsNullOrWhiteSpace(first.Stop.Id) && first.Stop.Id == second.Stop.Id
+            && first.PlannedTime is not null && first.PlannedTime == second.PlannedTime;
     }
     /// <summary>Cancels only unfinished work.</summary>
     public void CancelPending()

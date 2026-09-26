@@ -44,8 +44,9 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
                 Departure(stop, departure.AddMinutes(15), "107", null, null, null),
                 Departure(stop, departure.AddMinutes(20), "U11", null, true, null)],
             ErrorCode = error ? "fixture_unavailable" : null,
-            Source = "UI-Fixture " + stop.Name + " " + stop.Id, RetrievedAt = DateTimeOffset.UtcNow.AddMinutes(-2),
-            IsFallback = true, IsStale = true, Warnings = ["fixture_warning"]
+            Source = "UI-Fixture " + stop.Name + " " + stop.Id,
+            RetrievedAt = scenario == "resume-fresh" ? DateTimeOffset.UtcNow : DateTimeOffset.UtcNow.AddMinutes(-2),
+            IsFallback = true, IsStale = scenario != "resume-fresh", Warnings = ["fixture_warning"]
         };
     }
 
@@ -97,15 +98,22 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
     /// <inheritdoc />
     public async Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default)
     {
-        await Task.Delay(origin.Name.Contains("route-slow") ? 6000 : 800);
+        var scenario = location?.Scenario ?? "success";
+        var count = updates.GetValueOrDefault("routes") + 1;
+        updates["routes"] = count;
+        location?.RecordRoute();
+        await Task.Delay(origin.Name.Contains("route-slow") || scenario == "resume-route-slow" ? 6000 : 800);
         var time = new DateTimeOffset(2026, 9, 16, 23, 55, 0, TimeSpan.FromHours(2));
+        if (scenario == "resume-route-missing") time = time.AddDays(1);
+        var first = Route(time, "RE 1", origin, destination);
+        var error = origin.Name.Contains("route-error") || scenario == "resume-route-error";
         return new ProviderResult<Journey>
         {
-            Items = origin.Name.Contains("route-empty") || origin.Name.Contains("route-error") ? [] : [Route(time, "RE 1", origin, destination), Route(time.AddHours(1), "RE 2", origin, destination)],
-            ErrorCode = origin.Name.Contains("route-error") ? "fixture_unavailable" : null,
-            Source = "UI-Fixture " + origin.Name,
-            RetrievedAt = DateTimeOffset.UtcNow.AddMinutes(-8),
-            IsFallback = true, IsStale = true, Warnings = ["fixture_warning"]
+            Items = origin.Name.Contains("route-empty") || error ? [] : [first, scenario == "resume-route-duplicate" ? first : Route(time.AddHours(1), "RE 2", origin, destination)],
+            ErrorCode = error ? "fixture_unavailable" : null,
+            Source = "UI-Fixture " + origin.Name + (scenario.StartsWith("resume-", StringComparison.Ordinal) ? " Stand " + count : ""),
+            RetrievedAt = scenario == "resume-route-fresh" ? DateTimeOffset.UtcNow : DateTimeOffset.UtcNow.AddMinutes(-8),
+            IsFallback = true, IsStale = scenario != "resume-route-fresh", Warnings = ["fixture_warning"]
         };
     }
 
@@ -132,7 +140,7 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
 
     private static StopEvent Event(DateTimeOffset time, string name, bool realtime)
     {
-        return new StopEvent { PlannedTime = time, Identity = new TripIdentity { Stop = new Stop { Name = name } },
+        return new StopEvent { PlannedTime = time, Identity = new TripIdentity { Source = "fixture", TripId = "trip-" + time.ToString("O"), PlannedTime = time, Stop = new Stop { Name = name, Id = name, Source = "fixture" } },
             Realtime = realtime ? new RealtimeStatus { ActualTime = time.AddMinutes(3), Cancelled = true, Source = "Fixture Echtzeit" } : new RealtimeStatus() };
     }
 }
@@ -160,6 +168,7 @@ internal sealed class UiTestLocationServices : ICurrentLocationService, INotifyP
 {
     private string scenario = "success";
     private int calls;
+    private int routeCalls;
     private readonly Dictionary<string, int> departureCalls = [];
 
     /// <summary>Per-stop invocation counts, available only in UiTest UI.</summary>
@@ -175,6 +184,12 @@ internal sealed class UiTestLocationServices : ICurrentLocationService, INotifyP
         departureCalls[stopId] = departureCalls.GetValueOrDefault(stopId) + 1;
         PropertyChanged?.Invoke(this, new(nameof(DepartureCalls)));
     }
+
+    /// <summary>Number of synthetic route requests for lifecycle assertions.</summary>
+    public int RouteCalls => routeCalls;
+
+    /// <summary>Records a route request before any asynchronous fixture delay.</summary>
+    public void RecordRoute() { routeCalls++; PropertyChanged?.Invoke(this, new(nameof(RouteCalls))); }
 
     /// <summary>Notifies native fixture controls of scenario and counter updates.</summary>
     public event PropertyChangedEventHandler? PropertyChanged;

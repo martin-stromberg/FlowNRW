@@ -6,6 +6,7 @@
 
 ## What's New
 
+- Refresh stale visible departures and journeys on resume without navigation; bounded opportunistic iOS favorite refresh, disabled together with automatic refresh. Native iOS acceptance remains pending.
 - Persistent favorite stops on the home screen, independently refreshable departure boards, explicit distance sorting and validated monitor/map navigation.
 - Configurable foreground refresh intervals (off, 30, 60, 120 or 300 seconds) with persisted settings, cancellation on navigation/window deactivation and independent favorite loops.
 
@@ -31,6 +32,7 @@
 
 ## Neuerungen
 
+- Veraltete sichtbare Abfahrten und Verbindungen bei Wiederaufnahme ohne Seitensprung erneuern; begrenzte opportunistische iOS-Favoritenaktualisierung, gemeinsam mit der Automatik abschaltbar. Native iOS-Abnahme steht aus.
 - Dauerhaft gespeicherte Haltestellenfavoriten auf der Startseite, unabhängig aktualisierbare Abfahrtstafeln, explizite Entfernungssortierung und validierte Monitor-/Kartennavigation.
 - Konfigurierbare Vordergrundintervalle (aus, 30, 60, 120 oder 300 Sekunden) mit gespeicherter Einstellung, Abbruch bei Navigation/Fensterdeaktivierung und unabhängigen Favoritenschleifen.
 

@@ -1,4 +1,6 @@
 using FlowNRW.Core.Presentation;
+using FlowNRW.Core.Refresh;
+using System.ComponentModel;
 
 namespace FlowNRW;
 
@@ -6,12 +8,15 @@ namespace FlowNRW;
 public sealed class StopSearchPage : ContentPage
 {
     private readonly StopMonitorViewModel model;
+    private readonly ForegroundState foreground;
 
     /// <summary>Creates the stop lookup view.</summary>
     /// <param name="model">Retained monitor session.</param>
     /// <param name="map">Shared map snapshot.</param>
-    public StopSearchPage(StopMonitorViewModel model, FlowNRW.Core.Maps.MapViewModel map)
+    /// <param name="foreground">Shared active-window state.</param>
+    public StopSearchPage(StopMonitorViewModel model, FlowNRW.Core.Maps.MapViewModel map, ForegroundState foreground)
     {
+        this.foreground = foreground;
         this.model = model;
         BindingContext = model;
         Title = "Haltestelle suchen";
@@ -74,8 +79,17 @@ public sealed class StopSearchPage : ContentPage
     }
 
     /// <inheritdoc />
+    protected override void OnAppearing() { base.OnAppearing(); foreground.PropertyChanged += ForegroundChanged; }
+
+    private void ForegroundChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (!foreground.IsActive) { model.Lookup.CancelPending(); model.CancelNearbyPending(); }
+    }
+
+    /// <inheritdoc />
     protected override void OnDisappearing()
     {
+        foreground.PropertyChanged -= ForegroundChanged;
         base.OnDisappearing();
         model.Lookup.CancelPending();
         model.CancelNearbyPending();
