@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<coverage line-rate="0.9315000000000001" branch-rate="0.8005" version="1.9" timestamp="1790392387" lines-covered="1959" lines-valid="2103" branches-covered="1421" branches-valid="1775">
+<coverage line-rate="0.9315000000000001" branch-rate="0.8005" version="1.9" timestamp="1790392836" lines-covered="1959" lines-valid="2103" branches-covered="1421" branches-valid="1775">
   <sources>
     <source>D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Core\</source>
   </sources>

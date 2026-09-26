@@ -186,14 +186,20 @@ internal sealed class BackgroundDeadlineClock : TimeProvider
     {
         DueTime = dueTime;
         expire = () => callback(state);
-        return new DeadlineTimer(() => expire = null);
+        return new DeadlineTimer(due => DueTime = due, () => expire = null);
     }
     internal void Expire() => expire?.Invoke();
 
-    private sealed class DeadlineTimer(Action dispose) : ITimer
+    private sealed class DeadlineTimer(Action<TimeSpan> change, Action dispose) : ITimer
     {
-        public bool Change(TimeSpan dueTime, TimeSpan period) => throw new NotSupportedException();
-        public void Dispose() => dispose();
+        private bool disposed;
+        public bool Change(TimeSpan dueTime, TimeSpan period)
+        {
+            if (disposed || period != Timeout.InfiniteTimeSpan) return false;
+            change(dueTime);
+            return true;
+        }
+        public void Dispose() { disposed = true; dispose(); }
         public ValueTask DisposeAsync() { Dispose(); return ValueTask.CompletedTask; }
     }
 }
