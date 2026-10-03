@@ -21,12 +21,12 @@ public sealed class EfaProvider : IEfaProvider
     /// <inheritdoc/>
     public Task<ProviderResult<NearbyStopResult>> NearbyAsync(GeoCoordinate coordinate, CancellationToken cancellationToken = default) => Fetch("XML_COORD_REQUEST", new() { ["coord"] = Coordinate(coordinate), ["coordListOutputFormat"] = "STRING", ["inclFilter"] = "1", ["radius_1"] = "1000", ["type_1"] = "STOP", ["max"] = options.MaxResults.ToString(CultureInfo.InvariantCulture) }, mapper.Nearby, cancellationToken);
     /// <inheritdoc/>
-    public async Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default)
+    public async Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default, bool arriveBy = false)
     {
         var query = DateQuery(departure);
         if (!await Endpoint(origin, "origin", query, cancellationToken) || !await Endpoint(destination, "destination", query, cancellationToken)) return new() { Source = Name, ErrorCode = "unresolved_location" };
         query["calcNumberOfTrips"] = options.MaxResults.ToString(CultureInfo.InvariantCulture);
-        query["itdTripDateTimeDepArr"] = "dep";
+        query["itdTripDateTimeDepArr"] = arriveBy ? "arr" : "dep";
         return await Fetch("XML_TRIP_REQUEST2", query, mapper.Journeys, cancellationToken);
     }
     /// <inheritdoc/>

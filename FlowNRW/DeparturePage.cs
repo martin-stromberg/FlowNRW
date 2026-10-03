@@ -38,7 +38,7 @@ public sealed class DeparturePage : ContentPage
         BindingContext = model;
         SetBinding(TitleProperty, new Binding(nameof(model.Title)));
         var layout = new VerticalStackLayout { Padding = 16, Spacing = 16 };
-        var stop = new Label { FontSize = 24, FontAttributes = FontAttributes.Bold, AutomationId = "MonitorStop" };
+        var stop = new Label { FontSize = 28, FontAttributes = FontAttributes.Bold, AutomationId = "MonitorStop" };
         stop.SetBinding(Label.TextProperty, nameof(model.Title));
         layout.Children.Add(stop);
         toggleFavorite = new AsyncRelayCommand(async () =>
@@ -54,6 +54,7 @@ public sealed class DeparturePage : ContentPage
 #if UI_TEST_FIXTURES
         Loaded += (_, _) =>
         {
+            if (Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_HIDE_CONTROLS") == "1") return;
             if (layout.Children.Any(child => child.AutomationId == "FavoriteScenario")) return;
             var fixture = Handler!.MauiContext!.Services.GetRequiredService<UiTestLocationServices>();
             var scenario = new Entry { AutomationId = "FavoriteScenario", BindingContext = fixture };
@@ -76,15 +77,16 @@ public sealed class DeparturePage : ContentPage
         interval.SetBinding(Label.TextProperty, nameof(settings.Description)); layout.Children.Add(interval);
         var busy = new ActivityIndicator { AutomationId = "MonitorBusy" };
         busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(model.IsBusy));
+        busy.SetBinding(IsVisibleProperty, nameof(model.IsBusy));
         layout.Children.Add(busy);
         var status = new Label { AutomationId = "MonitorStatus" };
         status.SetBinding(Label.TextProperty, nameof(model.Status));
         layout.Children.Add(status);
         var metadata = new Label { AutomationId = "MonitorMetadata" };
         metadata.SetBinding(Label.TextProperty, nameof(model.Metadata));
-        layout.Children.Add(metadata);
         layout.Children.Add(items);
-        Content = new ScrollView { Content = layout };
+        layout.Children.Add(metadata);
+        Content = TransitVisuals.Page(layout);
     }
 
     /// <inheritdoc />
@@ -172,12 +174,7 @@ public sealed class DeparturePage : ContentPage
         items.Children.Clear();
         for (var index = 0; index < model.Items.Count; index++)
         {
-            items.Children.Add(new Border
-            {
-                Padding = 16,
-                Stroke = Color.FromArgb("#C7D7EC"),
-                Content = new Label { Text = DeparturePresentation.Describe(model.Items[index]), FontSize = 18, AutomationId = "Departure" + index }
-            });
+            items.Children.Add(new DepartureCardView(model.Items[index], "Departure" + index));
         }
     }
 }

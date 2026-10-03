@@ -33,6 +33,17 @@ function Name([string]$id) { return (WaitElement $id).Current.Name }
 function Click([string]$id) { (WaitElement $id).GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 150 }
 function SetText([string]$id, [string]$value) { (WaitElement $id).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($value); Start-Sleep -Milliseconds 100 }
 function Back { Click 'NavigationViewBackButton' }
+function SelectTab([string]$name) {
+    $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, $name)
+    $items = $script:window.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
+    foreach ($item in $items) {
+        $selection = $null
+        if ($item.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$selection)) { $selection.Select(); Start-Sleep -Milliseconds 300; return }
+        $invoke = $null
+        if ($item.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$invoke)) { $invoke.Invoke(); Start-Sleep -Milliseconds 300; return }
+    }
+    throw ('Persistent native tab not selectable: ' + $name)
+}
 function AwaitText([string]$id, [string]$pattern) {
     for ($attempt = 0; $attempt -lt 120; $attempt++) { if ((Name $id) -match $pattern) { return }; Start-Sleep -Milliseconds 100 }
     throw ($id + ' did not reach ' + $pattern + '; actual: ' + (Name $id))
@@ -119,7 +130,7 @@ function OpenStop([string]$query) {
 }
 function AddFavorite([string]$name) {
     OpenStop $name; Click 'ToggleFavorite'; AwaitText 'FavoriteToggleStatus' 'gespeichert'
-    Back; Back; WaitElement 'OpenHomeStops' | Out-Null; Foreground
+    Back; SelectTab 'Abfahrten'; WaitElement 'OpenHomeStops' | Out-Null; Foreground
 }
 function Snapshot([string]$name) {
     if (!$ScreenshotDirectory) { return }
@@ -173,7 +184,7 @@ try {
     $before = Count $stop; PauseAndResume; AwaitCount $stop ($before + 1) 5
     Back; Hold 7
     Assert ($null -ne (Find 'StopQuery') -and $null -eq (Find 'MonitorStop')) 'Leaving slow resume cannot reopen the old monitor'
-    Back; Foreground
+    SelectTab 'Abfahrten'; Foreground
     SetText 'HomeScenario' 'success'
     AddFavorite 'Favorite Far'; AddFavorite 'Favorite Near'
     AwaitText 'FavoriteStatus0' 'aktualisiert'; AwaitText 'FavoriteStatus1' 'aktualisiert'

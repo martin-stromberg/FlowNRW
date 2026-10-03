@@ -96,7 +96,7 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
     }
 
     /// <inheritdoc />
-    public async Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default)
+    public async Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default, bool arriveBy = false)
     {
         var scenario = location?.Scenario ?? "success";
         var count = updates.GetValueOrDefault("routes") + 1;
@@ -133,7 +133,7 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
         {
             Legs = [new JourneyLeg { Departure = Event(time, origin.Name, true), Arrival = Event(time.AddMinutes(20), "Umstieg", false), Line = new Line { Name = line, Operator = new Operator { Name = "Fixture Bahn" } }, Geometry = line == "RE 1" ? new GeoGeometry { Coordinates = [new(51.45, 7.01), new(51.46, 7.02), new(51.47, 7.03)] } : null },
                 new JourneyLeg { Departure = Event(time.AddMinutes(20), "Umstieg", false), Arrival = Event(time.AddMinutes(25), "Bussteig", false), Walking = new WalkingSegment { DistanceMeters = 300, Duration = TimeSpan.FromMinutes(5), Geometry = line == "RE 1" ? new GeoGeometry { Coordinates = [new(51.47, 7.03), new(51.4705, 7.031)] } : null } },
-                new JourneyLeg { Departure = Event(time.AddMinutes(30), "Bussteig", false), Arrival = Event(time.AddMinutes(45), destination.Name, false), Line = new Line { Name = "Bus 10", Operator = new Operator { Name = "Fixture Bus" } } }],
+                new JourneyLeg { Departure = Event(time.AddMinutes(30), "Bussteig", false) with { Line = new Line { Name = "Bus 10", Mode = "bus", Operator = new Operator { Name = "Fixture Bus" } } }, Arrival = Event(time.AddMinutes(45), destination.Name, false) }],
             Transfers = [new Transfer { Stop = new Stop { Name = "Umstieg" }, Duration = TimeSpan.FromMinutes(10) }]
         };
     }
@@ -166,7 +166,7 @@ internal sealed class UiTestMapTiles(MapViewModel model) : IMapTileService
 /// <summary>Explicitly selected location scenarios compiled only for native UI tests.</summary>
 internal sealed class UiTestLocationServices : ICurrentLocationService, INotifyPropertyChanged
 {
-    private string scenario = "success";
+    private string scenario = Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_SCENARIO") ?? "success";
     private int calls;
     private int routeCalls;
     private readonly Dictionary<string, int> departureCalls = [];

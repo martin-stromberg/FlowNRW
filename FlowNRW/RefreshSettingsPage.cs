@@ -44,9 +44,9 @@ public sealed class RefreshSettingsPage : ContentPage
                 Spacing = 16,
                 Children =
                 {
-                    new Label { Text = "Abfahrten automatisch laden", FontSize = 24, FontAttributes = FontAttributes.Bold },
+                    new Label { Text = "Aktualisierung", FontSize = 32, FontAttributes = FontAttributes.Bold },
                     new Label { Text = "Gilt für geöffnete Abfahrtsmonitore und Favoriten, solange die App aktiv ist. Manuell aktualisieren bleibt jederzeit möglich." },
-                    interval,
+                    new Border { Padding = 16, Content = new VerticalStackLayout { Spacing = 12, Children = { TransitVisuals.Text("Abfahrten automatisch laden", 22, true), interval } } },
                     new Button { Text = "Speichern", AutomationId = "SaveRefreshSettings", Command = save },
                     status, current,
                     new Label { Text = "Standard: 60 Sekunden. Mindestens 30 Sekunden begrenzen die Datenabrufe. Während eines laufenden Abrufs wird keine zweite Anfrage gestartet." },
@@ -54,9 +54,11 @@ public sealed class RefreshSettingsPage : ContentPage
                 }
             }
         };
+        Content = TransitVisuals.Page((VerticalStackLayout)((ScrollView)Content).Content);
 #if UI_TEST_FIXTURES
         Loaded += (_, _) =>
         {
+            if (Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_HIDE_CONTROLS") == "1") return;
             var layout = (VerticalStackLayout)((ScrollView)Content).Content;
             if (layout.Children.Any(child => child.AutomationId == "RefreshSettingsScenario")) return;
             var fixture = Handler!.MauiContext!.Services.GetRequiredService<UiTestLocationServices>();

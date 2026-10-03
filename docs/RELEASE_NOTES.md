@@ -6,6 +6,8 @@
 
 ## What's New
 
+- Native FlowNRW design integration with persistent departures, connections and stops areas, structured departure and journey cards, accessible map/list alternatives, light/dark semantic surfaces and Windows visual regression evidence. Native iOS device acceptance remains pending.
+
 - Refresh stale visible departures and journeys on resume without navigation; bounded opportunistic iOS favorite refresh, disabled together with automatic refresh. Native iOS acceptance remains pending.
 - Persistent favorite stops on the home screen, independently refreshable departure boards, explicit distance sorting and validated monitor/map navigation.
 - Configurable foreground refresh intervals (off, 30, 60, 120 or 300 seconds) with persisted settings, cancellation on navigation/window deactivation and independent favorite loops.

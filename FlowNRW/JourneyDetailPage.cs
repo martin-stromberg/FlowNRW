@@ -36,11 +36,13 @@ public sealed class JourneyDetailPage : ContentPage
         var status = new Label { AutomationId = "DetailStatus", BindingContext = model.Session };
         status.SetBinding(Label.TextProperty, nameof(model.Session.Status)); layout.Children.Add(status);
         var metadata = new Label { AutomationId = "DetailMetadata", BindingContext = model.Session };
-        metadata.SetBinding(Label.TextProperty, nameof(model.Session.Metadata)); layout.Children.Add(metadata);
+        metadata.SetBinding(Label.TextProperty, nameof(model.Session.Metadata));
         layout.Children.Add(sections);
+        layout.Children.Add(metadata);
 #if UI_TEST_FIXTURES
         Loaded += (_, _) =>
         {
+            if (Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_HIDE_CONTROLS") == "1") return;
             if (layout.Children.Any(child => child.AutomationId == "LifecycleScenario")) return;
             var fixture = Handler!.MauiContext!.Services.GetRequiredService<UiTestLocationServices>();
             var scenario = new Entry { AutomationId = "LifecycleScenario", BindingContext = fixture };
@@ -49,7 +51,7 @@ public sealed class JourneyDetailPage : ContentPage
             calls.SetBinding(Label.TextProperty, nameof(fixture.RouteCalls)); layout.Children.Insert(1, calls);
         };
 #endif
-        Content = new ScrollView { Content = layout };
+        Content = TransitVisuals.Page(layout);
         RenderDetails();
     }
 
@@ -95,9 +97,15 @@ public sealed class JourneyDetailPage : ContentPage
     private void RenderDetails()
     {
         sections.Children.Clear();
+        if (model.Session.SelectedJourney is { } journey)
+        {
+            sections.Children.Add(new JourneyTimelineView(journey));
+            showMap.Refresh();
+            return;
+        }
         var index = 0;
         foreach (var section in model.Details.Split("\n\n", StringSplitOptions.RemoveEmptyEntries))
-            sections.Children.Add(new Border { Padding = 16, Stroke = Color.FromArgb("#C7D7EC"), Content = new Label { Text = section, FontSize = 18, AutomationId = "JourneyDetailSection" + index++ } });
+            sections.Children.Add(new Border { Padding = 16, Content = new Label { Text = section, FontSize = 18, AutomationId = "JourneyDetailSection" + index++ } });
         showMap.Refresh();
     }
 }

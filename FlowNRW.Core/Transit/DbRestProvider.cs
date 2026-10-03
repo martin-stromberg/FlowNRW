@@ -21,9 +21,9 @@ public sealed class DbRestProvider : ITransitProvider
     /// <inheritdoc/>
     public Task<ProviderResult<NearbyStopResult>> NearbyAsync(GeoCoordinate coordinate, CancellationToken cancellationToken = default) => Fetch("locations/nearby", new() { ["latitude"] = Decimal(coordinate.Latitude), ["longitude"] = Decimal(coordinate.Longitude) }, mapper.Nearby, cancellationToken);
     /// <inheritdoc/>
-    public async Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default)
+    public async Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default, bool arriveBy = false)
     {
-        var query = new Dictionary<string, string> { ["departure"] = departure.ToString("O", CultureInfo.InvariantCulture), ["polylines"] = "true" };
+        var query = new Dictionary<string, string> { ["departure"] = departure.ToString("O", CultureInfo.InvariantCulture), ["arriveBy"] = arriveBy.ToString(), ["polylines"] = "true" };
         if (!await Endpoint(origin, "from", query, cancellationToken) || !await Endpoint(destination, "to", query, cancellationToken)) return new() { Source = Name, ErrorCode = "unresolved_location" };
         return await Fetch("journeys", query, mapper.Journeys, cancellationToken);
     }

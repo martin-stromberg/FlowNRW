@@ -33,6 +33,17 @@ function Name([string]$id) { return (WaitElement $id).Current.Name }
 function Click([string]$id) { (WaitElement $id).GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 150 }
 function SetText([string]$id, [string]$value) { (WaitElement $id).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($value); Start-Sleep -Milliseconds 100 }
 function Back { Click 'NavigationViewBackButton' }
+function SelectTab([string]$name) {
+    $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, $name)
+    $items = $script:window.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
+    foreach ($item in $items) {
+        $selection = $null
+        if ($item.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$selection)) { $selection.Select(); Start-Sleep -Milliseconds 300; return }
+        $invoke = $null
+        if ($item.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$invoke)) { $invoke.Invoke(); Start-Sleep -Milliseconds 300; return }
+    }
+    throw ('Persistent native tab not selectable: ' + $name)
+}
 function AwaitText([string]$id, [string]$pattern) {
     for ($attempt = 0; $attempt -lt 120; $attempt++) { if ((Name $id) -match $pattern) { return }; Start-Sleep -Milliseconds 100 }
     throw ($id + ' did not reach ' + $pattern + '; actual: ' + (Name $id))
@@ -119,7 +130,7 @@ function OpenStop([string]$query) {
 }
 function AddFavorite([string]$name) {
     OpenStop $name; Click 'ToggleFavorite'; AwaitText 'FavoriteToggleStatus' 'gespeichert'
-    Back; Back; WaitElement 'OpenHomeStops' | Out-Null; Foreground
+    Back; SelectTab 'Abfahrten'; WaitElement 'OpenHomeStops' | Out-Null; Foreground
 }
 function Snapshot([string]$name) {
     if (!$ScreenshotDirectory) { return }
@@ -190,8 +201,8 @@ try {
     AwaitCount $stop ($before + 1) 5; AwaitText 'MonitorStatus' 'automatisch aktualisiert'
     Hold 3; Assert ((Count $stop) -eq ($before + 1)) 'Reactivation starts one schedule without catch-up bursts'
     SetText 'FavoriteScenario' 'refresh-slow'; $before = Count $stop; AwaitCount $stop ($before + 1)
-    Back; Back; Foreground
-    Click 'OpenJourneySearch'; Hold 35; Back; Foreground
+    Back; SelectTab 'Abfahrten'; Foreground
+    Click 'OpenJourneySearch'; Hold 35; SelectTab 'Abfahrten'; Foreground
     Assert ((Count $stop) -eq ($before + 1)) 'Page departure cancels slow work and search has no invisible monitor loop'
     StartApp; AwaitText 'RefreshIntervalStatus' 'alle 30 Sekunden'
     Assert ($true) 'Retry-saved interval survives another process'
@@ -218,7 +229,7 @@ try {
     Settings 0; $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'; Hold 35
     Assert ((Count 'fixture-favorite-far-0') -eq $far -and (Count 'fixture-favorite-near-0') -eq $near) 'Off stops all favorite schedules'
     Settings 30
-    for ($round=0; $round -lt 3; $round++) { Click 'OpenJourneySearch'; Back; Foreground }
+    for ($round=0; $round -lt 3; $round++) { Click 'OpenJourneySearch'; SelectTab 'Abfahrten'; Foreground }
     $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'
     AwaitCount 'fixture-favorite-far-0' ($far + 1); AwaitCount 'fixture-favorite-near-0' ($near + 1)
     AwaitText 'FavoriteStatus0' 'automatisch aktualisiert'; AwaitText 'FavoriteStatus1' 'automatisch aktualisiert'

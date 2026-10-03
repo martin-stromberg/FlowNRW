@@ -127,7 +127,8 @@ public static class MauiProgram
 #endif
         });
         builder.Services.AddSingleton(services => new FavoriteHomeViewModel(services.GetRequiredService<IFavoriteStore>(),
-            () => services.GetRequiredService<IDepartureService>(), services.GetRequiredService<ICurrentLocationService>()));
+            () => services.GetRequiredService<IDepartureService>(), services.GetRequiredService<ICurrentLocationService>(),
+            services.GetRequiredService<IStopSearchService>()));
         builder.Services.AddSingleton<HomePage>();
         var mapOptions = new MapOptions
         {

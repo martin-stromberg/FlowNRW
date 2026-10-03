@@ -10,8 +10,20 @@
     <Color x:Key="PrimaryDark">#A5C9FF</Color>
     <Color x:Key="PrimaryDarkText">#242424</Color>
     <Color x:Key="Secondary">#E8F0FC</Color>
-    <Color x:Key="SecondaryDarkText">#9880e5</Color>
+    <Color x:Key="SecondaryDarkText">#F5F5F7</Color>
     <Color x:Key="Tertiary">#003E85</Color>
+    <Color x:Key="CanvasLight">#FAF9FE</Color>
+    <Color x:Key="CanvasDark">#000000</Color>
+    <Color x:Key="CardLight">#FFFFFF</Color>
+    <Color x:Key="CardDark">#1C1C1E</Color>
+    <Color x:Key="GroupLight">#F4F3F8</Color>
+    <Color x:Key="GroupDark">#2C2C2E</Color>
+    <Color x:Key="InkLight">#1A1B1F</Color>
+    <Color x:Key="InkDark">#F5F5F7</Color>
+    <Color x:Key="MutedLight">#414755</Color>
+    <Color x:Key="MutedDark">#C5C7D0</Color>
+    <Color x:Key="OutlineLight">#E3E2E7</Color>
+    <Color x:Key="OutlineDark">#414149</Color>
 
     <Color x:Key="White">White</Color>
     <Color x:Key="Black">Black</Color>

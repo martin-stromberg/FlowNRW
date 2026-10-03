@@ -24,6 +24,7 @@ public sealed class StopSearchPage : ContentPage
 #if UI_TEST_FIXTURES
         Loaded += (_, _) =>
         {
+            if (Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_HIDE_CONTROLS") == "1") return;
             if (layout.Children.Any(child => child.AutomationId == "NearbyScenario")) return;
             var fixture = Handler!.MauiContext!.Services.GetRequiredService<UiTestLocationServices>();
             var scenario = new Entry { AutomationId = "NearbyScenario", BindingContext = fixture };
@@ -31,19 +32,23 @@ public sealed class StopSearchPage : ContentPage
             layout.Children.Insert(0, scenario);
         };
 #endif
-        layout.Children.Add(new Label { Text = "Nächste Abfahrten", FontSize = 28, FontAttributes = FontAttributes.Bold });
-        layout.Children.Add(new Label { Text = "Haltestellenname oder Ort" });
+        layout.Children.Add(TransitVisuals.Text("Haltestellen", 32, true));
+        layout.Children.Add(TransitVisuals.Secondary("Suche eine Station oder finde Haltestellen in deiner Nähe."));
+        var searchCard = new VerticalStackLayout { Spacing = 12 };
+        layout.Children.Add(new Border { Padding = 16, Content = searchCard });
+        searchCard.Children.Add(new Label { Text = "Haltestellenname oder Ort" });
         var input = new Entry { AutomationId = "StopQuery", Placeholder = "z. B. Essen Hauptbahnhof" };
         SemanticProperties.SetDescription(input, "Haltestellenname oder Ort");
         input.SetBinding(Entry.TextProperty, "Lookup.Text");
-        layout.Children.Add(input);
-        layout.Children.Add(new Button { Text = "Haltestellen suchen", AutomationId = "FindStops", Command = model.Lookup.SearchCommand });
-        layout.Children.Add(new Button { Text = "Haltestellen in meiner Nähe", AutomationId = "FindNearbyStops", Command = model.NearbyCommand, LineBreakMode = LineBreakMode.WordWrap });
+        searchCard.Children.Add(input);
+        searchCard.Children.Add(new Button { Text = "Haltestellen suchen", AutomationId = "FindStops", Command = model.Lookup.SearchCommand });
+        searchCard.Children.Add(new Button { Text = "Haltestellen in meiner Nähe", AutomationId = "FindNearbyStops", Command = model.NearbyCommand, LineBreakMode = LineBreakMode.WordWrap });
         var nearbyStatus = new Label { AutomationId = "NearbyStatus" }; nearbyStatus.SetBinding(Label.TextProperty, nameof(model.NearbyStatus)); layout.Children.Add(nearbyStatus);
         var nearbyBusy = new ActivityIndicator { AutomationId = "NearbyBusy" };
-        nearbyBusy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(model.IsNearbyBusy)); layout.Children.Add(nearbyBusy);
+        nearbyBusy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(model.IsNearbyBusy)); nearbyBusy.SetBinding(IsVisibleProperty, nameof(model.IsNearbyBusy)); layout.Children.Add(nearbyBusy);
         var busy = new ActivityIndicator { AutomationId = "StopSearchBusy" };
         busy.SetBinding(ActivityIndicator.IsRunningProperty, "Lookup.IsBusy");
+        busy.SetBinding(IsVisibleProperty, "Lookup.IsBusy");
         layout.Children.Add(busy);
         var status = new Label { AutomationId = "StopSearchStatus" };
         status.SetBinding(Label.TextProperty, nameof(model.SearchStatus));
@@ -62,20 +67,21 @@ public sealed class StopSearchPage : ContentPage
             for (var index = 0; index < model.Stops.Count; index++)
             {
                 var candidate = model.Stops[index];
-                matches.Children.Add(new Button
+                matches.Children.Add(TransitVisuals.Candidate(candidate, new Button
                 {
                     Text = JourneyPresentation.Address(candidate) + model.DistanceLabel(candidate),
                     LineBreakMode = LineBreakMode.WordWrap,
                     AutomationId = "StopMatch" + index,
                     Command = new AsyncRelayCommand(() => model.OpenAsync(candidate), () => !model.IsBusy,
                         _ => Title = "Monitor konnte nicht geöffnet werden")
-                });
+                }, model.DistanceLabel(candidate)));
             }
+            TransitVisuals.ApplyRoles(matches);
         }
         model.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(model.Stops)) RenderMatches(); };
         RenderMatches();
         layout.Children.Add(matches);
-        Content = new ScrollView { Content = layout };
+        Content = TransitVisuals.Page(layout);
     }
 
     /// <inheritdoc />

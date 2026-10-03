@@ -53,14 +53,14 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
             (provider, token) => provider.NearbyAsync(coordinate, token), null, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default)
+    public async Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default, bool arriveBy = false)
     {
         var resolvedOrigin = await ResolveRegion(origin, cancellationToken).ConfigureAwait(false);
         var resolvedDestination = await ResolveRegion(destination, cancellationToken).ConfigureAwait(false);
         origin = resolvedOrigin.Location;
         destination = resolvedDestination.Location;
-        var result = await Run("route", new { origin, destination, departure }, IsRegional(origin) || IsRegional(destination), options.RealtimeTimeToLive,
-            (provider, token) => provider.RouteAsync(origin, destination, departure, token), MergeJourneys, cancellationToken).ConfigureAwait(false);
+            var result = await Run("route", new { origin, destination, departure, arriveBy }, IsRegional(origin) || IsRegional(destination), options.RealtimeTimeToLive,
+                (provider, token) => provider.RouteAsync(origin, destination, departure, token, arriveBy), MergeJourneys, cancellationToken).ConfigureAwait(false);
         return result with { Warnings = result.Warnings.Concat(resolvedOrigin.Warnings).Concat(resolvedDestination.Warnings).Distinct().ToArray() };
     }
 
@@ -230,4 +230,3 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
         internal int Waiters { get; set; }
     }
 }
-

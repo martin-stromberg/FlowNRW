@@ -24,11 +24,12 @@ public sealed class ResultsPage : ContentPage
         this.model = model; BindingContext = model.Session; Title = "Verbindungen";
         var layout = new VerticalStackLayout { Spacing = 16, Padding = 16 };
         var status = new Label { FontSize = 24, AutomationId = "ResultsStatus" }; status.SetBinding(Label.TextProperty, nameof(model.Session.Status)); layout.Children.Add(status);
-        var metadata = new Label { AutomationId = "ResultsMetadata" }; metadata.SetBinding(Label.TextProperty, nameof(model.Session.Metadata)); layout.Children.Add(metadata);
-        layout.Children.Add(journeys); Content = new ScrollView { Content = layout };
+        var metadata = new Label { AutomationId = "ResultsMetadata" }; metadata.SetBinding(Label.TextProperty, nameof(model.Session.Metadata));
+        layout.Children.Add(journeys); layout.Children.Add(metadata); Content = TransitVisuals.Page(layout);
 #if UI_TEST_FIXTURES
         Loaded += (_, _) =>
         {
+            if (Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_HIDE_CONTROLS") == "1") return;
             if (layout.Children.Any(child => child.AutomationId == "LifecycleScenario")) return;
             var fixture = Handler!.MauiContext!.Services.GetRequiredService<UiTestLocationServices>();
             var scenario = new Entry { AutomationId = "LifecycleScenario", BindingContext = fixture };
@@ -79,13 +80,13 @@ public sealed class ResultsPage : ContentPage
 
     private void RenderJourneys()
     {
-        foreach (var button in journeys.Children.OfType<Button>()) button.Command = null;
+        foreach (var card in journeys.Children.OfType<JourneyCardView>()) card.Detach();
         journeys.Children.Clear();
         for (var i = 0; i < model.Session.Journeys.Count; i++)
         {
             var journey = model.Session.Journeys[i];
             var command = new AsyncRelayCommand(() => model.OpenJourneyAsync(journey), () => true, _ => { Title = "Details konnten nicht geöffnet werden"; });
-            journeys.Children.Add(new Button { Text = JourneyPresentation.Summary(journey), LineBreakMode = LineBreakMode.WordWrap, AutomationId = "Journey" + i, Command = command });
+            journeys.Children.Add(new JourneyCardView(journey, "Journey" + i, command));
         }
     }
 }

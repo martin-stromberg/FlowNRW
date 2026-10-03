@@ -27,9 +27,24 @@ try {
         return $script:window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $c)
     }
     function Wait([string]$id) {
-        for ($i = 0; $i -lt 100; $i++) { $e = Find $id; if ($e) { return $e }; Start-Sleep -Milliseconds 100 }
+        for ($i = 0; $i -lt 100; $i++) {
+            $e = Find $id; if ($e) { return $e }
+            if ($i -gt 5 -and $i % 5 -eq 0) {
+                $all = $script:window.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)
+                foreach ($element in $all) {
+                    $scroll = $null
+                    if ($element.TryGetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern, [ref]$scroll) -and $scroll.Current.VerticallyScrollable) {
+                        if ($scroll.Current.VerticalScrollPercent -ge 99) { $scroll.SetScrollPercent(-1,0) }
+                        else { $scroll.Scroll([System.Windows.Automation.ScrollAmount]::NoAmount,[System.Windows.Automation.ScrollAmount]::LargeIncrement) }
+                        break
+                    }
+                }
+            }
+            Start-Sleep -Milliseconds 100
+        }
         Write-Output ('DIAGNOSTIC missing ' + $id + '; visible page markers: ' + ((@('OriginText','StopQuery','MonitorStop','MapCanvas','Journey0','JourneyDetailSection0') | Where-Object { $null -ne (Find $_) }) -join ', '))
         Snapshot ('failure-missing-' + $id)
+        $script:window.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { Write-Host ($_.Current.AutomationId + '|' + $_.Current.Name) }
         throw "Missing $id"
     }
     function Click([string]$id) {
@@ -52,7 +67,27 @@ try {
     function SetText([string]$id, [string]$value) { (Wait $id).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($value); Start-Sleep -Milliseconds 100 }
     function Name([string]$id) { return (Wait $id).Current.Name }
     function Assert([bool]$value, [string]$message) { if (!$value) { throw $message }; Write-Output "PASS $message" }
+    function MarkerY([double]$latitude) {
+        $view = (Name 'MapViewport').Split(';')
+        $center = [double]::Parse($view[0], [Globalization.CultureInfo]::InvariantCulture)
+        $zoom = [double]::Parse($view[2], [Globalization.CultureInfo]::InvariantCulture)
+        $size = 256 * [Math]::Pow(2,$zoom)
+        $targetY = (1 - [Math]::Log([Math]::Tan($latitude * [Math]::PI / 180) + 1 / [Math]::Cos($latitude * [Math]::PI / 180)) / [Math]::PI) / 2 * $size
+        $centerY = (1 - [Math]::Log([Math]::Tan($center * [Math]::PI / 180) + 1 / [Math]::Cos($center * [Math]::PI / 180)) / [Math]::PI) / 2 * $size
+        return 0.5 + ($targetY - $centerY) / (Wait 'MapCanvas').Current.BoundingRectangle.Height
+    }
     function Back { Click 'NavigationViewBackButton' }
+function SelectTab([string]$name) {
+    $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, $name)
+    $items = $script:window.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
+    foreach ($item in $items) {
+        $selection = $null
+        if ($item.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$selection)) { $selection.Select(); Start-Sleep -Milliseconds 300; return }
+        $invoke = $null
+        if ($item.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$invoke)) { $invoke.Invoke(); Start-Sleep -Milliseconds 300; return }
+    }
+    throw ('Persistent native tab not selectable: ' + $name)
+}
     function AssertNarrowAction([string]$id, [string]$message) {
         # Resize returns before WinUI has completed its layout pass.
         $width = 0
@@ -107,7 +142,7 @@ public static class NativeWindowCapture {
     if ($Favorites) {
         function FavoriteCount([int]$expected) { Status 'FavoriteCount' ('\b' + $expected + '\b'); Assert ($true) ('Favorite count is ' + $expected) }
         function HomeReady { Wait 'OpenHomeStops' | Out-Null; Wait 'HomeStatus' | Out-Null; Start-Sleep -Milliseconds 500 }
-        function BackHome { Back; Back; HomeReady }
+        function BackHome { Back; SelectTab 'Abfahrten'; HomeReady }
         function FindFavoriteMonitor([string]$query) {
             Click 'OpenHomeStops'; SetText 'StopQuery' $query; Click 'FindStops'; Click 'StopMatch0'
             Status 'MonitorStatus' 'manuell aktualisiert'
@@ -196,7 +231,7 @@ public static class NativeWindowCapture {
         Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorStop' 'Favorite Far'; Back; Back; HomeReady
         Click 'OpenJourneySearch'; SelectEndpoint 'Origin' 'Essen'; SelectEndpoint 'Destination' 'Berlin'
         Click 'SearchJourneys'; Click 'Journey0'; Wait 'JourneyDetailSection1' | Out-Null
-        Back; Back; Back; HomeReady
+        Back; Back; SelectTab 'Abfahrten'; HomeReady
         Write-Output 'PASS independent monitor refreshes, failure retention and monitor/map/routing navigation'
         Add-Type @"
 using System;
@@ -299,7 +334,7 @@ public static class LocationPointer {
         function LocationMapMarker {
             LocationForeground
             $rect = (Wait 'MapCanvas').Current.BoundingRectangle
-            [LocationPointer]::SetCursorPos([int]($rect.Left + $rect.Width * 0.5), [int]($rect.Top + $rect.Height * 0.285)) | Out-Null
+            [LocationPointer]::SetCursorPos([int]($rect.Left + $rect.Width * 0.5), [int]($rect.Top + $rect.Height * (MarkerY 51.46))) | Out-Null
             [LocationPointer]::mouse_event(2,0,0,0,[UIntPtr]::Zero)
             [LocationPointer]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
             Start-Sleep -Milliseconds 500
@@ -354,7 +389,7 @@ public static class LocationPointer {
         Start-Sleep -Seconds 6
         Contains 'OriginSelection' 'Newest manual endpoint'
         SetText 'LocationScenario' 'slow'; Click 'DestinationLocation'; Status 'DestinationLocationStatus' 'wird ermittelt'
-        Click 'OpenStopSearch'; Back
+        Click 'OpenStopSearch'; SelectTab 'Verbindungen'
         Start-Sleep -Seconds 6
         Assert ((Name 'DestinationLocationStatus') -notmatch 'wird ermittelt') 'Page exit cancels pending location state'
         SetText 'DestinationText' 'After back'; SelectEndpoint 'Destination' 'After back'
@@ -411,10 +446,10 @@ public static class LocationPointer {
         Start-Sleep -Seconds 6
         Contains 'StopMatch0' 'Neue Umgebung'; Contains 'StopSearchMetadata' 'Nearby new'
         SetText 'NearbyScenario' 'slow'; Click 'FindNearbyStops'; Status 'NearbyStatus' 'wird ermittelt'
-        Back; Start-Sleep -Seconds 6; Wait 'OriginText' | Out-Null
+        SelectTab 'Verbindungen'; Start-Sleep -Seconds 6; Wait 'OriginText' | Out-Null
         Assert ($null -eq (Find 'MonitorStop')) 'Abandoned location never navigates to monitor'
         Click 'OpenStopSearch'; Nearby; Click 'StopMatch0'; Status 'MonitorStatus' 'manuell aktualisiert'
-        Back; Back; Wait 'OriginText' | Out-Null
+        Back; SelectTab 'Verbindungen'; Wait 'OriginText' | Out-Null
         Write-Output 'PASS fixture location endpoints, failure/revocation, latest wins, nearby list/map/monitor, unknown distance/position, keyboard and back navigation'
     } elseif ($LiveMaps) {
         Click 'OpenStopSearch'; SetText 'StopQuery' 'Gelsenkirchen Hbf'; Click 'FindStops'
@@ -475,7 +510,7 @@ public static class MapPointer {
         Contains 'MapDataStatus' '2 Haltestellen.*2 Kartenpositionen'
         Start-Sleep -Milliseconds 500
         Snapshot 'native-map'
-        MapClick 0.5 0.285
+        MapClick 0.5 (MarkerY 51.46)
         Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-1'
         Back; Status 'MapStatus' 'Basiskarte geladen\.'
         Click 'ShowMapList'; KeyboardActivate 'MapStation0'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-0'
@@ -503,9 +538,9 @@ public static class MapPointer {
         SetText 'StopQuery' 'map-slow'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
         Wait 'MapCanvas' | Out-Null; Back; Wait 'StopQuery' | Out-Null
         SetText 'StopQuery' 'Newest map'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
-        Status 'MapStatus' 'Basiskarte geladen\.'; Start-Sleep -Seconds 6; Contains 'MapMetadata' 'Newest map'; Back; Back
+        Status 'MapStatus' 'Basiskarte geladen\.'; Start-Sleep -Seconds 6; Click 'MapInformation'; Contains 'MapMetadata' 'Newest map'; Back; SelectTab 'Verbindungen'
         SelectEndpoint 'Origin' 'Essen'; SelectEndpoint 'Destination' 'Berlin'; Click 'SearchJourneys'; Click 'Journey0'
-        Click 'ShowJourneyMap'; Status 'MapStatus' 'Basiskarte geladen\.'; Contains 'MapDataStatus' 'Teilweiser Verlauf'; Contains 'MapSegment0' 'RE 1.*3 gelieferte Punkte'; Contains 'MapSegment1' 'Fußweg.*2 gelieferte Punkte'
+        Click 'ShowJourneyMap'; Status 'MapStatus' 'Basiskarte geladen\.'; Contains 'MapDataStatus' 'Teilweiser Verlauf'; Click 'MapInformation'; Contains 'MapSegment0' 'RE 1.*3 gelieferte Punkte'; Contains 'MapSegment1' 'Fußweg.*2 gelieferte Punkte'
         Snapshot 'native-journey-map'
         Back; Wait 'JourneyDetailSection1' | Out-Null; Back; Click 'Journey1'; Click 'ShowJourneyMap'
         Contains 'MapDataStatus' 'Keine darstellbare Geometrie'; Assert ($null -eq (Find 'MapSegment0')) 'Previous journey geometry removed'
@@ -526,7 +561,7 @@ public static class MapPointer {
         for ($attempt = 0; $attempt -lt 120 -and (Name 'MonitorStatus') -match 'werden'; $attempt++) { Start-Sleep -Milliseconds 500 }
         Contains 'MonitorStatus' 'manuell aktualisiert'
         Write-Output ('LIVE refreshed: ' + (Name 'MonitorMetadata'))
-        Back; Assert (((Wait 'StopQuery').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value) -eq 'Gelsenkirchen Hbf') 'Live back preserves query'; Back; Wait 'OriginText' | Out-Null
+        Back; Assert (((Wait 'StopQuery').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value) -eq 'Gelsenkirchen Hbf') 'Live back preserves query'; SelectTab 'Verbindungen'; Wait 'OriginText' | Out-Null
         Write-Output 'PASS live monitor lookup, departure board, manual refresh and back navigation'
     } elseif ($Monitors) {
         Click 'OpenStopSearch'
@@ -565,7 +600,7 @@ public static class MapPointer {
         SetText 'StopQuery' 'New Stop'; Click 'FindStops'; Click 'StopMatch0'; Status 'MonitorStatus' 'manuell aktualisiert'
         Start-Sleep -Seconds 6
         Contains 'MonitorStop' 'New Stop'; Contains 'MonitorMetadata' 'New Stop'; Contains 'Departure0' 'Stand 1'
-        Back; Back; Wait 'OriginText' | Out-Null
+        Back; SelectTab 'Verbindungen'; Wait 'OriginText' | Out-Null
         Write-Output 'PASS all monitor native UI scenarios'
     } elseif ($Inspect) {
         $script:window.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { '{0}|{1}|{2}' -f $_.Current.AutomationId, $_.Current.ControlType.ProgrammaticName, $_.Current.Name }

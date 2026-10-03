@@ -15,7 +15,7 @@ public sealed class MapPage : ContentPage
     private readonly MapOptions options;
     private readonly ForegroundState foreground;
     private readonly HybridWebView map = new() { HybridRoot = "map", DefaultFile = "index.html", HeightRequest = 430, AutomationId = "MapCanvas" };
-    private readonly Label status = new() { Text = "Karte wird geladen …", AutomationId = "MapStatus" };
+    private readonly Label status = new() { Text = "Karte wird geladen …", AutomationId = "MapStatus", FontSize = 15 };
     private CancellationTokenSource? lifetime;
     private bool ready;
     private int pending;
@@ -35,43 +35,52 @@ public sealed class MapPage : ContentPage
         this.model = model; this.tiles = tiles; this.options = options;
         Title = model.Title;
         var layout = new VerticalStackLayout { Padding = 16, Spacing = 12 };
-        layout.Children.Add(new Label { Text = model.Status, AutomationId = "MapDataStatus", FontSize = 18 });
-        layout.Children.Add(new Label { Text = model.Metadata, AutomationId = "MapMetadata" });
+        layout.Children.Add(new Label { Text = model.Status.Replace(". Auswahl öffnet die Abfahrten.", "", StringComparison.Ordinal).Replace("Es wird kein Streckenverlauf erfunden.", "Für diese Verbindung ist kein Streckenverlauf verfügbar.", StringComparison.Ordinal), AutomationId = "MapDataStatus", FontSize = 17 });
         layout.Children.Add(status);
 #if UI_TEST_FIXTURES
+        viewport.IsVisible = Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_HIDE_CONTROLS") != "1";
         layout.Children.Add(viewport);
 #endif
         layout.Children.Add(new Button
         {
-            Text = "Karte erneut laden / auf Auswahl zentrieren",
+            Text = "Karte neu laden",
             AutomationId = "ResetMap",
             LineBreakMode = LineBreakMode.WordWrap,
             Command = new AsyncRelayCommand(InitializeAsync, () => true, failure: _ => status.Text = "Karte nicht verfügbar. Bitte die Haltestellenliste verwenden.")
         });
-        layout.Children.Add(new Label { Text = options.Attribution, AutomationId = "MapAttribution" });
-        layout.Children.Add(new Label { Text = "Kartendaten: Die angezeigte Region wird beim Kartenanbieter abgerufen. Keine Standortfreigabe erforderlich.", FontSize = 13 });
+        layout.Children.Add(new Label { Text = options.Attribution, AutomationId = "MapAttribution", FontSize = 13 });
+        SizeChanged += (_, _) => map.HeightRequest = Math.Max(320, Height * 0.55);
+        var information = new VerticalStackLayout { Spacing = 8, IsVisible = false };
+        information.Children.Add(new Label { Text = model.Metadata, AutomationId = "MapMetadata", FontSize = 13 });
+        information.Children.Add(new Label { Text = "Kartendaten: Die angezeigte Region wird beim Kartenanbieter abgerufen. Keine Standortfreigabe erforderlich.", FontSize = 13 });
         foreach (var segment in model.Segments)
-            layout.Children.Add(new Label { Text = "Verlauf: " + segment.Label + " · " + segment.Points.Count + " gelieferte Punkte", AutomationId = "MapSegment" + model.Segments.ToList().IndexOf(segment) });
+            information.Children.Add(new Label { Text = "Verlauf: " + segment.Label + " · " + segment.Points.Count + " gelieferte Punkte", AutomationId = "MapSegment" + model.Segments.ToList().IndexOf(segment), FontSize = 13 });
+        var infoButton = new Button { Text = "Quellen und Kartendaten", AutomationId = "MapInformation", LineBreakMode = LineBreakMode.WordWrap };
+        infoButton.Command = new RelayCommand(_ => { information.IsVisible = !information.IsVisible; infoButton.Text = information.IsVisible ? "Kartendaten schließen" : "Quellen und Kartendaten"; });
+        layout.Children.Add(infoButton);
+        layout.Children.Add(information);
         var list = new VerticalStackLayout { Spacing = 12, IsVisible = false };
         if (model.Stations.Count > 0)
         {
-            layout.Children.Add(new Button { Text = "Haltestellenliste anzeigen", AutomationId = "ShowMapList", Command = new RelayCommand(_ => { map.IsVisible = false; list.IsVisible = true; }) });
-            layout.Children.Add(new Button { Text = "Karte anzeigen", AutomationId = "ShowMapCanvas", Command = new AsyncRelayCommand(async () => { list.IsVisible = false; map.IsVisible = true; await InitializeAsync(); }, () => true, _ => status.Text = "Karte nicht verfügbar.") });
+            var controls = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
+            controls.Add(new Button { Text = "Liste", AutomationId = "ShowMapList", Command = new RelayCommand(_ => { map.IsVisible = false; list.IsVisible = true; }) }, 0);
+            controls.Add(new Button { Text = "Karte", AutomationId = "ShowMapCanvas", Command = new AsyncRelayCommand(async () => { list.IsVisible = false; map.IsVisible = true; await InitializeAsync(); }, () => true, _ => status.Text = "Karte nicht verfügbar.") }, 1);
+            layout.Children.Add(controls);
             list.Children.Add(new Label { Text = "Haltestellenliste – Abfahrten öffnen", FontSize = 20, FontAttributes = FontAttributes.Bold });
         }
         var session = model.Session;
         foreach (var station in model.Stations)
-            list.Children.Add(new Button
+            list.Children.Add(TransitVisuals.Candidate(station.Candidate, new Button
             {
                 Text = station.Label,
                 LineBreakMode = LineBreakMode.WordWrap,
                 AutomationId = "MapStation" + station.Index,
                 Command = new AsyncRelayCommand(() => model.SelectAsync(session, station.Index), () => true, failure: _ => status.Text = "Monitor konnte nicht geöffnet werden.")
-            });
+            }, station.Position is null ? " · Keine Kartenposition vorhanden" : ""));
         layout.Children.Add(list);
         layout.Children.Add(map);
         map.RawMessageReceived += MessageReceived;
-        Content = new ScrollView { Content = layout };
+        Content = TransitVisuals.Page(layout);
     }
 
     /// <inheritdoc />
@@ -167,7 +176,7 @@ public sealed class MapPage : ContentPage
             if (type == "view") { viewport.Text = root.GetProperty("lat").GetRawText() + ";" + root.GetProperty("lon").GetRawText() + ";" + root.GetProperty("zoom").GetRawText(); return; }
 #endif
             if (type == "select") { await model.SelectAsync(model.Session, root.GetProperty("id").GetInt32()); return; }
-            if (type == "loaded") { status.Text = model.Stations.Count > 0 ? "Basiskarte geladen. Marker auswählen oder Haltestellenliste verwenden." : "Basiskarte geladen. Gelieferte Verläufe können verschoben und vergrößert werden."; return; }
+            if (type == "loaded") { status.Text = "Basiskarte geladen."; return; }
             if (type == "failed") { status.Text = "Basiskarte fehlt oder ist veraltet. Haltestellen und gelieferte Verläufe bleiben nutzbar."; return; }
             if (type == "cancel") { if (tileRequests.TryGetValue(root.GetProperty("id").GetInt32(), out var previous)) previous.Cancel(); return; }
             if (type != "tile") return;

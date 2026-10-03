@@ -11,6 +11,7 @@ public sealed class HomePage : ContentPage
 {
     private readonly FavoriteHomeViewModel model;
     private readonly VerticalStackLayout cards = new() { Spacing = 16 };
+    private readonly VerticalStackLayout nearbyCards = new() { Spacing = 8 };
     private readonly List<Action> unsubscribe = [];
     private readonly List<AsyncRelayCommand> actions = [];
     private readonly StopMonitorViewModel monitor;
@@ -40,9 +41,10 @@ public sealed class HomePage : ContentPage
         BindingContext = model;
         Title = "Meine Haltestellen";
         var layout = new VerticalStackLayout { Padding = 16, Spacing = 12 };
-        layout.Children.Add(new Label { Text = "Deine nächsten Abfahrten", FontSize = 28, FontAttributes = FontAttributes.Bold });
-        layout.Children.Add(new Button { Text = "Verbindung suchen", AutomationId = "OpenJourneySearch", Command = Navigate("search") });
-        layout.Children.Add(new Button { Text = "Haltestelle hinzufügen", AutomationId = "OpenHomeStops", Command = Navigate("stops") });
+        layout.Children.Add(TransitVisuals.Text("Abfahrten", 32, true));
+        layout.Children.Add(TransitVisuals.Secondary("Deine gespeicherten Stationen auf einen Blick."));
+        layout.Children.Add(new Button { Text = "Verbindung suchen", AutomationId = "OpenJourneySearch", Command = Navigate("//main/connections-tab/search") });
+        layout.Children.Add(new Button { Text = "Haltestelle hinzufügen", AutomationId = "OpenHomeStops", Command = Navigate("//main/stations-tab/stops") });
         layout.Children.Add(new Button { Text = "Aktualisierung einstellen", AutomationId = "OpenRefreshSettings", Command = Navigate("refresh-settings") });
         var interval = new Label { AutomationId = "RefreshIntervalStatus", BindingContext = settings };
         interval.SetBinding(Label.TextProperty, nameof(settings.Description)); layout.Children.Add(interval);
@@ -56,6 +58,9 @@ public sealed class HomePage : ContentPage
             () => model.Cards.Count > 0, _ => Title = "Karte konnte nicht geöffnet werden");
         layout.Children.Add(new Button { Text = "Favoriten auf Karte zeigen", AutomationId = "HomeMap", Command = showMap });
         layout.Children.Add(cards);
+        layout.Children.Add(TransitVisuals.Text("Nächste Haltestellen", 22, true, "NearbyHeading"));
+        var nearbyStatus = new Label { AutomationId = "NearbyStatus" }; nearbyStatus.SetBinding(Label.TextProperty, nameof(model.NearbyStatus)); layout.Children.Add(nearbyStatus);
+        layout.Children.Add(nearbyCards);
         model.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName == nameof(model.Cards))
@@ -64,13 +69,15 @@ public sealed class HomePage : ContentPage
                 if (active && foreground.IsActive && resume is null) _ = RefreshMissingAsync();
                 ReconcileRefreshLoops();
             }
-            count.Text = $"{model.Cards.Count} Favoriten";
+            count.Text = $"{model.Cards.Count} Favoriten gespeichert";
+            RenderNearby();
             showMap.Refresh();
             foreach (var action in actions.ToArray()) action.Refresh();
         };
 #if UI_TEST_FIXTURES
         Loaded += (_, _) =>
         {
+            if (Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_HIDE_CONTROLS") == "1") return;
             if (layout.Children.Any(child => child.AutomationId == "HomeScenario")) return;
             var fixture = Handler!.MauiContext!.Services.GetRequiredService<UiTestLocationServices>();
             var scenario = new Entry { AutomationId = "HomeScenario", BindingContext = fixture };
@@ -79,8 +86,17 @@ public sealed class HomePage : ContentPage
             calls.SetBinding(Label.TextProperty, nameof(fixture.DepartureCalls)); layout.Children.Insert(1, calls);
         };
 #endif
-        count.Text = $"{model.Cards.Count} Favoriten";
-        Content = new ScrollView { Content = layout };
+        count.Text = $"{model.Cards.Count} Favoriten gespeichert";
+        layout.Children.Remove(cards);
+        layout.Children.Insert(3, cards);
+        var addStop = layout.Children.First(child => child.AutomationId == "OpenHomeStops");
+        layout.Children.Remove(addStop);
+        layout.Children.Insert(2, addStop);
+        var searchShortcut = layout.Children.First(child => child.AutomationId == "OpenJourneySearch");
+        layout.Children.Remove(searchShortcut);
+        layout.Children.Add(searchShortcut);
+        Content = TransitVisuals.Page(layout);
+        RenderNearby();
     }
 
     /// <inheritdoc />
@@ -98,6 +114,7 @@ public sealed class HomePage : ContentPage
             await model.LoadAsync();
             if (version != appearance) return;
             RenderCards(); ReconcileRefreshLoops();
+            await model.RefreshNearbyAsync();
             if (foreground.IsActive) await model.RefreshMissingAsync();
         }
         catch (Exception) { Title = "Favoriten konnten nicht geladen werden"; }
@@ -186,33 +203,55 @@ public sealed class HomePage : ContentPage
             AddLabel(layout, "FavoriteName" + index, nameof(card.Title), 22);
             AddLabel(layout, "FavoriteDistance" + index, nameof(card.DistanceLabel));
             AddLabel(layout, "FavoriteStatus" + index, nameof(card.Status));
-            AddLabel(layout, "FavoriteMetadata" + index, nameof(card.Metadata));
             var departures = new VerticalStackLayout { Spacing = 8 };
             void RenderDepartures()
             {
                 departures.Children.Clear();
                 for (var item = 0; item < Math.Min(card.Items.Count, 5); item++)
-                    departures.Children.Add(new Label { AutomationId = $"FavoriteDeparture{cardIndex}_{item}", Text = DeparturePresentation.Describe(card.Items[item]) });
+                    departures.Children.Add(new DepartureCardView(card.Items[item], $"FavoriteDeparture{cardIndex}_{item}", compact: true));
             }
             PropertyChangedEventHandler changed = (_, args) => { if (args.PropertyName == nameof(card.Items)) RenderDepartures(); };
             card.PropertyChanged += changed;
             unsubscribe.Add(() => card.PropertyChanged -= changed);
             RenderDepartures(); layout.Children.Add(departures);
-            var refreshButton = new Button { Text = "Aktualisieren", AutomationId = "RefreshFavorite" + index, Command = card.RefreshCommand };
-            layout.Children.Add(refreshButton);
+            var provenance = new Label { AutomationId = "FavoriteMetadata" + index, FontSize = 13, MaxLines = 2, LineBreakMode = LineBreakMode.TailTruncation };
+            provenance.SetBinding(Label.TextProperty, nameof(card.Metadata));
+            SemanticProperties.SetDescription(provenance, card.Metadata);
+            layout.Children.Add(provenance);
+            var actions = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
+            var refreshButton = new Button { Text = "↻", AutomationId = "RefreshFavorite" + index, Command = card.RefreshCommand, HeightRequest = 48, WidthRequest = 48 };
+            SemanticProperties.SetDescription(refreshButton, "Abfahrten aktualisieren");
+            actions.Add(refreshButton, 0);
             unsubscribe.Add(() => refreshButton.Command = null);
             var open = new AsyncRelayCommand(() => monitor.OpenFavoriteAsync(model, card), () => model.Contains(card),
                 _ => Title = "Monitor konnte nicht geöffnet werden");
             var remove = new AsyncRelayCommand(() => model.RemoveAsync(card), () => !model.IsSaving && model.Contains(card),
                 _ => Title = "Favorit konnte nicht entfernt werden");
-            actions.Add(open); actions.Add(remove);
-            var openButton = new Button { Text = "Abfahrtsmonitor öffnen", AutomationId = "OpenFavorite" + index, Command = open };
-            layout.Children.Add(openButton);
+            var openButton = new Button { Text = "▣", AutomationId = "OpenFavorite" + index, Command = open, HeightRequest = 48, WidthRequest = 48 };
+            SemanticProperties.SetDescription(openButton, "Abfahrtsmonitor öffnen");
+            actions.Add(openButton, 1);
             unsubscribe.Add(() => openButton.Command = null);
-            var removeButton = new Button { Text = "Favorit entfernen", AutomationId = "RemoveFavorite" + index, Command = remove };
-            layout.Children.Add(removeButton);
+            var removeButton = new Button { Text = "☆", AutomationId = "RemoveFavorite" + index, Command = remove, HeightRequest = 48, WidthRequest = 48 };
+            SemanticProperties.SetDescription(removeButton, "Favorit entfernen");
+            actions.Add(removeButton, 2);
+            layout.Children.Add(actions);
             unsubscribe.Add(() => removeButton.Command = null);
-            cards.Children.Add(new Border { Padding = 16, Stroke = Color.FromArgb("#C7D7EC"), Content = layout });
+            cards.Children.Add(new Border { Padding = 16, Content = layout });
+            TransitVisuals.ApplyRoles(layout);
+        }
+    }
+
+    private void RenderNearby()
+    {
+        nearbyCards.Children.Clear();
+        for (var index = 0; index < model.NearbyStops.Count; index++)
+        {
+            var candidate = model.NearbyStops[index];
+            var button = new Button { Text = candidate.Name, AutomationId = "NearbyStop" + index, HeightRequest = 48, HorizontalOptions = LayoutOptions.Fill };
+            SemanticProperties.SetDescription(button, "Nahe Haltestelle " + candidate.Name);
+            button.Command = new AsyncRelayCommand(() => monitor.OpenAsync(candidate), () => candidate.Stop is not null,
+                _ => Title = "Haltestelle konnte nicht geöffnet werden");
+            nearbyCards.Children.Add(button);
         }
     }
 

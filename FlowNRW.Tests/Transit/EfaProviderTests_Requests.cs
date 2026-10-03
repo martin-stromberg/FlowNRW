@@ -18,6 +18,16 @@ public sealed class EfaProviderTests_Requests
         Assert.Contains("itdDate=20260909", query);
         Assert.DoesNotContain("foreign", query);
     }
+    /// <summary>Arrival searches transmit the arrival mode to EFA.</summary>
+    [Fact]
+    public async Task RouteAsync_ArrivalMode_UsesArrivalParameter()
+    {
+        var gateway = new AdapterGateway(); gateway.Add("{\"journeys\":[]}");
+        var provider = new EfaProvider(gateway, new(new()), new());
+        var point = new Address { Coordinate = new(51, 7) };
+        await provider.RouteAsync(point, point, DateTimeOffset.UtcNow, arriveBy: true);
+        Assert.Contains("itdTripDateTimeDepArr=arr", gateway.Requests.Single().Query);
+    }
     /// <summary>Configured fallback URL is actually called and marked.</summary>
     [Fact]
     public async Task SearchAsync_PrimaryUnavailable_CallsFallbackEndpoint()

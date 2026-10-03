@@ -22,7 +22,7 @@ internal sealed class TransitTestProvider : IProviderOrchestrator, IEfaProvider
         Interlocked.Increment(ref Calls);
         return Task.FromResult(Nearby);
     }
-    public Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default)
+    public Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default, bool arriveBy = false)
     {
         Interlocked.Increment(ref Calls);
         return RoutePending?.Invoke(cancellationToken) ?? Task.FromResult(Journeys);
@@ -50,5 +50,4 @@ internal sealed class TransitTestHandler : HttpMessageHandler
         return Respond(request, cancellationToken);
     }
 }
-
 
