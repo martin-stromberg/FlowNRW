@@ -174,6 +174,17 @@ public sealed class StopMonitorViewModel : ObservableObject
         await OpenStopAsync(candidate.Stop);
     }
 
+    /// <summary>Opens a complete stop identity supplied by the retained home nearby list.</summary>
+    /// <param name="candidate">Nearby stop independently verified by the home projection.</param>
+    /// <returns>Navigation and initial update completion, or immediate completion for an incomplete identity.</returns>
+    public Task OpenNearbyFromHomeAsync(Address candidate)
+    {
+        if (candidate.Stop is not { } stop
+            || string.IsNullOrWhiteSpace(stop.Id)
+            || string.IsNullOrWhiteSpace(stop.Source)) return Task.CompletedTask;
+        return OpenStopAsync(stop);
+    }
+
     /// <summary>Opens an exact currently saved favorite without weakening search membership.</summary>
     /// <param name="home">Authoritative favorite session.</param>
     /// <param name="card">Current saved card instance.</param>

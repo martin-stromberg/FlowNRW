@@ -179,6 +179,11 @@ public static class NativeWindowCapture {
             Write-Output 'PASS new application process opened the same isolated favorite file'
         }
         HomeReady; FavoriteCount 0
+        SetText 'HomeScenario' 'success'; Wait 'NearbyStop0' | Out-Null
+        Click 'NearbyStop0'; Status 'MonitorStatus' 'manuell aktualisiert'
+        Contains 'MonitorStop' 'Umgebung Süd'; Contains 'MonitorMetadata' 'fixture-nearby-0'
+        BackHome
+        Write-Output 'PASS home nearby selection opens its exact departure monitor'
         Contains 'HomeStatus' 'Keine Favoriten|keine Favoriten|Haltestelle'
         Assert ((Wait 'OpenHomeStops').Current.IsEnabled) 'Empty home offers actual stop lookup'
         FindFavoriteMonitor 'Favorite Far'

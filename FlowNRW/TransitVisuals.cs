@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls.Shapes;
+using System.Windows.Input;
 
 namespace FlowNRW;
 
@@ -9,13 +10,15 @@ internal static class TransitVisuals
     {
         var description = FlowNRW.Core.Presentation.JourneyPresentation.Address(candidate) + suffix;
         action.Text = candidate.Name + suffix;
+        action.Padding = new Thickness(0);
+        action.SetAppThemeColor(Button.BackgroundColorProperty, Colors.Transparent, Colors.Transparent);
+        action.SetAppThemeColor(Button.TextColorProperty, Color.FromArgb("#1A1B1F"), Color.FromArgb("#F5F5F7"));
         SemanticProperties.SetDescription(action, description);
         var details = description.StartsWith(candidate.Name, StringComparison.Ordinal) ? description[candidate.Name.Length..].Trim(' ', '·') : description;
-        var layout = new VerticalStackLayout { Spacing = 4 };
+        var layout = new VerticalStackLayout { Spacing = 4, Padding = new Thickness(2) };
         layout.Children.Add(action);
         if (!string.IsNullOrWhiteSpace(details)) layout.Children.Add(Secondary(details));
-        ApplyRoles(layout);
-        return new Border { Padding = 8, Content = layout };
+        return new Border { Padding = 14, Content = layout };
     }
 
     internal static ScrollView Page(VerticalStackLayout layout)
@@ -30,12 +33,14 @@ internal static class TransitVisuals
 
     internal static void ApplyRoles(Element element)
     {
-        if (element is Label label && (label.AutomationId?.Contains("Metadata", StringComparison.Ordinal) == true || label.AutomationId == "RefreshIntervalStatus"))
+        if (element is Label label && (label.AutomationId?.Contains("Metadata", StringComparison.Ordinal) == true
+            || label.AutomationId?.EndsWith("Status", StringComparison.Ordinal) == true
+            || label.AutomationId == "RefreshIntervalStatus"))
         {
             label.FontSize = 13;
             label.SetAppThemeColor(Label.TextColorProperty, Color.FromArgb("#414755"), Color.FromArgb("#C5C7D0"));
         }
-        if (element is Button button && button.AutomationId is { } id && !new[] { "SearchJourneys", "FindStops", "RefreshDepartures", "SaveRefreshSettings", "OpenHomeStops" }.Contains(id))
+        if (element is Button button && button.AutomationId is { } id && !new[] { "SearchJourneys", "FindStops", "RefreshDepartures", "SaveRefreshSettings", "OpenJourneySearch" }.Contains(id))
         {
             button.SetAppThemeColor(Button.BackgroundColorProperty, Color.FromArgb("#EEEDF3"), Color.FromArgb("#2C2C2E"));
             button.SetAppThemeColor(Button.TextColorProperty, Color.FromArgb("#0058BC"), Color.FromArgb("#A8C8FF"));
@@ -57,6 +62,21 @@ internal static class TransitVisuals
         var label = Text(text, 13, id: id);
         label.SetAppThemeColor(Label.TextColorProperty, Color.FromArgb("#414755"), Color.FromArgb("#C5C7D0"));
         return label;
+    }
+
+    internal static Button SecondaryAction(string icon, string description, string automationId, ICommand command)
+    {
+        var button = new Button
+        {
+            Text = icon,
+            AutomationId = automationId,
+            Command = command,
+            HeightRequest = 48,
+            WidthRequest = 48,
+            Padding = new Thickness(0)
+        };
+        SemanticProperties.SetDescription(button, description);
+        return button;
     }
 
     internal static Border Badge(string line, string? mode = null)

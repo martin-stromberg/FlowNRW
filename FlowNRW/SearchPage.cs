@@ -23,6 +23,7 @@ public sealed class SearchPage : ContentPage
         this.model = model; BindingContext = model; Title = "Verbindung suchen";
         var content = new VerticalStackLayout { Padding = 16, Spacing = 16 };
         content.Children.Add(TransitVisuals.Text("Verbindungen", 32, true));
+        content.Children.Add(TransitVisuals.Secondary("Plane deine Fahrt mit Start, Ziel und Abfahrtszeit."));
 #if UI_TEST_FIXTURES
         Loaded += (_, _) =>
         {
@@ -37,11 +38,12 @@ public sealed class SearchPage : ContentPage
             content.Children.Insert(0, scenario);
         };
 #endif
-        content.Children.Add(Endpoint(model.Origin, "Origin", "Start"));
-        content.Children.Add(Endpoint(model.Destination, "Destination", "Ziel"));
-        var timePanel = new Border { Padding = 12, Content = new VerticalStackLayout { Spacing = 8 } };
-        var timeLayout = (VerticalStackLayout)timePanel.Content;
-        timeLayout.Children.Add(TransitVisuals.Text("Zeit", 17, true));
+        var searchForm = new VerticalStackLayout { Spacing = 12, Padding = 16 };
+        searchForm.Children.Add(TransitVisuals.Text("Wohin möchtest du fahren?", 20, true));
+        searchForm.Children.Add(Endpoint(model.Origin, "Origin", "Start"));
+        searchForm.Children.Add(Endpoint(model.Destination, "Destination", "Ziel"));
+        var timeLayout = new VerticalStackLayout { Spacing = 8, Padding = new Thickness(4, 8) };
+        timeLayout.Children.Add(TransitVisuals.Text("Zeitpunkt", 17, true));
         var timeMode = new Picker { AutomationId = "RoutingTimeMode", Title = "Zeitpunkt", ItemsSource = new[] { "Jetzt", "Andere Zeit" }, SelectedIndex = 0 };
         timeMode.SelectedIndexChanged += (_, _) => model.UseCurrentTime = timeMode.SelectedIndex == 0;
         timeLayout.Children.Add(timeMode);
@@ -57,8 +59,10 @@ public sealed class SearchPage : ContentPage
         var arriveRow = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto)] };
         arriveRow.Add(TransitVisuals.Text("Ankunft statt Abfahrt", 15), 0); arriveRow.Add(arrive, 1); timeLayout.Children.Add(arriveRow);
         timeMode.SelectedIndexChanged += (_, _) => alternative.IsVisible = timeMode.SelectedIndex == 1;
-        content.Children.Add(timePanel);
+        searchForm.Children.Add(timeLayout);
+        content.Children.Add(new Border { Content = searchForm });
         var search = new Button { Text = "Verbindungen suchen", AutomationId = "SearchJourneys", Command = model.SearchCommand };
+        SemanticProperties.SetDescription(search, "Verbindungen suchen");
         content.Children.Add(search);
         var busy = new ActivityIndicator { AutomationId = "RoutingBusy" }; busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(model.IsBusy)); busy.SetBinding(IsVisibleProperty, nameof(model.IsBusy)); content.Children.Add(busy);
         var status = new Label { AutomationId = "RoutingStatus" }; status.SetBinding(Label.TextProperty, nameof(model.Status)); content.Children.Add(status);
@@ -74,7 +78,7 @@ public sealed class SearchPage : ContentPage
     private Border Endpoint(EndpointViewModel endpoint, string prefix, string title)
     {
         var layout = new VerticalStackLayout { Spacing = 8, BindingContext = endpoint };
-        layout.Children.Add(new Label { Text = title, FontSize = 22, FontAttributes = FontAttributes.Bold });
+        layout.Children.Add(TransitVisuals.Text(title, 17, true));
         var toggle = new Switch { AutomationId = prefix + "CoordinateMode" }; toggle.SetBinding(Switch.IsToggledProperty, nameof(endpoint.IsCoordinateMode));
         SemanticProperties.SetDescription(toggle, title + ": Koordinatenmodus");
         var text = new Entry { Placeholder = title + ": Adresse oder Haltestelle", AutomationId = prefix + "Text" }; text.SetBinding(Entry.TextProperty, nameof(endpoint.Text)); text.SetBinding(IsVisibleProperty, nameof(endpoint.IsTextMode));
@@ -141,6 +145,6 @@ public sealed class SearchPage : ContentPage
             if (args.PropertyName == nameof(endpoint.Selection)) selection.IsVisible = true;
             if (args.PropertyName == nameof(endpoint.Metadata)) metadata.IsVisible = !string.IsNullOrWhiteSpace(endpoint.Metadata);
         };
-        return new Border { Padding = 16, Content = layout };
+        return new Border { Padding = 12, Content = layout };
     }
 }

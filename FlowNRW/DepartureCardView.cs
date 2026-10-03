@@ -15,23 +15,27 @@ public sealed class DepartureCardView : Border
     {
         Padding = compact ? 12 : 16;
         var line = item.Line?.Name ?? item.Identity.Line ?? "Linie unbekannt";
-        var layout = new VerticalStackLayout { Spacing = 8 };
-        var heading = new Grid { ColumnDefinitions = [new(new GridLength(76)), new(GridLength.Star)], ColumnSpacing = 12 };
+        var layout = new VerticalStackLayout { Spacing = 10 };
+        var heading = new Grid { ColumnDefinitions = [new(new GridLength(68)), new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 12 };
         heading.Add(TransitVisuals.Badge(line, item.Line?.Mode), 0);
         var destination = TransitVisuals.Text(item.Identity.Direction ?? "Ziel unbekannt", 17, true, id);
         SemanticProperties.SetDescription(destination, DeparturePresentation.Describe(item));
         heading.Add(destination, 1);
+        var realtime = item.Realtime;
+        var prominentTime = TransitVisuals.Text(Clock(realtime.ActualTime ?? item.PlannedTime), 22, true);
+        prominentTime.FontFamily = DeviceInfo.Platform == DevicePlatform.WinUI ? "Consolas" : "Menlo";
+        if (realtime.Cancelled == true) prominentTime.TextDecorations = TextDecorations.Strikethrough;
+        heading.Add(prominentTime, 2);
         layout.Children.Add(heading);
 
-        var realtime = item.Realtime;
-        var times = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 12 };
-        times.Add(TimeColumn("Soll", item.PlannedTime, false), 0);
-        times.Add(TimeColumn("Ist", realtime.ActualTime, realtime.Cancelled == true), 1);
-        if (!compact) layout.Children.Add(times);
+        if (!compact)
+        {
+            var timing = TransitVisuals.Secondary("Soll " + Clock(item.PlannedTime) + " · "
+                + (realtime.ActualTime is null ? "keine Echtzeit" : "Ist " + Clock(realtime.ActualTime)));
+            layout.Children.Add(timing);
+        }
         else
         {
-            static string Clock(DateTimeOffset? value) => value is { } time
-                ? TimeZoneInfo.ConvertTime(time, TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin")).ToString("HH:mm", CultureInfo.InvariantCulture) : "unbekannt";
             var timing = TransitVisuals.Text("Soll " + Clock(item.PlannedTime) + " · Ist " + Clock(realtime.ActualTime), 18, true);
             timing.FontFamily = DeviceInfo.Platform == DevicePlatform.WinUI ? "Consolas" : "Menlo";
             layout.Children.Add(timing);
@@ -67,16 +71,10 @@ public sealed class DepartureCardView : Border
         Content = layout;
     }
 
-    private static VerticalStackLayout TimeColumn(string title, DateTimeOffset? instant, bool cancelled)
+    private static string Clock(DateTimeOffset? instant)
     {
-        var local = instant is { } value ? TimeZoneInfo.ConvertTime(value, TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin")) : (DateTimeOffset?)null;
-        var time = TransitVisuals.Text(local?.ToString("HH:mm", CultureInfo.InvariantCulture) ?? (title == "Ist" ? "Keine Echtzeit" : "Unbekannt"), 18, true);
-        if (local is not null) time.FontFamily = DeviceInfo.Platform == DevicePlatform.WinUI ? "Consolas" : "Menlo";
-        if (cancelled && local is not null) time.TextDecorations = TextDecorations.Strikethrough;
-        var column = new VerticalStackLayout { Spacing = 0 };
-        column.Children.Add(TransitVisuals.Secondary(title));
-        column.Children.Add(time);
-        if (local is { } date) column.Children.Add(TransitVisuals.Secondary(date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)));
-        return column;
+        return instant is { } value
+            ? TimeZoneInfo.ConvertTime(value, TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin")).ToString("HH:mm", CultureInfo.InvariantCulture)
+            : "unbekannt";
     }
 }

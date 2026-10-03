@@ -32,13 +32,16 @@ public sealed class JourneyDetailPage : ContentPage
             if (model.Session.SelectedJourney is { } journey)
             { map.ShowJourney(journey, model.Session.Metadata); await Shell.Current.GoToAsync("map"); }
         }, () => model.Session.SelectedJourney is not null, _ => Title = "Karte konnte nicht geöffnet werden");
-        layout.Children.Add(new Button { Text = "Verlauf auf Karte", AutomationId = "ShowJourneyMap", Command = showMap });
+        var mapButton = TransitVisuals.SecondaryAction("⌖", "Verlauf auf Karte öffnen", "ShowJourneyMap", showMap);
+        layout.Children.Add(mapButton);
         var status = new Label { AutomationId = "DetailStatus", BindingContext = model.Session };
-        status.SetBinding(Label.TextProperty, nameof(model.Session.Status)); layout.Children.Add(status);
+        status.SetBinding(Label.TextProperty, nameof(model.Session.Status));
         var metadata = new Label { AutomationId = "DetailMetadata", BindingContext = model.Session };
         metadata.SetBinding(Label.TextProperty, nameof(model.Session.Metadata));
+        var sourceState = new VerticalStackLayout { Spacing = 4, Padding = new Thickness(4, 0) };
+        sourceState.Children.Add(status); sourceState.Children.Add(metadata);
+        layout.Children.Add(sourceState);
         layout.Children.Add(sections);
-        layout.Children.Add(metadata);
 #if UI_TEST_FIXTURES
         Loaded += (_, _) =>
         {

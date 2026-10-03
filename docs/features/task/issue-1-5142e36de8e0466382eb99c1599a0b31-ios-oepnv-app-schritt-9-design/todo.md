@@ -16,6 +16,10 @@
 | [x] | 9 | Codereview | review-code.md |
 | [x] | 10 | Native Tests, Screenshotmatrix, Core/Build | test-results.md |
 | [x] | 10a | Tester-Korrekturen K1–K7 umsetzen und erneut prüfen | correction-tasks.md |
+| [x] | 10b | Aktualisierten Stitch-Entwurf erfassen, Nearby-Drilldown korrigieren und Kernseiten visuell vereinheitlichen | requirement-draft-refresh.md, draft-refresh-plan.md |
+| [x] | 10c | Code-Review des aktualisierten Gesamtdiffs | review-draft-refresh.md |
+| [ ] | 10d | Nativen Windows-Designmatrixlauf für die aktualisierte Oberfläche in Hell/Dunkel durchführen, einschließlich Nearby-Drilldown-Screenshot | test-results-draft-refresh.md |
+| [ ] | 10e | iOS-Geräteabnahme für Safe Areas, Systemthema, Dynamic Type und VoiceOver durchführen | test-results-draft-refresh.md |
 | [ ] | 12 | Dokumentation/README/Release Notes | docs/help/design |
 | [ ] | – | Abschlusscommit und Projektabnahme | Git |
 
@@ -32,3 +36,5 @@
 03.10.2026: Coretests 253/253 bestanden; Coverage 93,21 % Zeilen und 80,23 % Zweige. Routing-, Monitor-, Standort- und Designregressionen sowie die revidierte Bildnachprüfung bestanden. `maps-final.log` blieb leer und wird nicht als Nachweis verwendet; der vollständige Kartenlauf ist unter `maps-oct2-accessible.log` belegt. Der Release-Solution-Build scheiterte in der Sandbox am Zugriff auf das Windows-SDK-Verzeichnis; ein erneuter privilegierter Build war wegen des automatischen Nutzungslimits nicht möglich. Schritt10 bleibt offen, bis diese Grenzen und der erneute Lifecycle-Regressionstest geklärt sind.
 
 03.10.2026: Sieben neue Tester-Korrekturen K1–K7 zu Startseite, Nearby-Anzeige, Favoritenzähler, Suchvorschlägen, Trefferübernahme, kompakter Suche und Routingzeit in `correction-tasks.md` erfasst. Die bisherige Schritt9-Abnahme bleibt bis zur Umsetzung und Prüfung dieser Korrekturen offen.
+
+03.10.2026: Der aktualisierte Stitch-Entwurf ist als Lifecycle-Anforderung, Bestandsaufnahme und Kleinplan dokumentiert. Der Home-Nearby-Drilldown wurde identitätsvalidiert repariert, mit Core-Test und Fixture-Pfad abgesichert; Startseite, Monitor, Suche, Detail und Karte wurden ausschließlich innerhalb des vorhandenen Funktionsumfangs visuell überarbeitet. Core-Tests: 256/256; UiTest-Build: 0 Warnungen/0 Fehler; PowerShell-Syntaxprüfung: bestanden. Der native Windows-Designmatrixlauf für diesen Refresh in Hell/Dunkel und die iOS-Geräteabnahme sind weiterhin ausdrücklich offen.

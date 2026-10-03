@@ -38,19 +38,28 @@ public sealed class DeparturePage : ContentPage
         BindingContext = model;
         SetBinding(TitleProperty, new Binding(nameof(model.Title)));
         var layout = new VerticalStackLayout { Padding = 16, Spacing = 16 };
+        var station = new VerticalStackLayout { Spacing = 6, Padding = 16 };
+        station.Children.Add(TransitVisuals.Secondary("Abfahrtsmonitor"));
         var stop = new Label { FontSize = 28, FontAttributes = FontAttributes.Bold, AutomationId = "MonitorStop" };
         stop.SetBinding(Label.TextProperty, nameof(model.Title));
-        layout.Children.Add(stop);
+        station.Children.Add(stop);
+        layout.Children.Add(new Border { Content = station });
         toggleFavorite = new AsyncRelayCommand(async () =>
         {
             var selected = model.SelectedStop;
             if (selected is not null) await favorites.ToggleAsync(selected);
         }, () => model.SelectedStop is not null && !favorites.IsSaving,
             _ => Title = "Favorit konnte nicht gespeichert werden");
-        favoriteButton = new Button { AutomationId = "ToggleFavorite", Command = toggleFavorite, LineBreakMode = LineBreakMode.WordWrap };
-        layout.Children.Add(favoriteButton);
+        favoriteButton = new Button { AutomationId = "ToggleFavorite", Command = toggleFavorite, LineBreakMode = LineBreakMode.TailTruncation };
+        var refresh = TransitVisuals.SecondaryAction("↻", "Abfahrten aktualisieren", "RefreshDepartures", model.RefreshCommand);
+        var settingsButton = TransitVisuals.SecondaryAction("⚙", "Aktualisierung einstellen", "OpenRefreshSettings",
+            new AsyncRelayCommand(() => Shell.Current.GoToAsync("refresh-settings"), () => true,
+                _ => Title = "Einstellungen konnten nicht geöffnet werden"));
+        var actions = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
+        actions.Add(refresh, 0); actions.Add(favoriteButton, 1); actions.Add(settingsButton, 2);
+        layout.Children.Add(actions);
         var favoriteStatus = new Label { AutomationId = "FavoriteToggleStatus", BindingContext = favorites };
-        favoriteStatus.SetBinding(Label.TextProperty, nameof(favorites.Status)); layout.Children.Add(favoriteStatus);
+        favoriteStatus.SetBinding(Label.TextProperty, nameof(favorites.Status));
 #if UI_TEST_FIXTURES
         Loaded += (_, _) =>
         {
@@ -65,25 +74,18 @@ public sealed class DeparturePage : ContentPage
             activity.SetBinding(Label.TextProperty, nameof(foreground.IsActive)); layout.Children.Insert(2, activity);
         };
 #endif
-        layout.Children.Add(new Button { Text = "Aktualisieren", AutomationId = "RefreshDepartures", Command = model.RefreshCommand });
-        layout.Children.Add(new Button
-        {
-            Text = "Aktualisierung einstellen",
-            AutomationId = "OpenRefreshSettings",
-            Command = new AsyncRelayCommand(() => Shell.Current.GoToAsync("refresh-settings"), () => true,
-                _ => Title = "Einstellungen konnten nicht geöffnet werden")
-        });
         var interval = new Label { AutomationId = "RefreshIntervalStatus", BindingContext = settings };
-        interval.SetBinding(Label.TextProperty, nameof(settings.Description)); layout.Children.Add(interval);
+        interval.SetBinding(Label.TextProperty, nameof(settings.Description));
         var busy = new ActivityIndicator { AutomationId = "MonitorBusy" };
         busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(model.IsBusy));
         busy.SetBinding(IsVisibleProperty, nameof(model.IsBusy));
-        layout.Children.Add(busy);
         var status = new Label { AutomationId = "MonitorStatus" };
         status.SetBinding(Label.TextProperty, nameof(model.Status));
-        layout.Children.Add(status);
         var metadata = new Label { AutomationId = "MonitorMetadata" };
         metadata.SetBinding(Label.TextProperty, nameof(model.Metadata));
+        var monitorState = new VerticalStackLayout { Spacing = 4, Padding = new Thickness(4, 0) };
+        monitorState.Children.Add(status); monitorState.Children.Add(favoriteStatus); monitorState.Children.Add(interval); monitorState.Children.Add(busy);
+        layout.Children.Add(monitorState);
         layout.Children.Add(items);
         layout.Children.Add(metadata);
         Content = TransitVisuals.Page(layout);
@@ -165,7 +167,9 @@ public sealed class DeparturePage : ContentPage
 
     private void RefreshFavorite()
     {
-        favoriteButton.Text = model.SelectedStop is { } stop && favorites.IsFavorite(stop) ? "Favorit entfernen" : "Als Favorit speichern";
+        var saved = model.SelectedStop is { } stop && favorites.IsFavorite(stop);
+        favoriteButton.Text = saved ? "★ Entfernen" : "☆ Speichern";
+        SemanticProperties.SetDescription(favoriteButton, saved ? "Favorit entfernen" : "Als Favorit speichern");
         toggleFavorite.Refresh();
     }
 

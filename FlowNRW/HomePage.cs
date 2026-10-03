@@ -40,23 +40,30 @@ public sealed class HomePage : ContentPage
         this.freshness = freshness;
         BindingContext = model;
         Title = "Meine Haltestellen";
-        var layout = new VerticalStackLayout { Padding = 16, Spacing = 12 };
+        var layout = new VerticalStackLayout { Padding = 16, Spacing = 16 };
         layout.Children.Add(TransitVisuals.Text("Abfahrten", 32, true));
-        layout.Children.Add(TransitVisuals.Secondary("Deine gespeicherten Stationen auf einen Blick."));
-        layout.Children.Add(new Button { Text = "Verbindung suchen", AutomationId = "OpenJourneySearch", Command = Navigate("//main/connections-tab/search") });
-        layout.Children.Add(new Button { Text = "Haltestelle hinzufügen", AutomationId = "OpenHomeStops", Command = Navigate("//main/stations-tab/stops") });
-        layout.Children.Add(new Button { Text = "Aktualisierung einstellen", AutomationId = "OpenRefreshSettings", Command = Navigate("refresh-settings") });
-        var interval = new Label { AutomationId = "RefreshIntervalStatus", BindingContext = settings };
-        interval.SetBinding(Label.TextProperty, nameof(settings.Description)); layout.Children.Add(interval);
-        var status = new Label { AutomationId = "HomeStatus" };
-        status.SetBinding(Label.TextProperty, nameof(model.Status)); layout.Children.Add(status);
-        var count = new Label { AutomationId = "FavoriteCount" }; layout.Children.Add(count);
-        layout.Children.Add(new Button { Text = "Entfernungen aktualisieren", AutomationId = "SortFavorites", Command = model.LocationCommand });
-        var location = new Label { AutomationId = "HomeLocationStatus" };
-        location.SetBinding(Label.TextProperty, nameof(model.LocationStatus)); layout.Children.Add(location);
+        layout.Children.Add(TransitVisuals.Secondary("Deine gespeicherten Stationen und Abfahrten auf einen Blick."));
+        var primaryNavigation = new Button { Text = "Verbindung suchen", AutomationId = "OpenJourneySearch", Command = Navigate("//main/connections-tab/search") };
+        SemanticProperties.SetDescription(primaryNavigation, "Verbindung suchen");
+        layout.Children.Add(primaryNavigation);
         var showMap = new AsyncRelayCommand(async () => { map.ShowFavorites(model); await Shell.Current.GoToAsync("map"); },
             () => model.Cards.Count > 0, _ => Title = "Karte konnte nicht geöffnet werden");
-        layout.Children.Add(new Button { Text = "Favoriten auf Karte zeigen", AutomationId = "HomeMap", Command = showMap });
+        var shortcuts = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
+        shortcuts.Add(TransitVisuals.SecondaryAction("＋", "Haltestelle hinzufügen", "OpenHomeStops", Navigate("//main/stations-tab/stops")), 0);
+        shortcuts.Add(TransitVisuals.SecondaryAction("⌖", "Favoriten auf Karte zeigen", "HomeMap", showMap), 1);
+        shortcuts.Add(TransitVisuals.SecondaryAction("↻", "Entfernungen aktualisieren", "SortFavorites", model.LocationCommand), 2);
+        shortcuts.Add(TransitVisuals.SecondaryAction("⚙", "Aktualisierung einstellen", "OpenRefreshSettings", Navigate("refresh-settings")), 3);
+        layout.Children.Add(shortcuts);
+        var interval = new Label { AutomationId = "RefreshIntervalStatus", BindingContext = settings };
+        interval.SetBinding(Label.TextProperty, nameof(settings.Description));
+        var status = new Label { AutomationId = "HomeStatus" };
+        status.SetBinding(Label.TextProperty, nameof(model.Status));
+        var count = new Label { AutomationId = "FavoriteCount", FontSize = 15, FontAttributes = FontAttributes.Bold };
+        var location = new Label { AutomationId = "HomeLocationStatus" };
+        location.SetBinding(Label.TextProperty, nameof(model.LocationStatus));
+        var overview = new VerticalStackLayout { Spacing = 4, Padding = 16 };
+        overview.Children.Add(count); overview.Children.Add(status); overview.Children.Add(location); overview.Children.Add(interval);
+        layout.Children.Add(new Border { Content = overview });
         layout.Children.Add(cards);
         layout.Children.Add(TransitVisuals.Text("Nächste Haltestellen", 22, true, "NearbyHeading"));
         var nearbyStatus = new Label { AutomationId = "NearbyStatus" }; nearbyStatus.SetBinding(Label.TextProperty, nameof(model.NearbyStatus)); layout.Children.Add(nearbyStatus);
@@ -87,14 +94,6 @@ public sealed class HomePage : ContentPage
         };
 #endif
         count.Text = $"{model.Cards.Count} Favoriten gespeichert";
-        layout.Children.Remove(cards);
-        layout.Children.Insert(3, cards);
-        var addStop = layout.Children.First(child => child.AutomationId == "OpenHomeStops");
-        layout.Children.Remove(addStop);
-        layout.Children.Insert(2, addStop);
-        var searchShortcut = layout.Children.First(child => child.AutomationId == "OpenJourneySearch");
-        layout.Children.Remove(searchShortcut);
-        layout.Children.Add(searchShortcut);
         Content = TransitVisuals.Page(layout);
         RenderNearby();
     }
@@ -247,11 +246,11 @@ public sealed class HomePage : ContentPage
         for (var index = 0; index < model.NearbyStops.Count; index++)
         {
             var candidate = model.NearbyStops[index];
-            var button = new Button { Text = candidate.Name, AutomationId = "NearbyStop" + index, HeightRequest = 48, HorizontalOptions = LayoutOptions.Fill };
+            var button = new Button { AutomationId = "NearbyStop" + index, HeightRequest = 48, HorizontalOptions = LayoutOptions.Fill };
             SemanticProperties.SetDescription(button, "Nahe Haltestelle " + candidate.Name);
-            button.Command = new AsyncRelayCommand(() => monitor.OpenAsync(candidate), () => candidate.Stop is not null,
+            button.Command = new AsyncRelayCommand(() => monitor.OpenNearbyFromHomeAsync(candidate), () => candidate.Stop is not null,
                 _ => Title = "Haltestelle konnte nicht geöffnet werden");
-            nearbyCards.Children.Add(button);
+            nearbyCards.Children.Add(TransitVisuals.Candidate(candidate, button));
         }
     }
 

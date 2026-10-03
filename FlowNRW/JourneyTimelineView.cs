@@ -10,16 +10,18 @@ public sealed class JourneyTimelineView : VerticalStackLayout
     /// <param name="journey">The selected provider journey.</param>
     public JourneyTimelineView(Journey journey)
     {
-        Spacing = 12;
+        Spacing = 16;
         var descriptions = JourneyPresentation.Detail(journey).Split("\n\n", StringSplitOptions.RemoveEmptyEntries);
-        var summary = TransitVisuals.Text("Deine Verbindung", 28, true, "JourneyDetailSection0");
+        var summary = TransitVisuals.Text("Deine Verbindung", 22, true, "JourneyDetailSection0");
         SemanticProperties.SetDescription(summary, JourneyPresentation.Summary(journey));
-        Children.Add(summary);
         var first = journey.Legs.FirstOrDefault()?.Departure.PlannedTime;
         var last = journey.Legs.LastOrDefault()?.Arrival.PlannedTime;
-        Children.Add(TransitVisuals.Text(JourneyCardView.Clock(first) + " → " + JourneyCardView.Clock(last), 24, true));
+        var summaryCard = new VerticalStackLayout { Spacing = 6 };
+        summaryCard.Children.Add(summary);
+        summaryCard.Children.Add(TransitVisuals.Text(JourneyCardView.Clock(first) + " → " + JourneyCardView.Clock(last), 28, true));
         var duration = first is { } start && last is { } end && end >= start ? (end - start).TotalMinutes.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " Min. · " : "Dauer unbekannt · ";
-        Children.Add(TransitVisuals.Secondary(duration + journey.Transfers.Count + (journey.Transfers.Count == 1 ? " Umstieg" : " Umstiege")));
+        summaryCard.Children.Add(TransitVisuals.Secondary(duration + journey.Transfers.Count + (journey.Transfers.Count == 1 ? " Umstieg" : " Umstiege")));
+        Children.Add(new Border { Padding = 16, Content = summaryCard });
         var index = 1;
         foreach (var leg in journey.Legs)
         {
@@ -33,7 +35,7 @@ public sealed class JourneyTimelineView : VerticalStackLayout
             var names = TransitVisuals.Text(origin + " → " + destination, 17, true, "JourneyDetailSection" + index);
             if (index < descriptions.Length) SemanticProperties.SetDescription(names, descriptions[index]);
             heading.Add(names, 1);
-            var content = new VerticalStackLayout { Spacing = 8 };
+            var content = new VerticalStackLayout { Spacing = 10 };
             content.Children.Add(heading);
             content.Children.Add(Event("Abfahrt", leg.Departure));
             content.Children.Add(Event("Ankunft", leg.Arrival));
@@ -41,7 +43,7 @@ public sealed class JourneyTimelineView : VerticalStackLayout
                 content.Children.Add(TransitVisuals.Secondary("Fußweg · " + (walk.DistanceMeters?.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "unbekannt") + " m · " + (walk.Duration?.TotalMinutes.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "unbekannt") + " Min.", "JourneyWalk" + index));
             else
                 content.Children.Add(TransitVisuals.Secondary("Betreiber: " + (leg.Line?.Operator?.Name ?? leg.Departure.Line?.Operator?.Name ?? leg.Departure.Identity.Operator ?? "unbekannt"), "JourneyOperator" + index));
-            content.Children.Add(TransitVisuals.Secondary((leg.Geometry?.Coordinates.Count ?? leg.Walking?.Geometry?.Coordinates.Count ?? 0) > 1 ? "Gelieferter Verlauf auf der Karte verfügbar" : "Kein gelieferter Kartenverlauf für diesen Abschnitt"));
+            content.Children.Add(TransitVisuals.Secondary((leg.Geometry?.Coordinates.Count ?? leg.Walking?.Geometry?.Coordinates.Count ?? 0) > 1 ? "Verlauf auf der Karte verfügbar" : "Kein gelieferter Kartenverlauf"));
             Children.Add(new Border { Padding = 16, AutomationId = "JourneyTimeline" + index++, Content = content });
         }
         if (journey.Transfers.Count > 0)
@@ -50,10 +52,13 @@ public sealed class JourneyTimelineView : VerticalStackLayout
 
     private static VerticalStackLayout Event(string title, StopEvent item)
     {
-        var stack = new VerticalStackLayout { Spacing = 4 };
-        stack.Children.Add(TransitVisuals.Text(title, 15, true));
-        stack.Children.Add(TransitVisuals.Text("Soll: " + JourneyPresentation.Time(item.PlannedTime), 15));
-        stack.Children.Add(TransitVisuals.Text("Ist: " + (item.Realtime.ActualTime is null ? "keine Echtzeitdaten" : JourneyPresentation.Time(item.Realtime.ActualTime)), 15));
+        var stack = new VerticalStackLayout { Spacing = 4, Padding = new Thickness(4, 0) };
+        var times = new Grid { ColumnDefinitions = [new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 10 };
+        times.Add(TransitVisuals.Text(title, 15, true), 0);
+        times.Add(TransitVisuals.Secondary("Soll " + JourneyPresentation.Time(item.PlannedTime)), 1);
+        var actualTime = TransitVisuals.Text(item.Realtime.ActualTime is null ? "keine Echtzeit" : "Ist " + JourneyPresentation.Time(item.Realtime.ActualTime), 15, true);
+        times.Add(actualTime, 2);
+        stack.Children.Add(times);
         var delay = item.Realtime.ActualTime is { } actual && item.PlannedTime is { } planned ? actual - planned : item.Realtime.Delay;
         stack.Children.Add(TransitVisuals.Secondary(delay is { } difference ? "Abweichung " + difference.TotalMinutes.ToString("+0;-0;0", System.Globalization.CultureInfo.InvariantCulture) + " Min." : "Verspätung unbekannt"));
         stack.Children.Add(TransitVisuals.Text(item.Realtime.Cancelled switch { true => "Fahrt fällt aus", false => "Kein Ausfall gemeldet", null => "Ausfallstatus unbekannt" }, 15, true));

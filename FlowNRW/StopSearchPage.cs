@@ -36,13 +36,16 @@ public sealed class StopSearchPage : ContentPage
         layout.Children.Add(TransitVisuals.Secondary("Suche eine Station oder finde Haltestellen in deiner Nähe."));
         var searchCard = new VerticalStackLayout { Spacing = 12 };
         layout.Children.Add(new Border { Padding = 16, Content = searchCard });
-        searchCard.Children.Add(new Label { Text = "Haltestellenname oder Ort" });
+        searchCard.Children.Add(TransitVisuals.Text("Haltestelle finden", 20, true));
         var input = new Entry { AutomationId = "StopQuery", Placeholder = "z. B. Essen Hauptbahnhof" };
         SemanticProperties.SetDescription(input, "Haltestellenname oder Ort");
         input.SetBinding(Entry.TextProperty, "Lookup.Text");
-        searchCard.Children.Add(input);
-        searchCard.Children.Add(new Button { Text = "Haltestellen suchen", AutomationId = "FindStops", Command = model.Lookup.SearchCommand });
-        searchCard.Children.Add(new Button { Text = "Haltestellen in meiner Nähe", AutomationId = "FindNearbyStops", Command = model.NearbyCommand, LineBreakMode = LineBreakMode.WordWrap });
+        var find = new Button { Text = "⌕", AutomationId = "FindStops", Command = model.Lookup.SearchCommand, HeightRequest = 48, WidthRequest = 48, Padding = new Thickness(0) };
+        SemanticProperties.SetDescription(find, "Haltestelle suchen");
+        var nearby = new Button { Text = "⌖", AutomationId = "FindNearbyStops", Command = model.NearbyCommand, HeightRequest = 48, WidthRequest = 48, Padding = new Thickness(0) };
+        SemanticProperties.SetDescription(nearby, "Haltestellen in meiner Nähe");
+        var inputRow = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto), new(GridLength.Auto)], ColumnSpacing = 8 };
+        inputRow.Add(input, 0); inputRow.Add(find, 1); inputRow.Add(nearby, 2); searchCard.Children.Add(inputRow);
         var nearbyStatus = new Label { AutomationId = "NearbyStatus" }; nearbyStatus.SetBinding(Label.TextProperty, nameof(model.NearbyStatus)); layout.Children.Add(nearbyStatus);
         var nearbyBusy = new ActivityIndicator { AutomationId = "NearbyBusy" };
         nearbyBusy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(model.IsNearbyBusy)); nearbyBusy.SetBinding(IsVisibleProperty, nameof(model.IsNearbyBusy)); layout.Children.Add(nearbyBusy);
@@ -59,7 +62,8 @@ public sealed class StopSearchPage : ContentPage
         var showMap = new AsyncRelayCommand(async () => { map.ShowStops(); await Shell.Current.GoToAsync("map"); },
             () => model.Stops.Count > 0 && !model.Lookup.IsBusy && !model.IsNearbyBusy, _ => Title = "Karte konnte nicht geöffnet werden");
         model.PropertyChanged += (_, _) => showMap.Refresh();
-        layout.Children.Add(new Button { Text = "Haltestellen auf Karte zeigen", AutomationId = "ShowStopMap", Command = showMap, LineBreakMode = LineBreakMode.WordWrap });
+        var showMapButton = TransitVisuals.SecondaryAction("⌖", "Haltestellen auf Karte zeigen", "ShowStopMap", showMap);
+        layout.Children.Add(showMapButton);
         var matches = new VerticalStackLayout { Spacing = 12 };
         void RenderMatches()
         {
@@ -76,7 +80,6 @@ public sealed class StopSearchPage : ContentPage
                         _ => Title = "Monitor konnte nicht geöffnet werden")
                 }, model.DistanceLabel(candidate)));
             }
-            TransitVisuals.ApplyRoles(matches);
         }
         model.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(model.Stops)) RenderMatches(); };
         RenderMatches();
