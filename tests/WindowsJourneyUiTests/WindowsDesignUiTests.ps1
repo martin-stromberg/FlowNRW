@@ -100,8 +100,13 @@ function SelectTab([string]$name) {
     }
     function Contains([string]$id, [string]$pattern) { Assert ((Name $id) -match $pattern) "$id contains $pattern" }
     function Status([string]$id, [string]$pattern) {
-        for ($j = 0; $j -lt 120; $j++) { if ((Name $id) -match $pattern) { return }; Start-Sleep -Milliseconds 100 }
-        throw "$id expected $pattern but was $(Name $id)"
+        $last = ''
+        for ($j = 0; $j -lt 120; $j++) {
+            $last = Name $id
+            if ($last -match $pattern) { return }
+            Start-Sleep -Milliseconds 100
+        }
+        throw "$id expected $pattern within 12 seconds but was $last"
     }
     function SelectEndpoint([string]$prefix, [string]$value) { SetText ($prefix + 'Text') $value; Click ($prefix + 'Search'); Click ($prefix + 'Match0') }
     function Snapshot([string]$name) {
@@ -262,7 +267,11 @@ public static class DesignWindow {
     AssertTouchTarget 'OriginLocation'
     AssertTouchTarget 'OriginCoordinateMode'
     AssertTouchTarget 'SearchJourneys'
-    Click 'OriginSearch'; Capture 'search-invalid' 'verbindungssuche'
+    Write-Output 'STAGE search-invalid: invoking OriginSearch'
+    Click 'OriginSearch'
+    Status 'OriginStatus' 'Suchtext'
+    Write-Output 'STAGE search-invalid: validation status received'
+    Capture 'search-invalid' 'verbindungssuche'
     SelectEndpoint 'Origin' 'Essen Hauptbahnhof'; SelectEndpoint 'Destination' 'Düsseldorf Hauptbahnhof'; Capture 'search-selections' 'verbindungssuche'
     Click 'SwapEndpoints'; Capture 'search-swapped' 'verbindungssuche'; Click 'SwapEndpoints'
     Click 'SearchJourneys'; Wait 'Journey0' | Out-Null; Capture 'journey-results' 'verbindungssuche'
