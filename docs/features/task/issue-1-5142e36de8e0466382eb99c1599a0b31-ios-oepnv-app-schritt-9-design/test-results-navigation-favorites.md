@@ -13,8 +13,7 @@ Die zusätzlichen Kernprüfungen decken den Roundtrip gerichteter Verbindungsfav
 
 ## Nativer Windows-Lauf
 
-- `WindowsJourneyUiTests.ps1` wurde mit der gebauten UiTest-EXE gestartet.
-- Bestätigte Schritte: deaktivierte Routensuche ohne Endpunkte, Texteingabe ohne Auswahl, mehrdeutige Endpunktliste, Auswahl eines zweiten Starttreffers und Auswahl des Ziels.
-- Der Prozess blieb anschließend in der nativen Automation ohne weitere Ausgabe stehen und wurde beendet. Der Lauf ist deshalb **nicht als erfolgreicher E2E-Nachweis** gewertet.
+- `WindowsJourneyUiTests.ps1` wurde nach der Korrektur der zwei überholten Trefferlistenannahmen erneut mit der gebauten UiTest-EXE ausgeführt.
+- Ergebnis: **`PASS all fixture native UI scenarios`**.
 
-Die Ursache liegt im nativen UI-Automationslauf nach der Endpunktauswahl und muss vor der Abnahme reproduziert werden. Smartphone-/iOS-Prüfung bleibt separat.
+Der native Windows-E2E-Nachweis ist damit erbracht. Smartphone-/iOS-Prüfung bleibt separat.
