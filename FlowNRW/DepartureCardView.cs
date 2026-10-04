@@ -16,11 +16,21 @@ public sealed class DepartureCardView : Border
         Padding = compact ? 12 : 16;
         var line = item.Line?.Name ?? item.Identity.Line ?? "Linie unbekannt";
         var layout = new VerticalStackLayout { Spacing = 10 };
-        var heading = new Grid { ColumnDefinitions = [new(new GridLength(68)), new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 12 };
+        // Keep the destination on a full row. At large text sizes, placing it
+        // between a line badge and time made otherwise short destinations wrap
+        // into several narrow fragments.
+        var heading = new Grid
+        {
+            RowDefinitions = [new(GridLength.Auto), new(GridLength.Auto)],
+            ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto)],
+            ColumnSpacing = 12,
+            RowSpacing = 4
+        };
         heading.Add(TransitVisuals.Badge(line, item.Line?.Mode), 0);
         var destination = TransitVisuals.Text(item.Identity.Direction ?? "Ziel unbekannt", 17, true, id);
         SemanticProperties.SetDescription(destination, DeparturePresentation.Describe(item));
-        heading.Add(destination, 1);
+        heading.Add(destination, 0, 1);
+        Grid.SetColumnSpan(destination, 2);
         var realtime = item.Realtime;
         var time = new VerticalStackLayout { Spacing = 0, HorizontalOptions = LayoutOptions.End };
         var prominentTime = TransitVisuals.Text(Clock(realtime.ActualTime ?? item.PlannedTime), 22, true);
@@ -34,7 +44,7 @@ public sealed class DepartureCardView : Border
             scheduled.TextDecorations = TextDecorations.Strikethrough;
             time.Children.Add(scheduled);
         }
-        heading.Add(time, 2);
+        heading.Add(time, 1);
         layout.Children.Add(heading);
         if (realtime.Cancelled == true) layout.Children.Add(TransitVisuals.Text("Fahrt fällt aus", 15, true));
         if (!string.IsNullOrWhiteSpace(realtime.Platform))

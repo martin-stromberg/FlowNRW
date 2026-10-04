@@ -1,0 +1,53 @@
+# Ergebnis: aktuelle Windows-Bildprüfung
+
+Stand: 04.10.2026. Die Prüfung nutzte `tests/WindowsJourneyUiTests/WindowsDesignUiTests.ps1` mit dem vorhandenen nativen `UiTest`-Build. Kein Produktcode wurde für diese Läufe verändert. Buildzuordnung: Commit `6eb05c25611506f176c6250812fe70227bbd3d2e`, SHA-256 der `FlowNRW.dll` `832B4C162E49BFA959AB9A7EC7CDDF283BA0881C3CDF7581A1ED5B91E0F38603`, Windows native MAUI, DPI 96. Die Matrixdateien geben Fenstermaße, Thema, Textskalierung und Szenario an. Der Runner hardcodiert ein veraltetes `workingTree`-Feld; die erzeugten JSONL-Manifeste wurden nach Prüfung von `git status` auf `tracked files clean; untracked files present` berichtigt.
+
+## Läufe und Artefakte
+
+| Konfiguration | Ergebnis | Artefaktordner |
+|---|---|---|
+| Hell, 430×900, 100 %, Standardszenario `success` | Fixture-Steuerung verborgen, Leere Favoritenansicht und Einstellungsansicht erfasst; Touchziele und Tastaturfokus erfolgreich. Danach Abbruch bei `MonitorStatus expected manuell aktualisiert but was Abfahrten konnten nicht geladen werden. Bitte erneut versuchen.` | [light-narrow](../../../../artifacts/step9-visual-final/light-narrow) |
+| Hell, 430×900, 100 %, `cache-lines-bc` | Leere Ansicht, Einstellungen und Monitorbild erfasst; Touchziele/Fokus erfolgreich. Danach erwartete der alte Runner `Departure3`, das vollständige `B`/`C`-Linien-Fixture hat jedoch nur zwei Abfahrten. Die Diagnoseaufnahme heißt `failure-missing-Departure3.png`. | [light-narrow-cachelines](../../../../artifacts/step9-visual-final/light-narrow-cachelines) |
+| Hell, 430×900, 100 %, `favorite-cache-seed` | `-HomeOnly` vollständig erfolgreich: Leere Ansicht, Einstellungen, Monitor normal/verspätet/unbekannt/ausgefallen, drei Favoriten, bekannte und unbekannte Entfernung, aufgeklappte und eingeklappte Karte. | [light-narrow-valid](../../../../artifacts/step9-visual-final/light-narrow-valid) |
+| Dunkel, 430×900, 100 %, `favorite-cache-seed` | Derselbe `-HomeOnly`-Lauf erfolgreich. | [dark-narrow](../../../../artifacts/step9-visual-final/dark-narrow) |
+| Dunkel, 430×900, 150 %, `favorite-cache-seed` | Derselbe `-HomeOnly`-Lauf erfolgreich; erforderliche Touchziele und Tastaturfokus bestanden. | [dark-large](../../../../artifacts/step9-visual-final/dark-large) |
+| Hell, 1024×768, 100 %, `favorite-cache-seed` | Derselbe `-HomeOnly`-Lauf erfolgreich. | [light-wide](../../../../artifacts/step9-visual-final/light-wide) |
+
+Die erfolgreich abgeschlossenen vier `favorite-cache-seed`-Läufe enthalten jeweils 12 PNGs und ein `matrix.jsonl` (48 PNGs). Die zwei abgebrochenen Läufe enthalten vier weitere PNGs plus eine nicht ins Manifest aufgenommene Fehlerdiagnose. Insgesamt liegen 53 manifestierte Aufnahmen und eine Diagnoseaufnahme unter `artifacts/step9-visual-final/`. Das Standardszenario liefert synthetisch veraltete/teilweise Resultate (`IsFallback`, `IsStale`, Warnung); der Monitor weist sie im aktuellen Code korrekt als unvollständig zurück. Das `cache-lines-bc`-Szenario liefert absichtlich genau zwei Linien/Abfahrten, während der ältere Screenshotablauf weiter vier (`Departure3`) voraussetzt. Beides sind Fixture-/Runnerinkonsistenzen, keine bestandenen Zustandsbilder.
+
+## Sichtprüfung der Bilder
+
+Die Aufnahmen `home-favorite-collapsed` und `home-favorite-expanded` wurden im hellen und dunklen 430×900-Lauf visuell betrachtet; dazu `dark-large` bei 150 % sowie `light-wide` bei 1024×768.
+
+- Eingeklappte Karten zeigen farbige Linienbadges mit nächster Uhrzeit und vier erreichbare Kartenaktionen. Mehrere Stationen und Entfernungen sind in einer nachvollziehbaren Scrollansicht sichtbar. Die helle breite Ansicht hält die Favoritenkarten kompakt.
+- Aufgeklappt sind Abfahrtszeit und kleine durchgestrichene Soll-Zeit sichtbar. Das unveränderte Gleis hat keine zusätzliche „geplant“-Angabe; beim Gleiswechsel wird der geplante Wert genannt. Ein Ausfall ist textlich markiert. Die Linienübersicht verschwindet im aufgeklappten Zustand.
+- Bei 150 % wird der Zieltext „Essen Hauptbahnhof“ im Abfahrtskopf sehr schmal und in mehrere kurze Zeilen zerlegt. Das Linienbadge „RE 1 · Stand 2“ bricht ebenfalls ungünstig um. Das ist ein konkreter offener Layoutmangel dieser Momentaufnahme und sollte mit einer breiteren Badge-Spalte bzw. flexiblerem Kopf korrigiert und erneut geprüft werden.
+- Die Aufnahmen belegen nicht, dass Linien ohne Abfahrtszeit nach einem App-Neustart aus dauerhaft gespeicherten Daten erscheinen: der erfolgreiche `favorite-cache-seed`-Lauf fragt gültige Fixturedaten ab, statt einen Prozessneustart mit vorgefülltem persistentem Cache zu zeigen.
+
+Beispielbilder: [helle eingeklappte Favoriten](../../../../artifacts/step9-visual-final/light-narrow-valid/light-430-900-100-favorite-cache-seed-home-favorite-collapsed.png), [helle aufgeklappte Abfahrten](../../../../artifacts/step9-visual-final/light-narrow-valid/light-430-900-100-favorite-cache-seed-home-favorite-expanded.png), [150-%-Detailansicht](../../../../artifacts/step9-visual-final/dark-large/dark-430-900-150-favorite-cache-seed-home-favorite-expanded.png), [breite helle Ansicht](../../../../artifacts/step9-visual-final/light-wide/light-1024-768-100-favorite-cache-seed-home-favorite-collapsed.png).
+
+## Erforderliche Runnerergänzungen für die nächste Matrix
+
+1. Das `success`-Szenario für Designbilder muss gültige vollständige Abfahrtsdaten liefern. Alternativ muss der Designrunner bei diesen Fällen explizit `favorite-cache-seed` verwenden.
+2. Der Runner darf die Ankunft bei `Departure3` nicht als allgemeine Vorbedingung für ein Zweilinien-Fixture verwenden. Zustandsbilder sollen gezielt zu den für das jeweilige Szenario vorhandenen AutomationIds scrollen. `cache-lines-bc` braucht eigene Assertions für die Chips `B` und `C`, den leeren/nicht vorhandenen Zeitpunkt und die Abwesenheit weiterer Linien.
+3. Für persistierte Linien ist ein echter Prozessneustart nötig: Cachedatei vor dem Start kontrolliert mit vollständiger Linienmenge und ohne zukünftige Abfahrten anlegen, Startseite erfassen, danach aktuelle Anfrage und Entfernung davon getrennt nachweisen. Keine `Lines` aus der gerade laufenden Anbieterantwort als Neustartnachweis verwenden.
+4. Ergänzende native Flüsse und Screenshots fehlen: Monitor direkt mit gecachten Daten während verzögertem Refresh und erneutes Öffnen nach Haltestellensuche; Suche → Trefferliste → Monitor → Zurück mit erhaltenen Treffern; Verbindungsfavorit im Kopf, gespeicherte Verbindung auswählen, Endpunkte tauschen; verdichtete Verbindungsdetails. `-HomeOnly` beendet vor Haltestellen- und Verbindungsseiten und kann diese Bilder nicht erzeugen.
+5. Die JSONL-Erzeugung in `WindowsDesignUiTests.ps1` muss `workingTree='uncommitted step 9'` durch echte Statusmetadaten ersetzen, damit künftige Manifestdaten dem aufgenommenen Build entsprechen.
+
+Die Screenshots und Logs sind native Windows-Bilder mit synthetischen Daten. Es wurden keine Kontrastquotienten gemessen und keine vollständigen UIA-Bounds der neuen Verbindungsaktionen, Cache-/Rückkehrpfade oder 44×44-Ziele erhoben. Eine unabhängige Bildbewertung für diesen Stand fehlt. Es wurde keine iOS-Geräteprüfung durchgeführt; Safe Areas, Dynamic Type, Orientierung, Dunkelmodus und VoiceOver bleiben offen.
+
+## Status für Schritt 9
+
+Die aktuelle Startseitenmatrix ist teilweise visuell belegt und zeigt einen reproduzierbaren Umbruchmangel bei großer Schrift. Einzelmonitorbilder belegen die geänderte Abfahrtsdarstellung auf Windows. Die verlangten Cache-/Rückkehrzustände und die neuen Verbindungsfavoriten-/Tauschansichten wurden nicht aufgenommen. Wegen dieser Lücken und der noch offenen Referenzprüfung, Kontrast-/Boundsmessung und iOS-Geräteabnahme ist Schritt 9 weiterhin nicht visuell freigegeben.
+
+## Nacharbeit: gezielte visuelle Korrekturen
+
+Der Abfahrtskopf wurde so umgebaut, dass Linienbadge und Ist-/Sollzeit in der ersten Zeile stehen und das Ziel darunter die gesamte Kartenbreite erhält. Das verhindert bei 150 % Textskalierung die vorherigen schmalen Umbrüche von Ziel und Linienbadge. Linienbadges nutzen jetzt eine einzeilige, bei Bedarf abgeschnittene Beschriftung statt Wortumbruch.
+
+Der Windows-Designrunner wartet bei regulären Fixture-Abfahrten nicht länger auf den fachlich überholten Text `manuell aktualisiert`, sondern auf eine gerenderte Abfahrt. Die Aufnahme `monitor-unknown-cancelled` verlangt keine nicht für jedes Fixture vorhandene vierte Abfahrt mehr. Das Matrixmanifest ermittelt seinen Arbeitsbaumstatus aus `git status --porcelain`, statt dauerhaft `uncommitted step 9` einzutragen.
+
+Für den nächsten nativen Lauf ergänzt der Runner gezielte Aufnahmen für Haltestellensuche → Monitor → Rückkehr zur Trefferliste, Start/Ziel-Tausch und das Speichern einer Verbindung. Ein echter Neustart mit zwischengespeicherten Linien bleibt im separaten `WindowsDepartureCacheUiTests.ps1` nachgewiesen; die Designmatrix erzeugt dafür noch kein eigenes Bild.
+
+Gezielte technische Prüfung nach der Nacharbeit: `dotnet test FlowNRW.Tests/FlowNRW.Tests.csproj -c UiTest -p:TreatWarningsAsErrors=true --no-restore` bestand mit 278/278 Tests. `dotnet build FlowNRW/FlowNRW.csproj -c UiTest -p:TreatWarningsAsErrors=true --no-restore` bestand mit 0 Warnungen und 0 Fehlern. Der PowerShell-Parser bestätigte `WindowsDesignUiTests.ps1`.
+
+Der gezielte native Lauf `dark`, 430×900, 150 %, `favorite-cache-seed`, `-HomeOnly` lief danach vollständig durch. Er erzeugte 13 Bilder unter [dark-large-fixed](../../../../artifacts/step9-visual-final/dark-large-fixed), einschließlich [aufgeklappter Favoritenkarte](../../../../artifacts/step9-visual-final/dark-large-fixed/dark-430-900-150-favorite-cache-seed-home-favorite-expanded.png), [Fahrt ohne Echtzeitangabe](../../../../artifacts/step9-visual-final/dark-large-fixed/dark-430-900-150-favorite-cache-seed-monitor-unknown.png) und [Ausfall](../../../../artifacts/step9-visual-final/dark-large-fixed/dark-430-900-150-favorite-cache-seed-monitor-cancelled.png). Die neue Kopfzeile zeigt Ziel und Badge ohne die zuvor festgestellten schmalen Umbrüche. Der Monitorlauf verwendet die vollständige Vier-Abfahrten-Fixture und scrollt gezielt zu `Departure2` beziehungsweise `Departure3`; daraus folgt keine Aussage für das bewusst zweizeilige `cache-lines-bc`-Fixture.

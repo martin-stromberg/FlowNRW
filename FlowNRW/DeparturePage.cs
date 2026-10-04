@@ -16,6 +16,7 @@ public sealed class DeparturePage : ContentPage
     private readonly ForegroundState foreground;
     private readonly RefreshLoop refreshLoop;
     private readonly Label monitorStatus;
+    private readonly Label favoriteStatus;
     private bool active;
     private long appearance;
     private readonly RefreshFreshness freshness;
@@ -65,7 +66,7 @@ public sealed class DeparturePage : ContentPage
         var actions = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
         actions.Add(refresh, 0); actions.Add(favoriteButton, 1); actions.Add(settingsButton, 2);
         layout.Children.Add(actions);
-        var favoriteStatus = new Label { AutomationId = "FavoriteToggleStatus", BindingContext = favorites };
+        favoriteStatus = new Label { AutomationId = "FavoriteToggleStatus", BindingContext = favorites };
         favoriteStatus.SetBinding(Label.TextProperty, nameof(favorites.Status));
 #if UI_TEST_FIXTURES
         Loaded += (_, _) =>
@@ -81,12 +82,10 @@ public sealed class DeparturePage : ContentPage
             activity.SetBinding(Label.TextProperty, nameof(foreground.IsActive)); layout.Children.Insert(2, activity);
         };
 #endif
-        var interval = new Label { AutomationId = "RefreshIntervalStatus", BindingContext = settings };
-        interval.SetBinding(Label.TextProperty, nameof(settings.Description));
         monitorStatus = new Label { AutomationId = "MonitorStatus" };
         monitorStatus.SetBinding(Label.TextProperty, nameof(model.Status));
         var monitorState = new VerticalStackLayout { Spacing = 4, Padding = new Thickness(4, 0) };
-        monitorState.Children.Add(monitorStatus); monitorState.Children.Add(favoriteStatus); monitorState.Children.Add(interval);
+        monitorState.Children.Add(monitorStatus); monitorState.Children.Add(favoriteStatus);
         layout.Children.Add(monitorState);
         layout.Children.Add(items);
         Content = TransitVisuals.Page(layout);
@@ -104,6 +103,7 @@ public sealed class DeparturePage : ContentPage
         favorites.PropertyChanged += FavoritesChanged;
         RefreshFavorite();
         UpdateMonitorStatus();
+        UpdateFavoriteStatus();
         RenderItems();
         await settings.LoadAsync();
         if (version == appearance) ReconcileRefreshLoop();
@@ -132,9 +132,34 @@ public sealed class DeparturePage : ContentPage
         if (args.PropertyName is nameof(model.Status) or nameof(model.IsBusy)) UpdateMonitorStatus();
     }
 
-    private void UpdateMonitorStatus() => monitorStatus.IsVisible = !model.IsBusy || !model.Status.Contains("werden aktualisiert", StringComparison.OrdinalIgnoreCase);
+    private void UpdateMonitorStatus()
+    {
+        var status = model.Status;
+        monitorStatus.IsVisible = !model.IsBusy
+            && (status.Contains("Keine nächsten", StringComparison.OrdinalIgnoreCase)
+                || status.Contains("fehlgeschlagen", StringComparison.OrdinalIgnoreCase)
+                || status.Contains("nicht geladen", StringComparison.OrdinalIgnoreCase)
+                || status.Contains("abgebrochen", StringComparison.OrdinalIgnoreCase)
+                || status.Contains("Letzte bekannte", StringComparison.OrdinalIgnoreCase)
+                || status.Contains("Datenstand", StringComparison.OrdinalIgnoreCase));
+    }
 
-    private void FavoritesChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args) => RefreshFavorite();
+    private void UpdateFavoriteStatus()
+    {
+        var status = favorites.Status;
+        favoriteStatus.IsVisible = favorites.IsSaving
+            || status.Contains("fehlgeschlagen", StringComparison.OrdinalIgnoreCase)
+            || status.Contains("nicht gespeichert", StringComparison.OrdinalIgnoreCase)
+            || status.Contains("maximal", StringComparison.OrdinalIgnoreCase)
+            || status.Contains("vollständige", StringComparison.OrdinalIgnoreCase)
+            || status is "Favorit gespeichert." or "Favorit entfernt.";
+    }
+
+    private void FavoritesChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+    {
+        RefreshFavorite();
+        if (args.PropertyName is nameof(favorites.Status) or nameof(favorites.IsSaving)) UpdateFavoriteStatus();
+    }
 
     private void SettingsChanged(object? sender, EventArgs args) => ReconcileRefreshLoop();
 

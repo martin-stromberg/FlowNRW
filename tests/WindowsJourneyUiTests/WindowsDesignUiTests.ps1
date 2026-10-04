@@ -150,6 +150,10 @@ public static class DesignWindow {
     Start-Sleep -Milliseconds 700
     $prefix="$Theme-$Width-$Height-$TextScale-$Scenario"
     $commit=(git rev-parse HEAD).Trim()
+    $statusLines = @(git status --porcelain)
+    $trackedChanges = @($statusLines | Where-Object { $_ -notmatch '^\?\?' })
+    $untrackedChanges = @($statusLines | Where-Object { $_ -match '^\?\?' })
+    $workingTree = if ($trackedChanges.Count -gt 0) { 'tracked files modified' } elseif ($untrackedChanges.Count -gt 0) { 'tracked files clean; untracked files present' } else { 'clean' }
     $buildHash=(Get-FileHash (Join-Path (Split-Path $Exe) 'FlowNRW.dll') -Algorithm SHA256).Hash
     function AssertOwnForeground {
         if ([DesignWindow]::GetForegroundWindow() -ne $handle) { throw 'Physical input cancelled: app is not the foreground window.' }
@@ -177,7 +181,6 @@ public static class DesignWindow {
         [DesignWindow]::mouse_event(0x0800,0,0,24000,[UIntPtr]::Zero)
         Start-Sleep -Milliseconds 350
         $focus = switch ($name) {
-            'monitor-unknown-cancelled' { 'Departure3' }
             'journey-walk-transfer' { 'JourneyDetailSection2' }
             'stop-list' { 'StopMatch0' }
             'no-journeys' { 'RoutingStatus' }
@@ -199,7 +202,7 @@ public static class DesignWindow {
         }
         Snapshot ($prefix+'-'+$name)
         $bounds=$script:window.Current.BoundingRectangle
-        [pscustomobject]@{image=$prefix+'-'+$name+'.png';commit=$commit;workingTree='uncommitted step 9';buildSha256=$buildHash;platform='Windows native MAUI';theme=$Theme;logicalWidth=$Width;logicalHeight=$Height;physicalWidth=$bounds.Width;physicalHeight=$bounds.Height;dpi=$dpi;textScale=$TextScale;scaleMethod='UiTest app text scaling';scenario=$name;reference=$reference;fixtureControls='hidden';timestamp=[DateTimeOffset]::Now.ToString('O')} | ConvertTo-Json -Compress | Add-Content (Join-Path $ScreenshotDirectory 'matrix.jsonl')
+        [pscustomobject]@{image=$prefix+'-'+$name+'.png';commit=$commit;workingTree=$workingTree;buildSha256=$buildHash;platform='Windows native MAUI';theme=$Theme;logicalWidth=$Width;logicalHeight=$Height;physicalWidth=$bounds.Width;physicalHeight=$bounds.Height;dpi=$dpi;textScale=$TextScale;scaleMethod='UiTest app text scaling';scenario=$name;reference=$reference;fixtureControls='hidden';timestamp=[DateTimeOffset]::Now.ToString('O')} | ConvertTo-Json -Compress | Add-Content (Join-Path $ScreenshotDirectory 'matrix.jsonl')
         Write-Output ('CAPTURE '+$name)
     }
     Wait 'OpenHomeStops' | Out-Null
@@ -223,8 +226,14 @@ public static class DesignWindow {
     Capture 'settings-success-keyboard' 'common-tokens'
     Back
     foreach($favorite in @('Favorite Far','Favorite Near','Favorite Missing')) {
-        Click 'OpenHomeStops'; SetText 'StopQuery' $favorite; Click 'FindStops'; Click 'StopMatch0'; Status 'MonitorStatus' 'manuell aktualisiert'
-        if($favorite -eq 'Favorite Far') { Capture 'monitor-delayed' 'abfahrtsmonitor_live'; Capture 'monitor-unknown-cancelled' 'abfahrtsmonitor_live' 'RefreshDepartures' }
+        Click 'OpenHomeStops'; SetText 'StopQuery' $favorite; Click 'FindStops'; Click 'StopMatch0'; Wait 'Departure0' | Out-Null
+        Assert ($null -eq (Find 'MonitorStatus')) 'Successful monitor refresh has no recurring status text'
+        Assert ($null -eq (Find 'RefreshIntervalStatus')) 'Monitor does not repeat the automatic refresh interval'
+        if($favorite -eq 'Favorite Far') {
+            Capture 'monitor-delayed' 'abfahrtsmonitor_live'
+            Capture 'monitor-unknown' 'abfahrtsmonitor_live' 'Departure2'
+            Capture 'monitor-cancelled' 'abfahrtsmonitor_live' 'Departure3'
+        }
         Click 'ToggleFavorite'; Status 'FavoriteToggleStatus' 'hinzugefügt|gespeichert'; Back; SelectTab 'Abfahrten'
     }
     Capture 'home-distance-unknown' 'abfahrtsmonitor_live' 'OpenHomeStops'
@@ -239,9 +248,11 @@ public static class DesignWindow {
     if ($HomeOnly) { return }
     SelectTab 'Haltestellen'; SetText 'StopQuery' 'Essen Hauptbahnhof'; Click 'FindStops'; Wait 'StopMatch1' | Out-Null
     Capture 'stop-list' 'umgebungskarte_stationen'
+    Click 'StopMatch0'; Wait 'Departure0' | Out-Null; Capture 'stop-monitor-cached' 'abfahrtsmonitor_live' 'Departure0'; Back
+    Wait 'StopMatch1' | Out-Null; Capture 'stop-list-returned' 'haltestellensuche' 'StopMatch1'
     Click 'ShowStopMap'; Status 'MapStatus' 'Basiskarte geladen'; Capture 'map-stations' 'umgebungskarte_stationen'
     Click 'ShowMapList'; Capture 'map-native-list' 'umgebungskarte_stationen'
-    Click 'MapStation1'; Status 'MonitorStatus' 'manuell aktualisiert'; Capture 'map-selected-station' 'abfahrtsmonitor_live'; Back; Back
+    Click 'MapStation1'; Wait 'Departure0' | Out-Null; Capture 'map-selected-station' 'abfahrtsmonitor_live'; Back; Back
     SetText 'StopQuery' 'map-offline'; Click 'FindStops'; Click 'ShowStopMap'; Status 'MapStatus' 'fehlt oder ist veraltet'; Capture 'map-offline' 'umgebungskarte_stationen'; Back
     SetText 'StopQuery' 'map-missing'; Click 'FindStops'; Click 'ShowStopMap'; Capture 'map-no-position' 'umgebungskarte_stationen'; Back
     SetText 'StopQuery' 'monitor-error'; Click 'FindStops'; Click 'StopMatch0'; Status 'MonitorStatus' 'fehlgeschlagen|nicht geladen'; Capture 'monitor-provider-error' 'abfahrtsmonitor_live'; Back
@@ -252,7 +263,9 @@ public static class DesignWindow {
     AssertTouchTarget 'SearchJourneys'
     Click 'OriginSearch'; Capture 'search-invalid' 'verbindungssuche'
     SelectEndpoint 'Origin' 'Essen Hauptbahnhof'; SelectEndpoint 'Destination' 'Düsseldorf Hauptbahnhof'; Capture 'search-selections' 'verbindungssuche'
+    Click 'SwapEndpoints'; Capture 'search-swapped' 'verbindungssuche'; Click 'SwapEndpoints'
     Click 'SearchJourneys'; Wait 'Journey0' | Out-Null; Capture 'journey-results' 'verbindungssuche'
+    Click 'ToggleConnectionFavorite'; Capture 'journey-favorite' 'verbindungssuche' 'ToggleConnectionFavorite'
     Click 'Journey0'; Wait 'JourneyDetailSection1' | Out-Null; Capture 'journey-details' 'fahrtbegleiter_detail'; Capture 'journey-walk-transfer' 'fahrtbegleiter_detail' 'ShowJourneyMap'
     Capture 'journey-walk-distance' 'fahrtbegleiter_detail' 'JourneyWalk2'
     Capture 'journey-following-leg' 'fahrtbegleiter_detail' 'JourneyDetailSection3'

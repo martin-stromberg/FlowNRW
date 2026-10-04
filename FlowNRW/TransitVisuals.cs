@@ -86,8 +86,14 @@ internal static class TransitVisuals
         {
             Padding = new Thickness(8, 4), StrokeThickness = 0, StrokeShape = new RoundRectangle { CornerRadius = 7 },
             BackgroundColor = Color.FromArgb(color), VerticalOptions = LayoutOptions.Start,
-            MaximumWidthRequest = 120,
-            Content = new Label { Text = line, TextColor = Colors.White, FontSize = 13, FontAttributes = FontAttributes.Bold, LineBreakMode = LineBreakMode.WordWrap }
+            HorizontalOptions = LayoutOptions.Start,
+            Content = new Label
+            {
+                Text = line, TextColor = Colors.White, FontSize = 13, FontAttributes = FontAttributes.Bold,
+                // A badge is a compact unit. Let its containing row allocate the
+                // available width instead of splitting its label across lines.
+                LineBreakMode = LineBreakMode.TailTruncation
+            }
         };
     }
 }
