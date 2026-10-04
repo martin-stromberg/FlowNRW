@@ -54,9 +54,9 @@ public sealed record DepartureCacheEntry
     /// <returns>The successful departure board.</returns>
     public ProviderResult<StopEvent> Result { get; init; } = new();
 
+    private DepartureCacheKey KeyForEntry => new(Source, StopId);
+
     /// <summary>Gets the technical key belonging to this entry.</summary>
-    /// <param name="Source">Provider namespace used by the key.</param>
-    /// <param name="StopId">Provider stop identifier used by the key.</param>
     /// <returns>The provider-scoped cache key.</returns>
-    public DepartureCacheKey Key => new(Source, StopId);
+    public DepartureCacheKey Key => KeyForEntry;
 }
