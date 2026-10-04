@@ -146,13 +146,17 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
             if (!primary.HasData && secondary.HasData)
                 result = secondary with { IsFallback = true, Warnings = Codes(primary, secondary, "primary-unavailable") };
             else if (primary.HasData && secondary.HasData)
+            {
+                var merged = merge is null ? (needsFallback ? secondary.Items : primary.Items) : merge(primary.Items, secondary.Items);
+                var truncated = merged.Count > maxResults;
                 result = primary with
                 {
-                    Items = merge is null ? (needsFallback ? secondary.Items : primary.Items) : merge(primary.Items, secondary.Items),
+                    Items = truncated ? merged.Take(maxResults).ToArray() : merged,
                     Source = merge is null && needsFallback ? secondary.Source : primary.Source + "+" + secondary.Source,
                     IsFallback = needsFallback,
-                    Warnings = Codes(primary, secondary, needsFallback ? "partial-primary" : null)
+                    Warnings = Codes(primary, secondary, needsFallback ? "partial-primary" : truncated ? "truncated-response" : null)
                 };
+            }
             else
                 result = primary with { Warnings = Codes(primary, secondary, "secondary-unavailable") };
         }
@@ -170,13 +174,13 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
     {
         var enriched = consolidator.Consolidate(consolidator.Consolidate(primary, secondary), primary);
         return enriched.Concat(Unmatched(primary, secondary, (left, right) => RealtimeConsolidator.Matches(left.Identity, right.Identity)))
-            .OrderBy(item => item.Realtime.ActualTime ?? item.PlannedTime ?? DateTimeOffset.MaxValue).Take(maxResults).ToArray();
+            .OrderBy(item => item.Realtime.ActualTime ?? item.PlannedTime ?? DateTimeOffset.MaxValue).Take(maxResults + 1).ToArray();
     }
 
     private IReadOnlyList<Journey> MergeJourneys(IReadOnlyList<Journey> primary, IReadOnlyList<Journey> secondary) =>
         primary.Select(journey => EnrichJourney(journey, primary, secondary)).Concat(Unmatched(primary, secondary, SameJourney))
             .OrderBy(item => item.Legs.FirstOrDefault()?.Departure.Realtime.ActualTime ?? item.Legs.FirstOrDefault()?.Departure.PlannedTime ?? DateTimeOffset.MaxValue)
-            .Take(maxResults).ToArray();
+            .Take(maxResults + 1).ToArray();
 
     private Journey EnrichJourney(Journey journey, IReadOnlyList<Journey> primary, IReadOnlyList<Journey> secondary)
     {

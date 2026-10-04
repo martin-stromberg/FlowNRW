@@ -118,6 +118,7 @@ public sealed class FavoriteTests
         Assert.Equal(["near", "far", "unknown"], home.Cards.Select(card => card.Stop.Id));
         Assert.Equal(0, home.Cards[0].DistanceMeters);
         Assert.Null(home.Cards[2].DistanceMeters); Assert.Equal(0, store.Saves);
+        Assert.Contains("fehlen Koordinaten", home.LocationStatus);
         request = home.LocationCommand.ExecuteAsync();
         location.Pending[1].SetResult(new(LocationStatus.Denied)); await request;
         Assert.Equal(["far", "unknown", "near"], home.Cards.Select(card => card.Stop.Id));

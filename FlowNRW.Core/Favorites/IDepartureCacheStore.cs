@@ -54,6 +54,9 @@ public sealed record DepartureCacheEntry
     /// <returns>The successful departure board.</returns>
     public ProviderResult<StopEvent> Result { get; init; } = new();
 
+    /// <summary>Last complete set of line names for the favorite, retained even without a future departure.</summary>
+    public IReadOnlyList<string> Lines { get; init; } = [];
+
     private DepartureCacheKey KeyForEntry => new(Source, StopId);
 
     /// <summary>Gets the technical key belonging to this entry.</summary>

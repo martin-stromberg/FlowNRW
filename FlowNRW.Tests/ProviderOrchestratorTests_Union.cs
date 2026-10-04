@@ -91,6 +91,8 @@ public sealed class ProviderOrchestratorTests_Union
         var departures = await service.DeparturesAsync(new() { Id = "origin", Coordinate = new(51.5, 7.1) }, When);
         Assert.Equal(new[] { "db-restB", "efaA" }, routes.Items.Select(item => item.Id));
         Assert.Equal(new[] { "B", "A" }, departures.Items.Select(item => item.Identity.SharedTripId));
+        Assert.Contains("truncated-response", routes.Warnings);
+        Assert.Contains("truncated-response", departures.Warnings);
     }
     /// <summary>All legs including walking endpoints participate in journey identity.</summary>
     /// <param name="differentLeg">Whether the second transit leg differs.</param>

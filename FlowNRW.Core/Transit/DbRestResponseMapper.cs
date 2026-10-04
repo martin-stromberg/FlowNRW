@@ -15,28 +15,28 @@ public sealed class DbRestResponseMapper
     /// <returns>Locations and status.</returns>
     public ProviderResult<Address> Search(string json)
     {
-        return Map(json, "db-rest", options.MaxResults, r => Array(r).Where(e => Text(e, "name") is not null || Text(e, "address") is not null).Select(e => new Address { Name = Text(e, "name") ?? Text(e, "address")!, Coordinate = Position(e), Stop = Text(e, "type") is "stop" or "station" && Text(e, "id") is not null ? Stop(e) : null }));
+        return Map(json, "db-rest", options.MaxResults, r => r.ValueKind == JsonValueKind.Array, r => Array(r).Where(e => Text(e, "name") is not null || Text(e, "address") is not null).Select(e => new Address { Name = Text(e, "name") ?? Text(e, "address")!, Coordinate = Position(e), Stop = Text(e, "type") is "stop" or "station" && Text(e, "id") is not null ? Stop(e) : null }));
     }
     /// <summary>Maps nearby stops.</summary>
     /// <param name="json">Provider JSON.</param>
     /// <returns>Nearby stops.</returns>
     public ProviderResult<NearbyStopResult> Nearby(string json)
     {
-        return Map(json, "db-rest", options.MaxResults, r => Array(r).Where(e => Text(e, "id") is not null).Select(e => new NearbyStopResult { Stop = Stop(e), DistanceMeters = Number(Get(e, "distance")) }));
+        return Map(json, "db-rest", options.MaxResults, r => r.ValueKind == JsonValueKind.Array, r => Array(r).Where(e => Text(e, "id") is not null).Select(e => new NearbyStopResult { Stop = Stop(e), DistanceMeters = Number(Get(e, "distance")) }));
     }
     /// <summary>Maps departures.</summary>
     /// <param name="json">Provider JSON.</param>
     /// <returns>Normalized events.</returns>
     public ProviderResult<StopEvent> Departures(string json)
     {
-        return Map(json, "db-rest", options.MaxResults, r => Array(Get(r, "departures")).Where(e => Text(Get(e, "stop"), "id") is not null).Select(e => Event(e, Get(e, "stop"), "plannedWhen", "when", "delay", "platform", "plannedPlatform")));
+        return Map(json, "db-rest", options.MaxResults, r => Get(r, "departures").ValueKind == JsonValueKind.Array, r => Array(Get(r, "departures")).Where(e => Text(Get(e, "stop"), "id") is not null).Select(e => Event(e, Get(e, "stop"), "plannedWhen", "when", "delay", "platform", "plannedPlatform")));
     }
     /// <summary>Maps connections.</summary>
     /// <param name="json">Provider JSON.</param>
     /// <returns>Connections with geometry and transfers.</returns>
     public ProviderResult<Journey> Journeys(string json)
     {
-        return Map(json, "db-rest", options.MaxResults, r => Array(Get(r, "journeys")).Select(e => { var legs = Array(Get(e, "legs")).Select(Leg).ToArray(); return new Journey { Id = Text(e, "refreshToken"), Legs = legs, Transfers = Transfers(legs) }; }).Where(j => j.Legs.Count > 0));
+        return Map(json, "db-rest", options.MaxResults, r => Get(r, "journeys").ValueKind == JsonValueKind.Array, r => Array(Get(r, "journeys")).Select(e => { var legs = Array(Get(e, "legs")).Select(Leg).ToArray(); return new Journey { Id = Text(e, "refreshToken"), Legs = legs, Transfers = Transfers(legs) }; }).Where(j => j.Legs.Count > 0));
     }
     private static GeoCoordinate? Position(JsonElement e) { var l = Get(e, "location"); if (l.ValueKind != JsonValueKind.Object) l = e; return Coord(Number(Get(l, "latitude")), Number(Get(l, "longitude"))); }
     private static Stop Stop(JsonElement e) => new() { Id = Text(e, "id") ?? "", Name = Text(e, "name") ?? Text(e, "address") ?? "", Source = "db-rest", Dhid = Text(Get(e, "ids"), "dhid"), Coordinate = Position(e) };

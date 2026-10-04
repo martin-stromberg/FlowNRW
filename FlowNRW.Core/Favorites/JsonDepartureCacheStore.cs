@@ -151,11 +151,13 @@ public sealed class JsonDepartureCacheStore : IDepartureCacheStore
             if (!keys.Add(entry.Key)) throw new InvalidDataException("Duplicate departure cache identity.");
             if (entry.Result is null || entry.Result.ErrorCode is not null || entry.Result.IsStale || entry.Result.Items.Count > MaximumEventsPerEntry)
                 throw new InvalidDataException("Departure cache must contain a successful bounded result.");
-            if (TooLong(entry.Result.Source, 256) || entry.Result.Warnings.Count > 32 || entry.Result.Warnings.Any(warning => TooLong(warning, 1024)))
+            var lines = entry.Lines ?? [];
+            if (TooLong(entry.Result.Source, 256) || entry.Result.Warnings.Count > 32 || entry.Result.Warnings.Any(warning => TooLong(warning, 1024))
+                || lines.Count > 100 || lines.Any(line => string.IsNullOrWhiteSpace(line) || line.Length > 256))
                 throw new InvalidDataException("Invalid departure cache metadata.");
             var events = entry.Result.Items.Select(WithoutCoordinate).ToArray();
             ValidateEvents(events);
-            result.Add(entry with { Result = entry.Result with { Items = events } });
+            result.Add(entry with { Result = entry.Result with { Items = events }, Lines = lines.Distinct(StringComparer.Ordinal).OrderBy(line => line, StringComparer.Ordinal).ToArray() });
         }
         return result.ToArray();
     }

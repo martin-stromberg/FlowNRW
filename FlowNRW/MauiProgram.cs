@@ -97,7 +97,8 @@ public static class MauiProgram
         builder.Services.AddSingleton(services => new StopMonitorViewModel(
             services.GetRequiredService<IStopSearchService>(), services.GetRequiredService<IDepartureService>(),
             services.GetRequiredService<IDepartureNavigation>(), providerOptions.MaxSearchLength,
-            services.GetRequiredService<ICurrentLocationService>(), services.GetRequiredService<IStopSearchService>()));
+            services.GetRequiredService<ICurrentLocationService>(), services.GetRequiredService<IStopSearchService>(),
+            services.GetRequiredService<IFavoriteStore>(), services.GetRequiredService<IDepartureCacheStore>(), services.GetRequiredService<RefreshFreshness>()));
         builder.Services.AddSingleton<StopSearchPage>();
         builder.Services.AddTransient<DeparturePage>();
         builder.Services.AddSingleton<ForegroundState>();
@@ -126,6 +127,17 @@ public static class MauiProgram
             return new JsonFavoriteStore(Path.Combine(FileSystem.AppDataDirectory, "favorites.json"));
 #endif
         });
+        builder.Services.AddSingleton<IConnectionFavoriteStore>(_ =>
+        {
+#if UI_TEST_FIXTURES
+            var path = Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_CONNECTION_FAVORITES")
+                ?? Path.Combine(FileSystem.CacheDirectory, "UiTest", "connection-favorites.json");
+#else
+            var path = Path.Combine(FileSystem.AppDataDirectory, "connection-favorites.json");
+#endif
+            return new JsonConnectionFavoriteStore(path);
+        });
+        builder.Services.AddSingleton<ConnectionFavoritesViewModel>();
         builder.Services.AddSingleton<IDepartureCacheStore>(_ =>
         {
 #if UI_TEST_FIXTURES
@@ -138,7 +150,7 @@ public static class MauiProgram
         });
         builder.Services.AddSingleton(services => new FavoriteHomeViewModel(services.GetRequiredService<IFavoriteStore>(),
             () => services.GetRequiredService<IDepartureService>(), services.GetRequiredService<ICurrentLocationService>(),
-            services.GetRequiredService<IStopSearchService>(), services.GetRequiredService<IDepartureCacheStore>()));
+            services.GetRequiredService<IStopSearchService>(), services.GetRequiredService<IDepartureCacheStore>(), services.GetRequiredService<RefreshFreshness>()));
         builder.Services.AddSingleton<HomePage>();
         var mapOptions = new MapOptions
         {

@@ -31,26 +31,32 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
         var count = updates.GetValueOrDefault(stop.Name) + 1;
         updates[stop.Name] = count;
         var scenario = location?.Scenario ?? "success";
+        var complete = scenario is "favorite-cache-seed" or "cache-start-slow-nearby" or "cache-start-error" or "cache-start-cancel" or "cache-lines-bc" or "cache-lines-empty" or "cache-expired-lines" or "cache-timeless-lines";
         location?.RecordDeparture(stop.Id);
         var favoriteTarget = stop.Id == "fixture-favorite-far-0";
-        await Task.Delay(stop.Name.Contains("monitor-slow") || scenario == "refresh-slow" || favoriteTarget && scenario is "favorite-slow" or "cache-start-slow-nearby" ? 6000 : 700);
+        await Task.Delay(stop.Name.Contains("monitor-slow") || scenario == "refresh-slow" || favoriteTarget && scenario is "favorite-slow" or "cache-start-slow-nearby" or "cache-start-cancel" ? 6000 : 700);
         var sequence = stop.Name.Contains("monitor-sequence");
-        var error = stop.Name.Contains("monitor-error") || scenario == "refresh-error" || sequence && count == 3 || favoriteTarget && scenario == "favorite-error";
-        var empty = stop.Name.Contains("monitor-empty") || sequence && count == 4;
+        var error = stop.Name.Contains("monitor-error") || scenario == "refresh-error" || sequence && count == 3 || favoriteTarget && scenario is "favorite-error" or "cache-start-error";
+        var empty = stop.Name.Contains("monitor-empty") || sequence && count == 4 || favoriteTarget && scenario == "cache-lines-empty";
+        var lines = favoriteTarget && scenario == "cache-lines-bc"
+            ? new[] { Departure(stop, departure.AddMinutes(5), "B", TimeSpan.Zero, false, "2"), Departure(stop, departure.AddMinutes(10), "C", null, false, "1") }
+            : favoriteTarget && scenario == "cache-expired-lines"
+                ? new[] { Departure(stop, departure.AddMinutes(-5), "Expired", TimeSpan.Zero, false, "2") }
+                : favoriteTarget && scenario == "cache-timeless-lines"
+                    ? new[] { Departure(stop, null, "Zeitlos", null, false, "2") }
+                    : new[] { Departure(stop, departure.AddMinutes(5), favoriteTarget && scenario is "favorite-slow" or "cache-start-slow-nearby" ? "RE 1 · Live Stand " + count : "RE 1 · Stand " + count, TimeSpan.FromMinutes(3), false, "2"),
+                Departure(stop, departure.AddMinutes(10), "S2", TimeSpan.Zero, false, "1"), Departure(stop, departure.AddMinutes(15), "107", null, null, null), Departure(stop, departure.AddMinutes(20), "U11", null, true, null) };
         return new ProviderResult<StopEvent>
         {
-            Items = error || empty ? [] : [Departure(stop, departure.AddMinutes(5), favoriteTarget && scenario is "favorite-slow" or "cache-start-slow-nearby" ? "RE 1 · Live Stand " + count : "RE 1 · Stand " + count, TimeSpan.FromMinutes(3), false, "2"),
-                Departure(stop, departure.AddMinutes(10), "S2", TimeSpan.Zero, false, "1"),
-                Departure(stop, departure.AddMinutes(15), "107", null, null, null),
-                Departure(stop, departure.AddMinutes(20), "U11", null, true, null)],
+            Items = error || empty ? [] : lines,
             ErrorCode = error ? "fixture_unavailable" : null,
             Source = "UI-Fixture " + stop.Name + " " + stop.Id,
             RetrievedAt = scenario == "resume-fresh" ? DateTimeOffset.UtcNow : DateTimeOffset.UtcNow.AddMinutes(-2),
-            IsFallback = true, IsStale = scenario is not ("resume-fresh" or "favorite-cache-seed"), Warnings = ["fixture_warning"]
+            IsFallback = !complete, IsStale = !complete && scenario != "resume-fresh", Warnings = complete ? [] : ["fixture_warning"]
         };
     }
 
-    private static StopEvent Departure(Stop stop, DateTimeOffset planned, string line, TimeSpan? delay, bool? cancelled, string? platform)
+    private static StopEvent Departure(Stop stop, DateTimeOffset? planned, string line, TimeSpan? delay, bool? cancelled, string? platform)
     {
         return new StopEvent
         {

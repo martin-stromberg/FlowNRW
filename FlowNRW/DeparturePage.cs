@@ -15,6 +15,7 @@ public sealed class DeparturePage : ContentPage
     private readonly RefreshSettingsViewModel settings;
     private readonly ForegroundState foreground;
     private readonly RefreshLoop refreshLoop;
+    private readonly Label monitorStatus;
     private bool active;
     private long appearance;
     private readonly RefreshFreshness freshness;
@@ -39,10 +40,16 @@ public sealed class DeparturePage : ContentPage
         SetBinding(TitleProperty, new Binding(nameof(model.Title)));
         var layout = new VerticalStackLayout { Padding = 16, Spacing = 16 };
         var station = new VerticalStackLayout { Spacing = 6, Padding = 16 };
-        station.Children.Add(TransitVisuals.Secondary("Abfahrtsmonitor"));
         var stop = new Label { FontSize = 28, FontAttributes = FontAttributes.Bold, AutomationId = "MonitorStop" };
         stop.SetBinding(Label.TextProperty, nameof(model.Title));
-        station.Children.Add(stop);
+        var stationHeader = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto)] };
+        stationHeader.Add(stop, 0);
+        var busy = new ActivityIndicator { AutomationId = "MonitorBusy", VerticalOptions = LayoutOptions.Center };
+        busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(model.IsBusy));
+        busy.SetBinding(IsVisibleProperty, nameof(model.IsBusy));
+        SemanticProperties.SetDescription(busy, "Abfahrten werden aktualisiert");
+        stationHeader.Add(busy, 1);
+        station.Children.Add(stationHeader);
         layout.Children.Add(new Border { Content = station });
         toggleFavorite = new AsyncRelayCommand(async () =>
         {
@@ -76,18 +83,12 @@ public sealed class DeparturePage : ContentPage
 #endif
         var interval = new Label { AutomationId = "RefreshIntervalStatus", BindingContext = settings };
         interval.SetBinding(Label.TextProperty, nameof(settings.Description));
-        var busy = new ActivityIndicator { AutomationId = "MonitorBusy" };
-        busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(model.IsBusy));
-        busy.SetBinding(IsVisibleProperty, nameof(model.IsBusy));
-        var status = new Label { AutomationId = "MonitorStatus" };
-        status.SetBinding(Label.TextProperty, nameof(model.Status));
-        var metadata = new Label { AutomationId = "MonitorMetadata" };
-        metadata.SetBinding(Label.TextProperty, nameof(model.Metadata));
+        monitorStatus = new Label { AutomationId = "MonitorStatus" };
+        monitorStatus.SetBinding(Label.TextProperty, nameof(model.Status));
         var monitorState = new VerticalStackLayout { Spacing = 4, Padding = new Thickness(4, 0) };
-        monitorState.Children.Add(status); monitorState.Children.Add(favoriteStatus); monitorState.Children.Add(interval); monitorState.Children.Add(busy);
+        monitorState.Children.Add(monitorStatus); monitorState.Children.Add(favoriteStatus); monitorState.Children.Add(interval);
         layout.Children.Add(monitorState);
         layout.Children.Add(items);
-        layout.Children.Add(metadata);
         Content = TransitVisuals.Page(layout);
     }
 
@@ -102,6 +103,7 @@ public sealed class DeparturePage : ContentPage
         model.PropertyChanged += ModelChanged;
         favorites.PropertyChanged += FavoritesChanged;
         RefreshFavorite();
+        UpdateMonitorStatus();
         RenderItems();
         await settings.LoadAsync();
         if (version == appearance) ReconcileRefreshLoop();
@@ -127,7 +129,10 @@ public sealed class DeparturePage : ContentPage
     {
         if (args.PropertyName == nameof(model.Items)) RenderItems();
         if (args.PropertyName == nameof(model.SelectedStop)) RefreshFavorite();
+        if (args.PropertyName is nameof(model.Status) or nameof(model.IsBusy)) UpdateMonitorStatus();
     }
+
+    private void UpdateMonitorStatus() => monitorStatus.IsVisible = !model.IsBusy || !model.Status.Contains("werden aktualisiert", StringComparison.OrdinalIgnoreCase);
 
     private void FavoritesChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args) => RefreshFavorite();
 

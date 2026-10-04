@@ -12,6 +12,7 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     private readonly ICurrentLocationService location;
     private readonly IStopSearchService? nearby;
     private readonly IDepartureCacheStore? cache;
+    private readonly RefreshFreshness freshness;
     private readonly SemaphoreSlim persistence = new(1, 1);
     private readonly List<FavoriteMonitorViewModel> savedOrder = [];
     private bool loaded;
@@ -25,10 +26,12 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     /// <param name="location">Explicit current-position provider.</param>
     /// <param name="nearby">Nearby-stop service.</param>
     /// <param name="cache">Optional durable cache for last-known departure boards.</param>
+    /// <param name="freshness">Policy deciding whether a durable board is fresh enough to display.</param>
     public FavoriteHomeViewModel(IFavoriteStore store, Func<IDepartureService> departureFactory, ICurrentLocationService location,
-        IStopSearchService? nearby = null, IDepartureCacheStore? cache = null)
+        IStopSearchService? nearby = null, IDepartureCacheStore? cache = null, RefreshFreshness? freshness = null)
     {
         this.store = store; this.departureFactory = departureFactory; this.location = location; this.nearby = nearby; this.cache = cache;
+        this.freshness = freshness ?? new RefreshFreshness(new TransitCacheOptions());
         LocationCommand = new AsyncRelayCommand(UpdateDistancesAsync, () => !IsLocating, _ => SetLocationFailure("Standort konnte nicht ermittelt werden."));
     }
 
@@ -76,8 +79,8 @@ public sealed class FavoriteHomeViewModel : ObservableObject
                     var now = DateTimeOffset.Now;
                     foreach (var card in savedOrder)
                     {
-                        if (byKey.TryGetValue(new DepartureCacheKey(card.Stop.Source, card.Stop.Id), out var entry) && !card.Restore(entry, now))
-                            await cache.RemoveAsync(entry.Key, cancellationToken).WaitAsync(cancellationToken);
+                        if (byKey.TryGetValue(new DepartureCacheKey(card.Stop.Source, card.Stop.Id), out var entry))
+                            card.Restore(entry, now, freshness);
                     }
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
@@ -108,6 +111,9 @@ public sealed class FavoriteHomeViewModel : ObservableObject
         {
             var current = await location.GetCurrentAsync(cancellationToken);
             if (!current.HasCurrentPosition) { NearbyStops = []; NearbyStatus = current.FailureDescription; Notify(nameof(NearbyStops)); Notify(nameof(NearbyStatus)); return; }
+            position = current.Coordinate;
+            SortCards();
+            SetSuccessfulLocationStatus(current.AccuracyDescription);
             var result = await nearby.NearbyAsync(current.Coordinate!, cancellationToken);
             if (result.ErrorCode is not null) { NearbyStops = []; NearbyStatus = "Nahe Haltestellen konnten nicht geladen werden."; Notify(nameof(NearbyStops)); Notify(nameof(NearbyStatus)); return; }
             var favorites = savedOrder.Select(card => card.Stop).ToArray();
@@ -228,7 +234,7 @@ public sealed class FavoriteHomeViewModel : ObservableObject
             if (!result.HasCurrentPosition) { SetLocationFailure(result.FailureDescription); return; }
             position = result.Coordinate;
             SortCards();
-            LocationStatus = "Nach Luftlinie sortiert. Unbekannte Entfernungen stehen am Ende." + result.AccuracyDescription;
+            SetSuccessfulLocationStatus(result.AccuracyDescription);
         }
         catch (OperationCanceledException) { if (version == locationRevision) SetLocationFailure("Standortabfrage abgebrochen."); }
         catch (Exception) { if (version == locationRevision) SetLocationFailure("Standort konnte nicht ermittelt werden. Bitte erneut versuchen."); }
@@ -246,6 +252,15 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     {
         position = null; SortCards();
         LocationStatus = message + " Entfernungen unbekannt; gespeicherte Reihenfolge wird angezeigt.";
+        Notify(nameof(LocationStatus));
+    }
+
+    private void SetSuccessfulLocationStatus(string accuracy)
+    {
+        var missingCoordinates = savedOrder.Count(card => card.Stop.Coordinate is null);
+        LocationStatus = missingCoordinates == 0
+            ? "Nach Luftlinie sortiert. Unbekannte Entfernungen stehen am Ende." + accuracy
+            : $"Standort ermittelt. Für {missingCoordinates} Favoriten fehlen Koordinaten; Entfernung unbekannt.";
         Notify(nameof(LocationStatus));
     }
 

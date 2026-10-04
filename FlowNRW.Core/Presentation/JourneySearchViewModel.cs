@@ -132,6 +132,26 @@ public sealed class JourneySearchViewModel : ObservableObject
         SelectedJourney = journey; Notify(nameof(SelectedJourney)); await navigation.ShowDetailAsync();
     }
 
+    /// <summary>Swaps the resolved start and destination without performing a provider request.</summary>
+    public void SwapEndpoints()
+    {
+        var origin = Origin.SelectedAddress;
+        var destination = Destination.SelectedAddress;
+        Origin.SetSelectedAddress(destination);
+        Destination.SetSelectedAddress(origin);
+    }
+
+    /// <summary>Applies a saved connection without searching for either endpoint.</summary>
+    /// <param name="origin">Saved origin.</param>
+    /// <param name="destination">Saved destination.</param>
+    public void SelectConnection(Address origin, Address destination)
+    {
+        ArgumentNullException.ThrowIfNull(origin);
+        ArgumentNullException.ThrowIfNull(destination);
+        Origin.SetSelectedAddress(origin);
+        Destination.SetSelectedAddress(destination);
+    }
+
     /// <summary>Renews expired visible results without navigating or guessing the previously selected trip.</summary>
     /// <param name="freshness">Shared realtime age policy.</param>
     /// <param name="cancellationToken">Visible page lifetime.</param>

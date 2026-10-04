@@ -48,4 +48,13 @@ public sealed class DbRestResponseMapperTests_Normalization
         Assert.Equal("invalid_response", result.ErrorCode);
         Assert.Empty(result.Items);
     }
+
+    /// <summary>Parseable JSON without the required departure array is not a valid empty provider response.</summary>
+    [Fact]
+    public void Departures_MissingPayload_ReportsError()
+    {
+        var result = new DbRestResponseMapper(new()).Departures("{}");
+        Assert.Equal("invalid_response", result.ErrorCode);
+        Assert.Contains("invalid_response", result.Warnings);
+    }
 }

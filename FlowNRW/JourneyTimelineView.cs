@@ -41,9 +41,8 @@ public sealed class JourneyTimelineView : VerticalStackLayout
             content.Children.Add(Event("Ankunft", leg.Arrival));
             if (leg.Walking is { } walk)
                 content.Children.Add(TransitVisuals.Secondary("Fußweg · " + (walk.DistanceMeters?.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "unbekannt") + " m · " + (walk.Duration?.TotalMinutes.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "unbekannt") + " Min.", "JourneyWalk" + index));
-            else
-                content.Children.Add(TransitVisuals.Secondary("Betreiber: " + (leg.Line?.Operator?.Name ?? leg.Departure.Line?.Operator?.Name ?? leg.Departure.Identity.Operator ?? "unbekannt"), "JourneyOperator" + index));
-            content.Children.Add(TransitVisuals.Secondary((leg.Geometry?.Coordinates.Count ?? leg.Walking?.Geometry?.Coordinates.Count ?? 0) > 1 ? "Verlauf auf der Karte verfügbar" : "Kein gelieferter Kartenverlauf"));
+            else if ((leg.Line?.Operator?.Name ?? leg.Departure.Line?.Operator?.Name ?? leg.Departure.Identity.Operator) is { Length: > 0 } operatorName)
+                content.Children.Add(TransitVisuals.Secondary("Betreiber: " + operatorName, "JourneyOperator" + index));
             Children.Add(new Border { Padding = 16, AutomationId = "JourneyTimeline" + index++, Content = content });
         }
         if (journey.Transfers.Count > 0)
@@ -53,17 +52,27 @@ public sealed class JourneyTimelineView : VerticalStackLayout
     private static VerticalStackLayout Event(string title, StopEvent item)
     {
         var stack = new VerticalStackLayout { Spacing = 4, Padding = new Thickness(4, 0) };
-        var times = new Grid { ColumnDefinitions = [new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 10 };
+        var times = new Grid { ColumnDefinitions = [new(GridLength.Auto), new(GridLength.Star)], ColumnSpacing = 10 };
         times.Add(TransitVisuals.Text(title, 15, true), 0);
-        times.Add(TransitVisuals.Secondary("Soll " + JourneyPresentation.Time(item.PlannedTime)), 1);
-        var actualTime = TransitVisuals.Text(item.Realtime.ActualTime is null ? "keine Echtzeit" : "Ist " + JourneyPresentation.Time(item.Realtime.ActualTime), 15, true);
-        times.Add(actualTime, 2);
+        var time = new VerticalStackLayout { Spacing = 0, HorizontalOptions = LayoutOptions.End };
+        var actual = item.Realtime.ActualTime ?? item.PlannedTime;
+        time.Children.Add(TransitVisuals.Text(JourneyPresentation.Time(actual), 15, true));
+        if (item.Realtime.ActualTime is { } actualTime && item.PlannedTime is { } planned && actualTime != planned)
+        {
+            var scheduled = TransitVisuals.Secondary(JourneyPresentation.Time(planned));
+            scheduled.FontSize = 12;
+            scheduled.TextDecorations = TextDecorations.Strikethrough;
+            time.Children.Add(scheduled);
+        }
+        times.Add(time, 1);
         stack.Children.Add(times);
-        var delay = item.Realtime.ActualTime is { } actual && item.PlannedTime is { } planned ? actual - planned : item.Realtime.Delay;
-        stack.Children.Add(TransitVisuals.Secondary(delay is { } difference ? "Abweichung " + difference.TotalMinutes.ToString("+0;-0;0", System.Globalization.CultureInfo.InvariantCulture) + " Min." : "Verspätung unbekannt"));
-        stack.Children.Add(TransitVisuals.Text(item.Realtime.Cancelled switch { true => "Fahrt fällt aus", false => "Kein Ausfall gemeldet", null => "Ausfallstatus unbekannt" }, 15, true));
-        stack.Children.Add(TransitVisuals.Secondary("Bahnsteig Soll: " + (item.Realtime.PlannedPlatform ?? "unbekannt") + " · Ist: " + (item.Realtime.Platform ?? "unbekannt")));
-        if (!string.IsNullOrWhiteSpace(item.Realtime.Source)) stack.Children.Add(TransitVisuals.Secondary("Echtzeitquelle: " + item.Realtime.Source + " · Stand: " + JourneyPresentation.Time(item.Realtime.RetrievedAt)));
+        if (item.Realtime.Cancelled == true) stack.Children.Add(TransitVisuals.Text("Fahrt fällt aus", 15, true));
+        if (!string.IsNullOrWhiteSpace(item.Realtime.Platform))
+        {
+            var platform = "Bahnsteig: " + item.Realtime.Platform;
+            if (!string.IsNullOrWhiteSpace(item.Realtime.PlannedPlatform) && item.Realtime.PlannedPlatform != item.Realtime.Platform) platform += " · geplant " + item.Realtime.PlannedPlatform;
+            stack.Children.Add(TransitVisuals.Secondary(platform));
+        }
         return stack;
     }
 }

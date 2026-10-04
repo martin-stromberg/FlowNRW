@@ -35,6 +35,20 @@ public sealed class TransitServiceTests_Validation
         Assert.Equal(0, provider.Calls);
     }
 
+    /// <summary>An exactly full provider response is complete; only an observed extra item marks truncation.</summary>
+    [Fact]
+    public async Task DeparturesAsync_ExactlyAtLimit_IsNotMarkedTruncated()
+    {
+        var provider = new TransitTestProvider { Departures = new()
+        {
+            Items = [new StopEvent { PlannedTime = DateTimeOffset.UtcNow.AddMinutes(1) }, new StopEvent { PlannedTime = DateTimeOffset.UtcNow.AddMinutes(2) }]
+        } };
+        var result = await new DepartureService(provider, new TransitProviderOptions { MaxResults = 2 })
+            .DeparturesAsync(new Stop { Id = "stop", Source = "fixture" }, DateTimeOffset.UtcNow);
+        Assert.Equal(2, result.Items.Count);
+        Assert.DoesNotContain("truncated-response", result.Warnings);
+    }
+
     /// <summary>A newer search suppresses even an older provider that ignores cancellation.</summary>
     [Fact]
     public async Task SearchAsync_NewerRequest_SuppressesOlderResult()

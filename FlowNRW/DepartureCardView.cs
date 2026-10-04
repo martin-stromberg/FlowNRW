@@ -22,51 +22,34 @@ public sealed class DepartureCardView : Border
         SemanticProperties.SetDescription(destination, DeparturePresentation.Describe(item));
         heading.Add(destination, 1);
         var realtime = item.Realtime;
+        var time = new VerticalStackLayout { Spacing = 0, HorizontalOptions = LayoutOptions.End };
         var prominentTime = TransitVisuals.Text(Clock(realtime.ActualTime ?? item.PlannedTime), 22, true);
         prominentTime.FontFamily = DeviceInfo.Platform == DevicePlatform.WinUI ? "Consolas" : "Menlo";
         if (realtime.Cancelled == true) prominentTime.TextDecorations = TextDecorations.Strikethrough;
-        heading.Add(prominentTime, 2);
+        time.Children.Add(prominentTime);
+        if (realtime.ActualTime is { } actual && item.PlannedTime is { } planned && actual != planned)
+        {
+            var scheduled = TransitVisuals.Secondary(Clock(planned));
+            scheduled.FontSize = 13;
+            scheduled.TextDecorations = TextDecorations.Strikethrough;
+            time.Children.Add(scheduled);
+        }
+        heading.Add(time, 2);
         layout.Children.Add(heading);
-
-        if (!compact)
+        if (realtime.Cancelled == true) layout.Children.Add(TransitVisuals.Text("Fahrt fällt aus", 15, true));
+        if (!string.IsNullOrWhiteSpace(realtime.Platform))
         {
-            var timing = TransitVisuals.Secondary("Soll " + Clock(item.PlannedTime) + " · "
-                + (realtime.ActualTime is null ? "keine Echtzeit" : "Ist " + Clock(realtime.ActualTime)));
-            layout.Children.Add(timing);
+            var platform = "Gleis/Steig: " + realtime.Platform;
+            if (!string.IsNullOrWhiteSpace(realtime.PlannedPlatform) && realtime.Platform != realtime.PlannedPlatform)
+                platform += " · geplant " + realtime.PlannedPlatform;
+            layout.Children.Add(TransitVisuals.Secondary(platform));
         }
-        else
-        {
-            var timing = TransitVisuals.Text("Soll " + Clock(item.PlannedTime) + " · Ist " + Clock(realtime.ActualTime), 18, true);
-            timing.FontFamily = DeviceInfo.Platform == DevicePlatform.WinUI ? "Consolas" : "Menlo";
-            layout.Children.Add(timing);
-        }
-        var delay = realtime.ActualTime is { } actual && item.PlannedTime is { } planned ? actual - planned : realtime.Delay;
-        var status = realtime.Cancelled == true ? "Fahrt fällt aus"
-            : delay is null ? "Verspätung unbekannt" : delay == TimeSpan.Zero ? "Pünktlich gemeldet"
-            : "Abweichung " + delay.Value.TotalMinutes.ToString("+0;-0;0", CultureInfo.InvariantCulture) + " Min.";
-        var statusLabel = TransitVisuals.Text(status, 15, true);
-        if (realtime.Cancelled == true)
-            statusLabel.SetAppThemeColor(Label.TextColorProperty, Color.FromArgb("#BA1A1A"), Color.FromArgb("#FFB4AB"));
-        else if (delay is { } difference && difference != TimeSpan.Zero)
-            statusLabel.SetAppThemeColor(Label.TextColorProperty, Color.FromArgb("#894D00"), Color.FromArgb("#FFB874"));
-        else if (delay == TimeSpan.Zero)
-            statusLabel.SetAppThemeColor(Label.TextColorProperty, Color.FromArgb("#006E28"), Color.FromArgb("#72FE88"));
-        layout.Children.Add(statusLabel);
-        var platform = "Gleis/Steig: " + (realtime.Platform ?? "unbekannt") + " · geplant " + (realtime.PlannedPlatform ?? "unbekannt");
-        if (!string.IsNullOrWhiteSpace(realtime.Platform) && !string.IsNullOrWhiteSpace(realtime.PlannedPlatform) && realtime.Platform != realtime.PlannedPlatform)
-            platform += " · Gleis-/Steigwechsel";
-        layout.Children.Add(TransitVisuals.Secondary(platform));
         if (compact && item.PlannedTime is { } instant)
         {
             var zone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
             var date = TimeZoneInfo.ConvertTime(instant, zone);
             if (date.Date != TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone).Date)
                 layout.Children.Add(TransitVisuals.Secondary(date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)));
-        }
-        if (!compact)
-        {
-            layout.Children.Add(TransitVisuals.Secondary(realtime.Cancelled switch { true => "FÄLLT AUS", false => "Kein Ausfall gemeldet", null => "Ausfallstatus unbekannt" }));
-            layout.Children.Add(TransitVisuals.Secondary("Betreiber: " + (item.Line?.Operator?.Name ?? item.Identity.Operator ?? "unbekannt")));
         }
         Content = layout;
     }

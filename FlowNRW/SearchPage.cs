@@ -12,14 +12,18 @@ public sealed class SearchPage : ContentPage
     private readonly JourneySearchViewModel model;
     private readonly ForegroundState foreground;
     private readonly FavoriteHomeViewModel favorites;
+    private readonly ConnectionFavoritesViewModel connectionFavorites;
     /// <summary>Creates the native search view.</summary>
     /// <param name="model">Retained search session.</param>
     /// <param name="foreground">Shared active-window state.</param>
     /// <param name="favorites">Persisted favorite stops used for suggestions.</param>
-    public SearchPage(JourneySearchViewModel model, ForegroundState foreground, FavoriteHomeViewModel favorites)
+    /// <param name="connectionFavorites">Explicitly saved reusable journey endpoint pairs.</param>
+    public SearchPage(JourneySearchViewModel model, ForegroundState foreground, FavoriteHomeViewModel favorites,
+        ConnectionFavoritesViewModel connectionFavorites)
     {
         this.foreground = foreground;
         this.favorites = favorites;
+        this.connectionFavorites = connectionFavorites;
         this.model = model; BindingContext = model; Title = "Verbindung suchen";
         var content = new VerticalStackLayout { Padding = 16, Spacing = 16 };
         content.Children.Add(TransitVisuals.Text("Verbindungen", 32, true));
@@ -41,6 +45,10 @@ public sealed class SearchPage : ContentPage
         var searchForm = new VerticalStackLayout { Spacing = 12, Padding = 16 };
         searchForm.Children.Add(TransitVisuals.Text("Wohin möchtest du fahren?", 20, true));
         searchForm.Children.Add(Endpoint(model.Origin, "Origin", "Start"));
+        var swap = TransitVisuals.SecondaryAction("⇄", "Start und Ziel vertauschen", "SwapEndpoints",
+            new AsyncRelayCommand(() => { model.SwapEndpoints(); return Task.CompletedTask; }, () => true,
+                _ => Title = "Start und Ziel konnten nicht vertauscht werden"));
+        searchForm.Children.Add(swap);
         searchForm.Children.Add(Endpoint(model.Destination, "Destination", "Ziel"));
         var timeLayout = new VerticalStackLayout { Spacing = 8, Padding = new Thickness(4, 8) };
         timeLayout.Children.Add(TransitVisuals.Text("Zeitpunkt", 17, true));
@@ -61,6 +69,23 @@ public sealed class SearchPage : ContentPage
         timeMode.SelectedIndexChanged += (_, _) => alternative.IsVisible = timeMode.SelectedIndex == 1;
         searchForm.Children.Add(timeLayout);
         content.Children.Add(new Border { Content = searchForm });
+        var savedConnections = new VerticalStackLayout { Spacing = 4, AutomationId = "ConnectionFavorites" };
+        content.Children.Add(savedConnections);
+        void RenderConnectionFavorites()
+        {
+            savedConnections.Children.Clear();
+            foreach (var favorite in connectionFavorites.Favorites)
+            {
+                var action = new Button { Text = favorite.Name, AutomationId = "ConnectionFavorite" + favorite.Origin.Source + favorite.Origin.Id + favorite.Destination.Source + favorite.Destination.Id, HeightRequest = 44 };
+                SemanticProperties.SetDescription(action, "Gespeicherte Verbindung " + favorite.Name);
+                action.Command = new Command(() => model.SelectConnection(
+                    new Address { Name = favorite.Origin.Name, Stop = favorite.Origin, Coordinate = favorite.Origin.Coordinate },
+                    new Address { Name = favorite.Destination.Name, Stop = favorite.Destination, Coordinate = favorite.Destination.Coordinate }));
+                savedConnections.Children.Add(action);
+            }
+            savedConnections.IsVisible = savedConnections.Children.Count > 0;
+        }
+        connectionFavorites.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(connectionFavorites.Favorites)) RenderConnectionFavorites(); };
         var search = new Button { Text = "Verbindungen suchen", AutomationId = "SearchJourneys", Command = model.SearchCommand };
         SemanticProperties.SetDescription(search, "Verbindungen suchen");
         content.Children.Add(search);
@@ -70,7 +95,12 @@ public sealed class SearchPage : ContentPage
         Content = TransitVisuals.Page(content);
     }
     /// <inheritdoc />
-    protected override void OnAppearing() { base.OnAppearing(); foreground.PropertyChanged += ForegroundChanged; }
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing(); foreground.PropertyChanged += ForegroundChanged;
+        try { await connectionFavorites.LoadAsync(); }
+        catch (Exception) { Title = "Gespeicherte Verbindungen konnten nicht geladen werden"; }
+    }
     /// <inheritdoc />
     protected override void OnDisappearing() { foreground.PropertyChanged -= ForegroundChanged; base.OnDisappearing(); CancelPending(); }
     private void ForegroundChanged(object? sender, PropertyChangedEventArgs args) { if (!foreground.IsActive) CancelPending(); }

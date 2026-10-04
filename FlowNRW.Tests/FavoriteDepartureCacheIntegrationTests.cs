@@ -62,18 +62,66 @@ public sealed class FavoriteDepartureCacheIntegrationTests
         Assert.Contains("Letzte bekannte", card.Status);
     }
 
-    /// <summary>A board with no remaining future departure is removed from durable cache during hydration.</summary>
+    /// <summary>A future event from an expired cache response is not shown on the home card.</summary>
     [Fact]
-    public async Task LoadAsync_RemovesCacheBoardWithOnlyExpiredDepartures()
+    public async Task LoadAsync_DoesNotRestoreStaleBoardWithFutureDeparture()
     {
-        var stop = Stop("one");
-        var cache = new MemoryDepartureCache { Entries = [Entry(stop, "expired", DateTimeOffset.Now.AddMinutes(-1))] };
-        var home = new FavoriteHomeViewModel(new MemoryFavoriteStore(stop), () => new ControlledDepartureService(), new ControlledLocation(), cache: cache);
+        var stop = Stop("stale");
+        var clock = new TransitTestClock { Now = DateTimeOffset.UtcNow };
+        var freshness = new FlowNRW.Core.Refresh.RefreshFreshness(new TransitCacheOptions { RealtimeTimeToLive = TimeSpan.FromSeconds(1) }, clock);
+        var cache = new MemoryDepartureCache
+        {
+            Entries = [new DepartureCacheEntry
+            {
+                Source = stop.Source,
+                StopId = stop.Id,
+                Result = new ProviderResult<StopEvent> { Source = "stale", RetrievedAt = clock.Now.AddMinutes(-1), Items = [Event(DateTimeOffset.Now.AddMinutes(5))] }
+            }]
+        };
+        var home = new FavoriteHomeViewModel(new MemoryFavoriteStore(stop), () => new ControlledDepartureService(), new ControlledLocation(), cache: cache, freshness: freshness);
 
         await home.LoadAsync();
 
         Assert.Null(Assert.Single(home.Cards).Result);
-        Assert.Empty(cache.Entries);
+    }
+
+    /// <summary>A board with no remaining future departure is removed from durable cache during hydration.</summary>
+    [Fact]
+    public async Task LoadAsync_KeepsCacheBoardWithOnlyExpiredDeparturesForItsLineInventory()
+    {
+        var stop = Stop("one");
+        var cache = new MemoryDepartureCache { Entries = [Entry(stop, "expired", DateTimeOffset.Now.AddMinutes(-1)) with { Lines = ["S1"] }] };
+        var home = new FavoriteHomeViewModel(new MemoryFavoriteStore(stop), () => new ControlledDepartureService(), new ControlledLocation(), cache: cache);
+
+        await home.LoadAsync();
+
+        var card = Assert.Single(home.Cards);
+        Assert.Null(card.Result);
+        Assert.Equal(["S1"], card.Lines);
+        Assert.Single(cache.Entries);
+    }
+
+    /// <summary>A partial provider response retains both the visible complete board and its durable line inventory.</summary>
+    [Fact]
+    public async Task Refresh_PersistsLineInventoryOnlyFromCompleteResponses()
+    {
+        var stop = Stop("one");
+        var cache = new MemoryDepartureCache();
+        var service = new ControlledDepartureService();
+        var home = new FavoriteHomeViewModel(new MemoryFavoriteStore(stop), () => service, new ControlledLocation(), cache: cache);
+        await home.LoadAsync();
+        var card = Assert.Single(home.Cards);
+        var first = card.RefreshAsync();
+        service.Pending[0].SetResult(new ProviderResult<StopEvent> { Source = "live", Items = [Event(DateTimeOffset.Now.AddMinutes(4)) with { Identity = new TripIdentity { Source = "fixture", Stop = Stop("event"), Line = "S1" } }] });
+        await first;
+        Assert.Equal(["S1"], Assert.Single(cache.Entries).Lines);
+
+        var second = card.RefreshAsync();
+        service.Pending[1].SetResult(new ProviderResult<StopEvent> { Source = "partial", Warnings = ["partial-primary"], Items = [Event(DateTimeOffset.Now.AddMinutes(5)) with { Identity = new TripIdentity { Source = "fixture", Stop = Stop("event"), Line = "S2" } }] });
+        await second;
+        Assert.Equal(["S1"], Assert.Single(cache.Entries).Lines);
+        Assert.Equal(["S1"], card.Lines);
+        Assert.Equal("live", card.Result?.Source);
     }
 
     /// <summary>Loading cleans unrelated cache boards, and removing a favorite removes its matching board.</summary>

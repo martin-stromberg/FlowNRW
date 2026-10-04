@@ -33,6 +33,8 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
     public ProviderResult<StopEvent>? LastAttempt { get; private set; }
     /// <summary>Displayed departures in effective-time order.</summary>
     public IReadOnlyList<StopEvent> Items => Result?.Items ?? [];
+    /// <summary>Last complete line inventory, including lines without a currently known departure time.</summary>
+    public IReadOnlyList<string> Lines { get; private set; } = [];
     /// <summary>Provenance belonging to displayed data.</summary>
     public string Metadata
     {
@@ -40,6 +42,8 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
     }
     /// <summary>Whether this card alone is loading.</summary>
     public bool IsBusy { get; private set; }
+    /// <summary>Whether the departure rows are expanded on the home page.</summary>
+    public bool IsExpanded { get; private set; }
     /// <summary>Refresh or retained-data status.</summary>
     public string Status { get; private set; } = "Noch keine Abfahrten geladen.";
     /// <summary>Calculated straight-line distance from the explicitly requested position.</summary>
@@ -72,18 +76,30 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
     /// <summary>Restores a successful board only when it belongs to this card and still has future departures.</summary>
     /// <param name="entry">Cached board keyed by technical favorite identity.</param>
     /// <param name="now">Current instant used to reject expired departures.</param>
+    /// <param name="freshness">Policy used to reject stale cached provider responses.</param>
     /// <returns>Whether a usable local board was applied.</returns>
-    internal bool Restore(DepartureCacheEntry entry, DateTimeOffset now)
+    internal bool Restore(DepartureCacheEntry entry, DateTimeOffset now, RefreshFreshness freshness)
     {
-        if (entry.Key.Source != Stop.Source || entry.Key.Id != Stop.Id || entry.Result.ErrorCode is not null || entry.Result.IsStale) return false;
+        if (entry.Key.Source != Stop.Source || entry.Key.Id != Stop.Id) return false;
+        var storedLines = entry.Lines ?? [];
+        Lines = (storedLines.Count > 0 ? storedLines : entry.Result.Items.Select(LineName))
+            .Where(line => !string.IsNullOrWhiteSpace(line)).Distinct(StringComparer.Ordinal).OrderBy(line => line, StringComparer.Ordinal).ToArray();
+        if (freshness.IsStale(entry.Result)) { RefreshBindings(); return false; }
         var retained = entry.Result.Items.Where(item => EffectiveTime(item) is { } time && time >= now)
             .OrderBy(item => EffectiveTime(item)!.Value).ToArray();
-        if (retained.Length == 0) return false;
+        if (retained.Length == 0) { RefreshBindings(); return false; }
         Result = entry.Result with { Items = retained };
         LastAttempt = null;
         Status = "Letzter Stand wird aktualisiert …";
         RefreshBindings();
         return true;
+    }
+
+    /// <summary>Toggles the compact home card without changing its persisted data.</summary>
+    public void ToggleExpanded()
+    {
+        IsExpanded = !IsExpanded;
+        Notify(nameof(IsExpanded));
     }
 
     private async Task RefreshCoreAsync(bool automatic, CancellationToken cancellationToken = default)
@@ -99,23 +115,25 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
             source.Token.ThrowIfCancellationRequested();
             if (version != revision) return;
             LastAttempt = result;
-            if (result.ErrorCode is not null) SetFailure();
+            if (!IsComplete(result)) SetFailure();
             else
             {
                 Result = result with
                 {
-                    Items = result.Items.Where(item => EffectiveTime(item) is not { } time || time >= started)
-                        .OrderBy(item => EffectiveTime(item) ?? DateTimeOffset.MaxValue).ToArray()
+                    Items = result.Items.Where(item => EffectiveTime(item) is { } time && time >= started)
+                        .OrderBy(item => EffectiveTime(item)!.Value).ToArray()
                 };
                 Status = Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · {(automatic ? "automatisch" : "manuell")} aktualisiert.";
-                if (!Result.IsStale && persist is not null)
+                if (IsComplete(result))
                 {
+                    Lines = result.Items.Select(LineName).Where(line => !string.IsNullOrWhiteSpace(line)).Distinct(StringComparer.Ordinal).OrderBy(line => line, StringComparer.Ordinal).ToArray();
+                    Notify(nameof(Lines));
                     var cached = Result with
                     {
                         Items = Result.Items.Where(item => EffectiveTime(item) is { } time && time >= started)
                             .OrderBy(item => EffectiveTime(item)!.Value).ToArray()
                     };
-                    try { await persist(new DepartureCacheEntry { Source = Stop.Source, StopId = Stop.Id, Result = cached }); }
+                    try { if (persist is not null) await persist(new DepartureCacheEntry { Source = Stop.Source, StopId = Stop.Id, Result = cached, Lines = Lines }); }
                     catch (Exception) { }
                 }
             }
@@ -124,6 +142,9 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
         catch (Exception) { if (version == revision) SetFailure(); }
         finally { if (version == revision) { request = null; IsBusy = false; RefreshBindings(); } }
     }
+
+    private static bool IsComplete(ProviderResult<StopEvent> result) => result.ErrorCode is null && result.Warnings.Count == 0 && !result.IsFallback && !result.IsStale;
+    private static string LineName(StopEvent item) => item.Line?.Name ?? item.Identity.Line ?? string.Empty;
 
     /// <summary>Cancels removed or departed cards and rejects uncooperative late responses.</summary>
     public void CancelPending()
@@ -150,7 +171,7 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
 
     private void RefreshBindings()
     {
-        Notify(nameof(Result)); Notify(nameof(LastAttempt)); Notify(nameof(Items)); Notify(nameof(Metadata)); Notify(nameof(Status)); Notify(nameof(IsBusy));
+        Notify(nameof(Result)); Notify(nameof(LastAttempt)); Notify(nameof(Items)); Notify(nameof(Lines)); Notify(nameof(Metadata)); Notify(nameof(Status)); Notify(nameof(IsBusy)); Notify(nameof(IsExpanded));
         RefreshCommand.Refresh();
     }
 }
