@@ -41,8 +41,6 @@ public sealed class HomePage : ContentPage
         BindingContext = model;
         Title = "Meine Haltestellen";
         var layout = new VerticalStackLayout { Padding = 16, Spacing = 16 };
-        layout.Children.Add(TransitVisuals.Text("Abfahrten", 32, true));
-        layout.Children.Add(TransitVisuals.Secondary("Deine gespeicherten Stationen und Abfahrten auf einen Blick."));
         var primaryNavigation = new Button { Text = "Verbindung suchen", AutomationId = "OpenJourneySearch", Command = Navigate("//main/connections-tab/search") };
         SemanticProperties.SetDescription(primaryNavigation, "Verbindung suchen");
         layout.Children.Add(primaryNavigation);
@@ -54,16 +52,12 @@ public sealed class HomePage : ContentPage
         shortcuts.Add(TransitVisuals.SecondaryAction("↻", "Entfernungen aktualisieren", "SortFavorites", model.LocationCommand), 2);
         shortcuts.Add(TransitVisuals.SecondaryAction("⚙", "Aktualisierung einstellen", "OpenRefreshSettings", Navigate("refresh-settings")), 3);
         layout.Children.Add(shortcuts);
-        var interval = new Label { AutomationId = "RefreshIntervalStatus", BindingContext = settings };
-        interval.SetBinding(Label.TextProperty, nameof(settings.Description));
         var status = new Label { AutomationId = "HomeStatus" };
         status.SetBinding(Label.TextProperty, nameof(model.Status));
-        var count = new Label { AutomationId = "FavoriteCount", FontSize = 15, FontAttributes = FontAttributes.Bold };
         var location = new Label { AutomationId = "HomeLocationStatus" };
         location.SetBinding(Label.TextProperty, nameof(model.LocationStatus));
-        var overview = new VerticalStackLayout { Spacing = 4, Padding = 16 };
-        overview.Children.Add(count); overview.Children.Add(status); overview.Children.Add(location); overview.Children.Add(interval);
-        layout.Children.Add(new Border { Content = overview });
+        layout.Children.Add(status);
+        layout.Children.Add(location);
         layout.Children.Add(cards);
         layout.Children.Add(TransitVisuals.Text("Nächste Haltestellen", 22, true, "NearbyHeading"));
         var nearbyStatus = new Label { AutomationId = "NearbyStatus" }; nearbyStatus.SetBinding(Label.TextProperty, nameof(model.NearbyStatus)); layout.Children.Add(nearbyStatus);
@@ -76,7 +70,9 @@ public sealed class HomePage : ContentPage
                 if (active && foreground.IsActive && resume is null) _ = RefreshMissingAsync();
                 ReconcileRefreshLoops();
             }
-            count.Text = $"{model.Cards.Count} Favoriten gespeichert";
+            status.IsVisible = ShowsHomeStatus();
+            location.IsVisible = ShowsLocationStatus();
+            nearbyStatus.IsVisible = ShowsNearbyStatus();
             RenderNearby();
             showMap.Refresh();
             foreach (var action in actions.ToArray()) action.Refresh();
@@ -93,8 +89,10 @@ public sealed class HomePage : ContentPage
             calls.SetBinding(Label.TextProperty, nameof(fixture.DepartureCalls)); layout.Children.Insert(1, calls);
         };
 #endif
-        count.Text = $"{model.Cards.Count} Favoriten gespeichert";
         Content = TransitVisuals.Page(layout);
+        status.IsVisible = ShowsHomeStatus();
+        location.IsVisible = ShowsLocationStatus();
+        nearbyStatus.IsVisible = ShowsNearbyStatus();
         RenderNearby();
     }
 
@@ -207,7 +205,10 @@ public sealed class HomePage : ContentPage
             var layout = new VerticalStackLayout { Spacing = 8, BindingContext = card };
             AddLabel(layout, "FavoriteName" + index, nameof(card.Title), 22);
             AddLabel(layout, "FavoriteDistance" + index, nameof(card.DistanceLabel));
-            AddLabel(layout, "FavoriteStatus" + index, nameof(card.Status));
+            var status = new Label { AutomationId = "FavoriteStatus" + index };
+            status.SetBinding(Label.TextProperty, nameof(card.Status));
+            status.IsVisible = ShowsFavoriteStatus(card);
+            layout.Children.Add(status);
             var departures = new VerticalStackLayout { Spacing = 8 };
             void RenderDepartures()
             {
@@ -215,7 +216,12 @@ public sealed class HomePage : ContentPage
                 for (var item = 0; item < Math.Min(card.Items.Count, 5); item++)
                     departures.Children.Add(new DepartureCardView(card.Items[item], $"FavoriteDeparture{cardIndex}_{item}", compact: true));
             }
-            PropertyChangedEventHandler changed = (_, args) => { if (args.PropertyName == nameof(card.Items)) RenderDepartures(); };
+            PropertyChangedEventHandler changed = (_, args) =>
+            {
+                if (args.PropertyName == nameof(card.Items)) RenderDepartures();
+                if (args.PropertyName is nameof(card.Status) or nameof(card.IsBusy) or nameof(card.Result))
+                    status.IsVisible = ShowsFavoriteStatus(card);
+            };
             card.PropertyChanged += changed;
             unsubscribe.Add(() => card.PropertyChanged -= changed);
             RenderDepartures(); layout.Children.Add(departures);
@@ -265,4 +271,23 @@ public sealed class HomePage : ContentPage
         var label = new Label { AutomationId = id, FontSize = size };
         label.SetBinding(Label.TextProperty, property); layout.Children.Add(label);
     }
+
+    private bool ShowsHomeStatus() => model.Cards.Count == 0 || model.Status.Contains("konnten nicht", StringComparison.OrdinalIgnoreCase)
+        || model.Status.Contains("keine vollständige", StringComparison.OrdinalIgnoreCase)
+        || model.Status.Contains("maximal", StringComparison.OrdinalIgnoreCase);
+
+    private bool ShowsLocationStatus() => model.IsLocating || (!model.LocationStatus.StartsWith("Entfernungen unbekannt", StringComparison.OrdinalIgnoreCase)
+        && !model.LocationStatus.StartsWith("Nach Luftlinie sortiert", StringComparison.OrdinalIgnoreCase)
+        && !model.LocationStatus.StartsWith("Standortabfrage abgebrochen", StringComparison.OrdinalIgnoreCase));
+
+    private bool ShowsNearbyStatus() => model.NearbyStops.Count == 0 || model.NearbyStatus.Contains("werden geladen", StringComparison.OrdinalIgnoreCase)
+        || model.NearbyStatus.Contains("wird ermittelt", StringComparison.OrdinalIgnoreCase)
+        || model.NearbyStatus.Contains("nicht verfügbar", StringComparison.OrdinalIgnoreCase)
+        || model.NearbyStatus.Contains("nicht geladen", StringComparison.OrdinalIgnoreCase);
+
+    private static bool ShowsFavoriteStatus(FavoriteMonitorViewModel card) => card.IsBusy
+        || card.Status.Contains("Keine nächsten", StringComparison.OrdinalIgnoreCase)
+        || card.Status.Contains("Letzter Stand", StringComparison.OrdinalIgnoreCase)
+        || card.Status.Contains("fehlgeschlagen", StringComparison.OrdinalIgnoreCase)
+        || card.Status.Contains("nicht geladen", StringComparison.OrdinalIgnoreCase);
 }

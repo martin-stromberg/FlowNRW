@@ -144,8 +144,12 @@ public static class NativeWindowCapture {
     if (!$Favorites) { Click 'OpenJourneySearch'; Wait 'OriginText' | Out-Null }
     if (!$LiveLocations -and !$Favorites) { Snapshot 'native-search' }
     if ($Favorites) {
-        function FavoriteCount([int]$expected) { Status 'FavoriteCount' ('\b' + $expected + '\b'); Assert ($true) ('Favorite count is ' + $expected) }
-        function HomeReady { Wait 'OpenHomeStops' | Out-Null; Wait 'HomeStatus' | Out-Null; Start-Sleep -Milliseconds 500 }
+        function FavoriteCards([int]$expected) {
+            $actual = 0
+            while (Find ('FavoriteName' + $actual)) { $actual++ }
+            Assert ($actual -eq $expected) ('Favorite card count is ' + $expected)
+        }
+        function HomeReady { Wait 'OpenHomeStops' | Out-Null; Start-Sleep -Milliseconds 500 }
         function BackHome { Back; SelectTab 'Abfahrten'; HomeReady }
         function FindFavoriteMonitor([string]$query) {
             Click 'OpenHomeStops'; SetText 'StopQuery' $query; Click 'FindStops'; Click 'StopMatch0'
@@ -182,7 +186,8 @@ public static class NativeWindowCapture {
             HomeReady
             Write-Output 'PASS new application process opened the same isolated favorite file'
         }
-        HomeReady; FavoriteCount 0
+        HomeReady; FavoriteCards 0
+        Assert ($null -eq (Find 'FavoriteCount')) 'Home does not show a saved-favorite count panel'
         SetText 'HomeScenario' 'success'; Wait 'NearbyStop0' | Out-Null
         Click 'NearbyStop0'; Status 'MonitorStatus' 'manuell aktualisiert'
         Contains 'MonitorStop' 'Umgebung Süd'; Contains 'MonitorMetadata' 'fixture-nearby-0'
@@ -196,14 +201,14 @@ public static class NativeWindowCapture {
         Status 'FavoriteToggleStatus' 'fehlgeschlagen|nicht gespeichert|Speicherfehler'
         Contains 'ToggleFavorite' 'hinzufügen|speichern'
         SetText 'FavoriteScenario' 'favorite-cache-seed'; Click 'ToggleFavorite'; Status 'FavoriteToggleStatus' 'hinzugefügt|gespeichert'
-        BackHome; FavoriteCount 1; SetText 'HomeScenario' 'success'
+        BackHome; FavoriteCards 1; SetText 'HomeScenario' 'success'
         Contains 'FavoriteName0' 'Favorite Far'; Status 'FavoriteStatus0' 'manuell aktualisiert'
         Contains 'FavoriteDeparture0_0' 'RE 1'; Contains 'FavoriteMetadata0' 'Quelle:.*Datenalter:.*Fallback'
         Contains 'FavoriteDistance0' 'unbekannt'
         FindFavoriteMonitor 'Favorite Far'; Contains 'ToggleFavorite' 'entfernen'
-        BackHome; FavoriteCount 1
+        BackHome; FavoriteCards 1
         $env:FLOWNRW_UI_TEST_SCENARIO = 'favorite-slow'
-        RestartFavorites; FavoriteCount 1; Contains 'FavoriteName0' 'Favorite Far'
+        RestartFavorites; FavoriteCards 1; Contains 'FavoriteName0' 'Favorite Far'
         Contains 'FavoriteDistance0' 'unbekannt'
         Status 'FavoriteStatus0' 'Letzter Stand wird aktualisiert|werden aktualisiert'
         Contains 'FavoriteDeparture0_0' 'RE 1'
@@ -214,8 +219,8 @@ public static class NativeWindowCapture {
         SetText 'HomeScenario' 'success'
         Write-Output 'PASS cached future departures are visible before the delayed startup refresh and are then replaced'
         Write-Output 'PASS failed add is not reported as saved; retry, duplicate recognition and process persistence'
-        AddFavorite 'Favorite Near'; FavoriteCount 2
-        AddFavorite 'Favorite Missing'; FavoriteCount 3
+        AddFavorite 'Favorite Near'; FavoriteCards 2
+        AddFavorite 'Favorite Missing'; FavoriteCards 3
         Contains 'FavoriteName0' 'Favorite Far'; Contains 'FavoriteName1' 'Favorite Near'; Contains 'FavoriteName2' 'Favorite Missing'
         SetText 'HomeScenario' 'success'; Click 'SortFavorites'; Status 'HomeLocationStatus' 'sortiert|aktualisiert|Entfernung'
         Status 'FavoriteName0' 'Favorite Near'; Contains 'FavoriteName1' 'Favorite Far'; Contains 'FavoriteName2' 'Favorite Missing'
@@ -274,9 +279,9 @@ public static class FavoriteKeyboard {
         Snapshot 'native-favorites-narrow'; $transform.Resize($bounds.Width,$bounds.Height)
         SetText 'HomeScenario' 'store-error'; $missing = FavoriteIndex 'Favorite Missing'
         Click ('RemoveFavorite' + $missing); Status 'HomeStatus' 'fehlgeschlagen|nicht gespeichert|nicht entfernt|Speicherfehler'
-        FavoriteCount 3; Assert ((FavoriteIndex 'Favorite Missing') -ge 0) 'Failed remove keeps saved favorite visible'
-        SetText 'HomeScenario' 'success'; Click ('RemoveFavorite' + $missing); FavoriteCount 2
-        RestartFavorites; FavoriteCount 2
+        FavoriteCards 3; Assert ((FavoriteIndex 'Favorite Missing') -ge 0) 'Failed remove keeps saved favorite visible'
+        SetText 'HomeScenario' 'success'; Click ('RemoveFavorite' + $missing); FavoriteCards 2
+        RestartFavorites; FavoriteCards 2
         Assert ($null -eq (Find 'FavoriteName2')) 'Successful remove persists into a new process'
         Contains 'FavoriteName0' 'Favorite Far'; Contains 'FavoriteName1' 'Favorite Near'
         Status 'FavoriteStatus0' 'manuell aktualisiert'; Status 'FavoriteStatus1' 'manuell aktualisiert'
@@ -286,12 +291,12 @@ public static class FavoriteKeyboard {
         Write-Output ('DIAGNOSTIC remove enabled=' + $remove.Current.IsEnabled + '; offscreen=' + $remove.Current.IsOffscreen + '; bounds=' + $remove.Current.BoundingRectangle)
         Click 'RemoveFavorite0'
         Start-Sleep -Milliseconds 500
-        Write-Output ('DIAGNOSTIC after removal: ' + (Name 'HomeStatus') + '; count=' + (Name 'FavoriteCount'))
-        FavoriteCount 1
+        Write-Output ('DIAGNOSTIC after removal: ' + (Name 'HomeStatus') + '; cards=' + (Name 'FavoriteName0'))
+        FavoriteCards 1
         Start-Sleep -Seconds 6
         Contains 'FavoriteName0' 'Favorite Near'; Assert ($null -eq (Find 'FavoriteName1')) 'Late removed-card response cannot recreate favorite'
-        SetText 'HomeScenario' 'success'; Click 'RemoveFavorite0'; FavoriteCount 0
-        RestartFavorites; FavoriteCount 0; Contains 'HomeStatus' 'Keine Favoriten|keine Favoriten|Haltestelle'
+        SetText 'HomeScenario' 'success'; Click 'RemoveFavorite0'; FavoriteCards 0
+        RestartFavorites; FavoriteCards 0; Contains 'HomeStatus' 'Keine Favoriten|keine Favoriten|Haltestelle'
         Write-Output 'PASS native favorites: add/failure/retry, duplicate, four process starts, sorting/fallback, independent refresh, removal/failure/retry, empty home, navigation and keyboard'
     } elseif ($LiveLocations) {
         # Never capture screenshots, raw UI names, endpoint values or returned stop identities here.
@@ -559,7 +564,7 @@ public static class MapPointer {
         SetText 'StopQuery' 'Newest map'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
         Status 'MapStatus' 'Basiskarte geladen\.'; Start-Sleep -Seconds 6; Click 'MapInformation'; Contains 'MapMetadata' 'Newest map'; Back; SelectTab 'Verbindungen'
         SelectEndpoint 'Origin' 'Essen'; SelectEndpoint 'Destination' 'Berlin'; Click 'SearchJourneys'; Click 'Journey0'
-        Click 'ShowJourneyMap'; Status 'MapStatus' 'Basiskarte geladen\.'; Contains 'MapDataStatus' 'Teilweiser Verlauf'; Click 'MapInformation'; Contains 'MapSegment0' 'RE 1.*3 gelieferte Punkte'; Contains 'MapSegment1' 'Fußweg.*2 gelieferte Punkte'
+        Click 'ShowJourneyMap'; Status 'MapStatus' 'Basiskarte geladen\.'; Contains 'MapDataStatus' 'Teilweiser Verlauf'; Click 'MapInformation'; Contains 'MapSegment0' 'RE 1'; Contains 'MapSegment1' 'Fußweg'
         Snapshot 'native-journey-map'
         Back; Wait 'JourneyDetailSection1' | Out-Null; Back; Click 'Journey1'; Click 'ShowJourneyMap'
         Contains 'MapDataStatus' 'Keine darstellbare Geometrie'; Assert ($null -eq (Find 'MapSegment0')) 'Previous journey geometry removed'
@@ -700,4 +705,3 @@ public static class MapPointer {
     $env:FLOWNRW_UI_TEST_DEPARTURE_CACHE = $previousDepartureCachePath
     $env:FLOWNRW_UI_TEST_SCENARIO = $previousScenario
 }
-

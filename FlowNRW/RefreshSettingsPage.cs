@@ -12,6 +12,7 @@ public sealed class RefreshSettingsPage : ContentPage
     private readonly RefreshSettingsViewModel model;
     private readonly Picker interval;
     private readonly AsyncRelayCommand save;
+    private readonly Label status;
 
     /// <summary>Creates the interval settings page.</summary>
     /// <param name="model">Persisted shared refresh preference.</param>
@@ -32,8 +33,9 @@ public sealed class RefreshSettingsPage : ContentPage
         };
         save = new AsyncRelayCommand(model.SaveAsync, () => !model.IsSaving,
             _ => Title = "Einstellung konnte nicht gespeichert werden");
-        var status = new Label { AutomationId = "RefreshSettingsStatus" };
+        status = new Label { AutomationId = "RefreshSettingsStatus" };
         status.SetBinding(Label.TextProperty, nameof(model.Status));
+        status.IsVisible = ShowsStatus();
         var current = new Label { AutomationId = "RefreshIntervalStatus" };
         current.SetBinding(Label.TextProperty, nameof(model.Description));
         Content = new ScrollView
@@ -44,13 +46,9 @@ public sealed class RefreshSettingsPage : ContentPage
                 Spacing = 16,
                 Children =
                 {
-                    new Label { Text = "Aktualisierung", FontSize = 32, FontAttributes = FontAttributes.Bold },
-                    new Label { Text = "Gilt für geöffnete Abfahrtsmonitore und Favoriten, solange die App aktiv ist. Manuell aktualisieren bleibt jederzeit möglich." },
                     new Border { Padding = 16, Content = new VerticalStackLayout { Spacing = 12, Children = { TransitVisuals.Text("Abfahrten automatisch laden", 22, true), interval } } },
                     new Button { Text = "Speichern", AutomationId = "SaveRefreshSettings", Command = save },
-                    status, current,
-                    new Label { Text = "Standard: 60 Sekunden. Mindestens 30 Sekunden begrenzen die Datenabrufe. Während eines laufenden Abrufs wird keine zweite Anfrage gestartet." },
-                    new Label { AutomationId = "RefreshLifecycleHelp", Text = "Beim Zurückkehren werden veraltete Daten erneuert. Aus deaktiviert auch diese automatische Aktualisierung. Auf iOS kann das System gespeicherte Favoriten gelegentlich im Hintergrund aktualisieren; Zeitpunkt und Ausführung sind nicht garantiert. Bitte immer Quelle und Datenstand beachten." }
+                    status, current
                 }
             }
         };
@@ -88,6 +86,13 @@ public sealed class RefreshSettingsPage : ContentPage
     private void ModelChanged(object? sender, PropertyChangedEventArgs args)
     {
         interval.IsEnabled = !model.IsSaving;
+        if (args.PropertyName is nameof(model.Status) or nameof(model.IsSaving) or nameof(model.IsLoaded))
+            status.IsVisible = ShowsStatus();
         save.Refresh();
     }
+
+    private bool ShowsStatus() => !model.IsLoaded || model.IsSaving
+        || model.Status.Contains("konnte nicht", StringComparison.OrdinalIgnoreCase)
+        || model.Status.StartsWith("Bitte ", StringComparison.Ordinal)
+        || model.Status.Contains("gespeichert", StringComparison.OrdinalIgnoreCase);
 }
