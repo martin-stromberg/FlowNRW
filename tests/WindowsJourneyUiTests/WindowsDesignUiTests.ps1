@@ -160,7 +160,10 @@ public static class DesignWindow {
     $trackedChanges = @($statusLines | Where-Object { $_ -notmatch '^\?\?' })
     $untrackedChanges = @($statusLines | Where-Object { $_ -match '^\?\?' })
     $workingTree = if ($trackedChanges.Count -gt 0) { 'tracked files modified' } elseif ($untrackedChanges.Count -gt 0) { 'tracked files clean; untracked files present' } else { 'clean' }
-    $buildHash=(Get-FileHash (Join-Path (Split-Path $Exe) 'FlowNRW.dll') -Algorithm SHA256).Hash
+    $buildPath = Join-Path (Split-Path $Exe) 'FlowNRW.dll'
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try { $buildHash = ([BitConverter]::ToString($sha256.ComputeHash([IO.File]::ReadAllBytes($buildPath)))).Replace('-', '') }
+    finally { $sha256.Dispose() }
     function AssertOwnForeground {
         if ([DesignWindow]::GetForegroundWindow() -ne $handle) { throw 'Physical input cancelled: app is not the foreground window.' }
     }
