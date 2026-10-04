@@ -51,3 +51,29 @@ Für den nächsten nativen Lauf ergänzt der Runner gezielte Aufnahmen für Halt
 Gezielte technische Prüfung nach der Nacharbeit: `dotnet test FlowNRW.Tests/FlowNRW.Tests.csproj -c UiTest -p:TreatWarningsAsErrors=true --no-restore` bestand mit 278/278 Tests. `dotnet build FlowNRW/FlowNRW.csproj -c UiTest -p:TreatWarningsAsErrors=true --no-restore` bestand mit 0 Warnungen und 0 Fehlern. Der PowerShell-Parser bestätigte `WindowsDesignUiTests.ps1`.
 
 Der gezielte native Lauf `dark`, 430×900, 150 %, `favorite-cache-seed`, `-HomeOnly` lief danach vollständig durch. Er erzeugte 13 Bilder unter [dark-large-fixed](../../../../artifacts/step9-visual-final/dark-large-fixed), einschließlich [aufgeklappter Favoritenkarte](../../../../artifacts/step9-visual-final/dark-large-fixed/dark-430-900-150-favorite-cache-seed-home-favorite-expanded.png), [Fahrt ohne Echtzeitangabe](../../../../artifacts/step9-visual-final/dark-large-fixed/dark-430-900-150-favorite-cache-seed-monitor-unknown.png) und [Ausfall](../../../../artifacts/step9-visual-final/dark-large-fixed/dark-430-900-150-favorite-cache-seed-monitor-cancelled.png). Die neue Kopfzeile zeigt Ziel und Badge ohne die zuvor festgestellten schmalen Umbrüche. Der Monitorlauf verwendet die vollständige Vier-Abfahrten-Fixture und scrollt gezielt zu `Departure2` beziehungsweise `Departure3`; daraus folgt keine Aussage für das bewusst zweizeilige `cache-lines-bc`-Fixture.
+
+## Windows-Breitmatrix und Kontrastnachweis, 04.10.2026
+
+Ein neuer vollständiger nativer Lauf wurde für **hell, 1024×768, 100 %, `favorite-cache-seed`** mit der aktuellen `WindowsDesignUiTests.ps1` angesetzt. Das vollständige Fixture ist erforderlich, weil das Default-Fixture absichtlich unvollständige/alte Abfahrten liefert. Der Prozess fand das Fenster und prüfte erfolgreich, dass die Fixture-Steuerung verborgen ist. Vor der ersten Aufnahme brach der Runner bei seiner absichtlichen Schutzprüfung ab: `Physical input cancelled: app is not the foreground window.` Es wurden dadurch keine Eingaben, keine Aufnahmen und keine Matrixeinträge erzeugt. Der Fehler liegt in der nicht interaktiven Ausführungsumgebung dieses Laufs; er ist weder als bestandene noch als fehlgeschlagene Produktprüfung zu werten. Die dunkle 1024×768-Variante wurde aus demselben Grund nicht künstlich wiederholt.
+
+Die Touchzielprüfung ist im aktuellen Runner weiterhin als echte UIA-Boundsprüfung vorhanden: `SaveRefreshSettings`, `RefreshInterval`, `OriginSearch`, `OriginLocation`, `OriginCoordinateMode` und `SearchJourneys` müssen jeweils mindestens 44×44 logische Einheiten groß sein. Der erfolgreiche native Journey-Lauf des Nutzers (`PASS all fixture native UI scenarios`) und die bisherigen erfolgreichen Designläufe belegen diese bereits ausgeführten Assertions. Für die neuen breiten Ansichten fehlen wegen des Vordergrundabbruchs weiterhin aktuelle UIA-Bounds und Bildschirmbilder.
+
+Die Kontrastwerte der tatsächlich verwendeten Farbtokens wurden unabhängig nach WCAG-Relativluminanz berechnet; normale Schrift muss mindestens 4,5:1 erreichen. Die Werte sind eine Tokenprüfung und ersetzen keinen Bildvergleich.
+
+| Vordergrund auf Hintergrund | Kontrast | Ergebnis |
+|---|---:|---|
+| `#1A1B1F` auf `#FAF9FE` | 16,42:1 | bestanden |
+| `#414755` auf `#FAF9FE` | 8,88:1 | bestanden |
+| `#0058BC` auf `#EEEDF3` | 5,78:1 | bestanden |
+| `#F5F5F7` auf `#1C1C1E` | 15,63:1 | bestanden |
+| `#C5C7D0` auf `#1C1C1E` | 10,09:1 | bestanden |
+| `#A8C8FF` auf `#2C2C2E` | 8,21:1 | bestanden |
+| Weiß auf Linienbadges (RE/S/U/Tram/Bus/Fähre/neutral) | 5,32–9,30:1 | bestanden |
+
+Die Linienfarben stammen aus `DeparturePresentation.BadgeColor`; die hellste Kombination ist Weiß auf Fähre `#00777F` mit 5,32:1. Damit erfüllen auch die kleineren Badge-Beschriftungen die Grenze für normalen Text.
+
+### Noch offene, tatsächlich auszuführende Nachweise
+
+- Interaktiver Windows-Vollmatrixlauf mit aktuellem Build und `favorite-cache-seed`: hell und dunkel bei 1024×768, inklusive Suchrückkehr, gecachtem Monitor, Endpunkttausch, Verbindungsfavorit und verdichteter Detailansicht. Danach unabhängige Sichtprüfung der neuen Bilder gegen die Referenzen.
+- iPhone-Geräteabnahme durch den Nutzer: kleines und großes iPhone, hell und dunkel, Hoch- und Querformat; Safe Areas oben/unten und Tabbar; Dynamic Type mindestens große Stufe; VoiceOver-Namen/Reihenfolge/Status; echte GPS-Entfernung; Cacheanzeige beim Favoriten und aus der Haltestellensuche geöffneten Monitor während eines laufenden Refreshes.
+- Die Ergebnisse dieser iOS-Prüfung müssen als Gerät, iOS-Version, Thema, Textgröße, Orientierung und beobachtetes Resultat festgehalten werden. Ein Simulator- oder Windows-Bild ersetzt diese Punkte nicht.
