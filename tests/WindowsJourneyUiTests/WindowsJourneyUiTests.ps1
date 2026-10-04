@@ -678,7 +678,7 @@ public static class MapPointer {
         SetText 'DestinationText' 'Parallel Ziel'; Click 'DestinationSearch'
         SelectEndpoint 'Origin' 'Newest Start'; Click 'DestinationMatch0'
         Start-Sleep -Seconds 6
-        Contains 'OriginSelection' 'Newest Start'; Contains 'OriginMatch0' 'Newest Start'; Contains 'DestinationSelection' 'Parallel Ziel'
+        Contains 'OriginSelection' 'Newest Start'; Assert ($null -eq (Find 'OriginMatch0')) 'Selected origin closes its candidate list'; Contains 'DestinationSelection' 'Parallel Ziel'
         Write-Output 'PASS LatestInputWins and independent endpoint requests'
         foreach ($query in @('empty', 'error')) {
             SetText 'OriginText' $query; Click 'OriginSearch'; Status 'OriginStatus' 'Keine Treffer|fehlgeschlagen'
