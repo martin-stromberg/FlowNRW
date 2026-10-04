@@ -143,7 +143,7 @@ public sealed class JourneyPresentationTests
     {
         Assert.Equal("", JourneyPresentation.CompactWarning<StopEvent>(new()));
         var warning = JourneyPresentation.CompactWarning(new ProviderResult<StopEvent> { IsStale = true, IsFallback = true, Warnings = ["partial"] });
-        Assert.Equal("Zwischengespeicherte Daten · Ersatzquelle · Daten möglicherweise unvollständig", warning);
+        Assert.Equal("Daten möglicherweise unvollständig", warning);
     }
 
     /// <summary>German local dates, offset, walking and cancellations remain explicit.</summary>

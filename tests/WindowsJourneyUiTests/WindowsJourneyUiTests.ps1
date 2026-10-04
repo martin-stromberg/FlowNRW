@@ -430,7 +430,7 @@ public static class LocationPointer {
         Nearby
         Contains 'StopMatch0' 'Umgebung Süd'; Assert ((Name 'StopMatch0') -notmatch '225') 'Stop candidate omits technical identity'
         Contains 'StopMatch1' 'Umgebung Nord'; Assert ((Name 'StopMatch1') -notmatch 'unbekannt') 'Stop candidate omits unknown technical coordinate'
-        Contains 'StopSearchMetadata' 'Ersatzquelle'
+        Contains 'StopSearchMetadata' 'Daten möglicherweise unvollständig'
         $bounds = $script:window.Current.BoundingRectangle
         $transform = $script:window.GetCurrentPattern([System.Windows.Automation.TransformPattern]::Pattern)
         $transform.Resize(430,900)

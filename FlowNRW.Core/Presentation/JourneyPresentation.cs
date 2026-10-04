@@ -26,11 +26,9 @@ public static class JourneyPresentation
     public static string CompactWarning<T>(ProviderResult<T>? result)
     {
         if (result is null) return "";
-        var warnings = new List<string>();
-        if (result.IsStale) warnings.Add("Zwischengespeicherte Daten");
-        if (result.IsFallback) warnings.Add("Ersatzquelle");
-        if (result.Warnings.Count > 0) warnings.Add("Daten möglicherweise unvollständig");
-        return string.Join(" · ", warnings);
+        if (result.Warnings.Count > 0) return "Daten möglicherweise unvollständig";
+        if (result.IsStale) return "Zwischengespeicherte Daten";
+        return result.IsFallback ? "Ersatzquelle" : "";
     }
     /// <summary>Formats a compact result.</summary>
     /// <param name="journey">Journey.</param>
