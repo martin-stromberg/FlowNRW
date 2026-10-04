@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory)][string]$Exe, [string]$ScreenshotDirectory = 'docs/help/design/verification/matrix', [ValidateSet('light','dark')][string]$Theme='light', [int]$Width=430, [int]$Height=900, [ValidateSet(100,150)][int]$TextScale=100, [string]$Scenario='success', [switch]$HomeOnly)
+param([Parameter(Mandatory)][string]$Exe, [string]$ScreenshotDirectory = 'docs/help/design/verification/matrix', [ValidateSet('light','dark')][string]$Theme='light', [int]$Width=430, [int]$Height=900, [ValidateSet(100,150)][int]$TextScale=100, [string]$Scenario='success', [switch]$HomeOnly, [switch]$ConnectionOnly)
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
@@ -172,7 +172,16 @@ public static class DesignWindow {
                 $node = [System.Windows.Automation.TreeWalker]::RawViewWalker.GetParent($node)
             }
         }
-        $bounds = (Wait $id).Current.BoundingRectangle
+        $target = Wait $id
+        $bounds = $target.Current.BoundingRectangle
+        if ($target.Current.IsOffscreen -or $bounds.Width -le 0 -or $bounds.Height -le 0) {
+            $scrollItem = $null
+            if ($target.TryGetCurrentPattern([System.Windows.Automation.ScrollItemPattern]::Pattern, [ref]$scrollItem)) { $scrollItem.ScrollIntoView() }
+            else { $target.SetFocus() }
+            Start-Sleep -Milliseconds 250
+            $target = Wait $id
+            $bounds = $target.Current.BoundingRectangle
+        }
         $logicalWidth = $bounds.Width * 96 / $dpi
         $logicalHeight = $bounds.Height * 96 / $dpi
         Assert ($logicalWidth -ge 44 -and $logicalHeight -ge 44) ("Touch target $id >=44x44 ($logicalWidth x $logicalHeight)")
@@ -211,7 +220,27 @@ public static class DesignWindow {
         [pscustomobject]@{image=$prefix+'-'+$name+'.png';commit=$commit;workingTree=$workingTree;buildSha256=$buildHash;platform='Windows native MAUI';theme=$Theme;logicalWidth=$Width;logicalHeight=$Height;physicalWidth=$bounds.Width;physicalHeight=$bounds.Height;dpi=$dpi;textScale=$TextScale;scaleMethod='UiTest app text scaling';scenario=$name;reference=$reference;fixtureControls='hidden';timestamp=[DateTimeOffset]::Now.ToString('O')} | ConvertTo-Json -Compress | Add-Content (Join-Path $ScreenshotDirectory 'matrix.jsonl')
         Write-Output ('CAPTURE '+$name)
     }
-    Wait 'OpenHomeStops' | Out-Null
+    if ($ConnectionOnly) {
+        SelectTab 'Verbindungen'; Capture 'search-form' 'verbindungssuche'
+        AssertTouchTarget 'OriginSearch'
+        AssertTouchTarget 'OriginLocation'
+        AssertTouchTarget 'OriginCoordinateMode'
+        AssertTouchTarget 'SearchJourneys'
+        Click 'OriginSearch'; Status 'OriginStatus' 'Suchtext'; Capture 'search-invalid' 'verbindungssuche'
+        SelectEndpoint 'Origin' 'Essen Hauptbahnhof'; SelectEndpoint 'Destination' 'Düsseldorf Hauptbahnhof'; Capture 'search-selections' 'verbindungssuche'
+        Click 'SwapEndpoints'; Capture 'search-swapped' 'verbindungssuche'; Click 'SwapEndpoints'
+        # The endpoint swap publishes binding changes asynchronously; let both directions settle before routing.
+        Start-Sleep -Milliseconds 750
+        Click 'SearchJourneys'; Wait 'Journey0' | Out-Null; Capture 'journey-results' 'verbindungssuche'
+        Click 'ToggleConnectionFavorite'; Capture 'journey-favorite' 'verbindungssuche' 'ToggleConnectionFavorite'
+        Click 'Journey0'; Wait 'JourneyDetailSection1' | Out-Null; Capture 'journey-details' 'fahrtbegleiter_detail'
+        Capture 'journey-walk-transfer' 'fahrtbegleiter_detail' 'ShowJourneyMap'
+        Capture 'journey-walk-distance' 'fahrtbegleiter_detail' 'JourneyWalk2'
+        Capture 'journey-following-leg' 'fahrtbegleiter_detail' 'JourneyDetailSection3'
+        Contains 'JourneyLine3' '^Bus 10$'; Contains 'JourneyOperator3' '^Betreiber: Fixture Bus$'
+        Capture 'journey-transfer-summary' 'fahrtbegleiter_detail' 'JourneyDetailSection3'
+        return
+    }    Wait 'OpenHomeStops' | Out-Null
     if ($env:FLOWNRW_DESIGN_SEARCH_ONLY -eq '1') {
         SelectTab 'Verbindungen'
         AssertTouchTarget 'OriginCoordinateMode'

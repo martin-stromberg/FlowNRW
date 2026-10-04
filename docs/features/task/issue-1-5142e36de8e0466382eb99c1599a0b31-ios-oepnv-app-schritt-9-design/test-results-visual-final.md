@@ -97,3 +97,11 @@ Die Linienfarben stammen aus `DeparturePresentation.BadgeColor`; die hellste Kom
 - Die Ergebnisse dieser iOS-Prüfung müssen als Gerät, iOS-Version, Thema, Textgröße, Orientierung und beobachtetes Resultat festgehalten werden. Ein Simulator- oder Windows-Bild ersetzt diese Punkte nicht.
 
 Die manuelle Schrittfolge für den iOS-Nutzercheck ist in [ios-device-acceptance.md](ios-device-acceptance.md) aktualisiert. **Status: nicht ausgeführt; iOS-Abnahme bleibt nutzerseitig offen.** Es wurden in diesem Arbeitspaket keine iOS-Gerätebilder oder iOS-Bedienergebnisse erzeugt.
+
+## Verbindungsansichten – breite Windows-Matrix, 04.10.2026
+
+Der isolierte native Lauf **hell, 1024×768, 100 %, `favorite-cache-seed`, `-ConnectionOnly`** lief vollständig durch. Er erzeugte aktuelle Aufnahmen für Formular, ungültige Suche, gewählte Endpunkte, Start/Ziel-Tausch, Ergebnisliste, gespeicherte Verbindung und die verdichteten Detailzustände unter [wide-connection-light](../../../../artifacts/step9-visual-final/wide-connection-light).
+
+Die UIA-Prüfung bestätigte Touchziele für Startsuche (48×48), Standort (48×48), Koordinatenmodus (62×48) und die zunächst unterhalb des sichtbaren Scrollbereichs liegende Verbindungssuche (792×44). Der Runner scrollt diese Kontrolle nun vor der Boundsmessung sichtbar; das ist eine Testkorrektur, keine Produktänderung.
+
+Ein anfänglicher Lauf blieb am nicht mehr vorhandenen `JourneyDetailSection4` stehen, obwohl die vorangehenden Detailbilder bereits erzeugt waren. Die aktuelle Detailansicht endet bei `JourneyDetailSection3`; der letzte Capture referenziert daher diesen vorhandenen Abschlusszustand. Ein weiterer Lauf wurde einmal durch eine noch laufende asynchrone Bindungsaktualisierung nach zweimaligem Tausch abgebrochen. Nach einer kurzen Stabilisierung vor der Routensuche lief die gesamte Serie erfolgreich durch.
