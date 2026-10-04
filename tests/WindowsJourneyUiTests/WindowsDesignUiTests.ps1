@@ -15,7 +15,8 @@ $env:FLOWNRW_UI_TEST_SCENARIO=$Scenario
 $env:FLOWNRW_UI_TEST_FAVORITES=Join-Path $run 'favorites.json'
 $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS=Join-Path $run 'refresh.json'
 [IO.File]::WriteAllText($env:FLOWNRW_UI_TEST_REFRESH_SETTINGS,'0')
-$app=Start-Process -FilePath $Exe -PassThru -WindowStyle Hidden
+# The capture path sends physical input and therefore requires an interactive foreground window.
+$app=Start-Process -FilePath $Exe -PassThru
 try {
     $condition=New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty,$app.Id)
     $script:window=$null

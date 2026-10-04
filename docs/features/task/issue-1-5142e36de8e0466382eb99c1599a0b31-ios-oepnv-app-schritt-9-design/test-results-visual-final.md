@@ -74,7 +74,8 @@ Die Linienfarben stammen aus `DeparturePresentation.BadgeColor`; die hellste Kom
 
 ### Noch offene, tatsächlich auszuführende Nachweise
 
-- Interaktiver Windows-Vollmatrixlauf mit aktuellem Build und `favorite-cache-seed`: hell und dunkel bei 1024×768, inklusive Suchrückkehr, gecachtem Monitor, Endpunkttausch, Verbindungsfavorit und verdichteter Detailansicht. Danach unabhängige Sichtprüfung der neuen Bilder gegen die Referenzen.
+- Die breite Home-Matrix lief mit aktuellem Build und `favorite-cache-seed` erfolgreich: hell und dunkel bei 1024×768, 100 %, jeweils mit `-HomeOnly`. Die Bilder liegen unter `artifacts/step9-visual-final/wide-visible-light` und `artifacts/step9-visual-final/wide-visible-dark`.
+- Für Suchrückkehr, gecachten Haltestellenmonitor, Endpunkttausch, Verbindungsfavorit und verdichtete Detailansicht fehlen weiterhin die Bilder aus dem vollständigen, nicht auf Home begrenzten Matrixlauf. Danach folgt die unabhängige Sichtprüfung gegen die Referenzen.
 - iPhone-Geräteabnahme durch den Nutzer: kleines und großes iPhone, hell und dunkel, Hoch- und Querformat; Safe Areas oben/unten und Tabbar; Dynamic Type mindestens große Stufe; VoiceOver-Namen/Reihenfolge/Status; echte GPS-Entfernung; Cacheanzeige beim Favoriten und aus der Haltestellensuche geöffneten Monitor während eines laufenden Refreshes.
 - Die Ergebnisse dieser iOS-Prüfung müssen als Gerät, iOS-Version, Thema, Textgröße, Orientierung und beobachtetes Resultat festgehalten werden. Ein Simulator- oder Windows-Bild ersetzt diese Punkte nicht.
 
