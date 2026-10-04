@@ -6,9 +6,9 @@ namespace FlowNRW;
 /// <summary>Shared native text and surface roles from the accepted design reference.</summary>
 internal static class TransitVisuals
 {
-    internal static Border Candidate(FlowNRW.Core.Transit.Address candidate, Button action, string suffix = "")
+    internal static Border Candidate(FlowNRW.Core.Transit.Address candidate, Button action, string suffix = "", bool showTechnicalIdentity = true)
     {
-        var description = FlowNRW.Core.Presentation.JourneyPresentation.Address(candidate) + suffix;
+        var description = (showTechnicalIdentity ? FlowNRW.Core.Presentation.JourneyPresentation.Address(candidate) : candidate.Name) + suffix;
         action.Text = candidate.Name + suffix;
         action.Padding = new Thickness(0);
         action.SetAppThemeColor(Button.BackgroundColorProperty, Colors.Transparent, Colors.Transparent);

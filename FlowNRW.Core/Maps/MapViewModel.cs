@@ -21,10 +21,10 @@ public sealed record MapStation(int Index, Address Candidate)
     {
         get { return MapViewModel.IsMappable(Candidate.Stop?.Coordinate ?? Candidate.Coordinate) ? Candidate.Stop?.Coordinate ?? Candidate.Coordinate : null; }
     }
-    /// <summary>Accessible identity and missing-position explanation.</summary>
+    /// <summary>Readable station label and missing-position explanation.</summary>
     public string Label
     {
-        get { return JourneyPresentation.Address(Candidate) + (Position is null ? " · Keine Kartenposition vorhanden" : ""); }
+        get { return Candidate.Name + (Position is null ? " · Keine Kartenposition vorhanden" : ""); }
     }
 }
 

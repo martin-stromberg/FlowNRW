@@ -72,6 +72,8 @@ public sealed class StopMonitorViewModel : ObservableObject
     }
     /// <summary>Whether the location-to-nearby request chain is running.</summary>
     public bool IsNearbyBusy { get; private set; }
+    /// <summary>Whether the latest explicitly requested nearby lookup needs user attention.</summary>
+    public bool IsNearbyFailure { get; private set; }
     /// <summary>Complete selected stop identity.</summary>
     public Stop? SelectedStop { get; private set; }
     /// <summary>Selected stop title.</summary>
@@ -113,7 +115,7 @@ public sealed class StopMonitorViewModel : ObservableObject
         Lookup.CancelPending();
         var version = nearbyRevision;
         using var source = new CancellationTokenSource(); nearbyRequest = source;
-        IsNearbyBusy = true; NearbyStatus = "Standort wird ermittelt …"; RefreshSearchBindings();
+        IsNearbyBusy = true; IsNearbyFailure = false; NearbyStatus = "Standort wird ermittelt …"; RefreshSearchBindings();
         try
         {
             var position = await location.GetCurrentAsync(source.Token);
@@ -126,6 +128,7 @@ public sealed class StopMonitorViewModel : ObservableObject
             NearbyResult = result;
             NearbyStops = result.Items.Where(x => !string.IsNullOrWhiteSpace(x.Stop?.Id)).Select(x => new Address { Name = x.Stop!.Name, Stop = x.Stop, Coordinate = x.Stop.Coordinate }).ToArray();
             nearbyActive = true;
+            IsNearbyFailure = false;
             NearbyStatus = NearbyStops.Count == 0 ? "Keine Haltestellen in der Nähe gefunden." : $"{NearbyStops.Count} nahe Haltestellen gefunden.";
             NearbyStatus += position.AccuracyDescription;
         }
@@ -160,12 +163,13 @@ public sealed class StopMonitorViewModel : ObservableObject
     {
         CancelNearbyPending();
         nearbyActive = false; NearbyStops = []; NearbyResult = null;
-        NearbyStatus = "Standort nur nach Aktion verwenden.";
+        IsNearbyFailure = false; NearbyStatus = "Standort nur nach Aktion verwenden.";
         RefreshSearchBindings();
     }
 
     private void SetNearbyFailure(string description)
     {
+        IsNearbyFailure = true;
         NearbyStatus = description + (Stops.Count > 0 ? " Vorherige Ergebnisse werden angezeigt; keine neue Umgebung ermittelt." : "");
         RefreshSearchBindings();
     }
@@ -173,7 +177,7 @@ public sealed class StopMonitorViewModel : ObservableObject
     private void RefreshSearchBindings()
     {
         Notify(nameof(Stops)); Notify(nameof(SearchStatus)); Notify(nameof(SearchMetadata));
-        Notify(nameof(NearbyStatus)); Notify(nameof(NearbyResult)); Notify(nameof(NearbyStops)); Notify(nameof(IsNearbyBusy));
+        Notify(nameof(NearbyStatus)); Notify(nameof(NearbyResult)); Notify(nameof(NearbyStops)); Notify(nameof(IsNearbyBusy)); Notify(nameof(IsNearbyFailure));
         NearbyCommand?.Refresh();
     }
 

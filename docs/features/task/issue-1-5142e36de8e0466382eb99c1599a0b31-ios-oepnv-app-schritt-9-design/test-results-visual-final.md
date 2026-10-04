@@ -1,5 +1,22 @@
 # Ergebnis: aktuelle Windows-Bildprüfung
 
+## Aktueller Ergänzungsnachweis: heller Breitlauf
+
+Unabhängig geprüft am 04.10.2026: `artifacts/step9-visual-final/wide-full-light/` enthält 23 PNGs und 23 Manifestzeilen für hell, 1024×768, DPI 96, 100 % Textskalierung. Die Bilder sind dem Basiscommit `81cdd69ae83f58133becfcd077deebaf0a1c36dc` und dem Build-SHA256 `D5523269D832EACCB89124BB7C49DD21DAC1364A7F762364EDBE98688BFB9B8B` zugeordnet. Die nachfolgende ältere Beschreibung des Vordergrundabbruchs betrifft einen früheren Versuch und beschreibt diesen neueren Lauf nicht.
+
+| Bereich | Tatsächlicher Nachweis im neueren Lauf | Grenze |
+|---|---|---|
+| Startseite/Monitor | Bilder für Karten ein-/aufgeklappt, Entfernungen, Ist-/Sollzeit, fehlende Echtzeit und Ausfall; normaler Monitor ohne wiederkehrenden Erfolgs-/Intervalltext | Dateinamen „distance-unknown“ allein belegen den Zustand nicht, da Standortermittlung vorher abgeschlossen sein kann |
+| Haltestellensuche/Rückkehr | `stop-list` und `stop-list-returned` zeigen beide Treffer vor/nach Monitoraufruf | Suchtext wird zum gewählten Stationsnamen; kein Prozessneustart |
+| Haltestellenmonitor | `stop-monitor-cached` zeigt vorhandene Abfahrten | Runner wartet auf `Departure0`; kein belegter verzögerter Wiederholungsaufruf und damit kein visueller Cache-Frühanzeigenachweis |
+| Kartenpfade | Stationen, native Liste, Monitor nach Stationswahl, Offlinekarte und Karte ohne Position aufgenommen | Synthetische Kacheln; kein echter Kartenanbieter-Nachweis |
+| Monitorfehler | Verständlicher Fehler und erhaltene letzte Abfahrten sichtbar | Kein leerer Fehler-Erstaufruf in diesem Bild |
+| Touch/Fokus | Log bestätigt Speichern 792×44, Intervallauswahl 766×70, Startsuche/Standort jeweils 48×48, Koordinatenschalter 62×48; nativer Tastaturfokus auf Speichern | Kein aktueller PASS für `SearchJourneys` oder die neuen Verbindungsaktionen in diesem Log |
+
+`run.log` endet nach `PASS Touch target OriginCoordinateMode >=44x44 (62 x 48)`. Es enthält zuvor `CAPTURE map-offline`, `CAPTURE map-no-position`, `CAPTURE monitor-provider-error` und `CAPTURE search-form`. Deshalb wird dieser Lauf als Teilnachweis bis zum Suchformular geführt, ohne vollständigen Runner-PASS oder Verbindungsabnahme zu behaupten.
+
+Die unabhängige Sichtprüfung öffnete zwölf ausgewählte Bilder dieser Gruppe und die intakten hellen Abfahrts-/Kartenreferenzen. Ergebnis und genaue Auswahl stehen in [review-visual-final.md](review-visual-final.md). Konkrete Restbefunde sind technische Identitäten/Koordinaten in Such- und Kartenlisten sowie überlange Quellen- und wiederkehrende Erfolgstexte in der Haltestellensuche. Die weiteren Matrixvarianten, ein belegter Cache während Refresh, aktuelle Verbindungsbilder und die nutzerseitige iOS-Abnahme bleiben offen. Es wurden für diese Dokumentationsprüfung keine Builds oder Tests neu ausgeführt.
+
 Stand: 04.10.2026. Die Prüfung nutzte `tests/WindowsJourneyUiTests/WindowsDesignUiTests.ps1` mit dem vorhandenen nativen `UiTest`-Build. Kein Produktcode wurde für diese Läufe verändert. Buildzuordnung: Commit `6eb05c25611506f176c6250812fe70227bbd3d2e`, SHA-256 der `FlowNRW.dll` `832B4C162E49BFA959AB9A7EC7CDDF283BA0881C3CDF7581A1ED5B91E0F38603`, Windows native MAUI, DPI 96. Die Matrixdateien geben Fenstermaße, Thema, Textskalierung und Szenario an. Der Runner hardcodiert ein veraltetes `workingTree`-Feld; die erzeugten JSONL-Manifeste wurden nach Prüfung von `git status` auf `tracked files clean; untracked files present` berichtigt.
 
 ## Läufe und Artefakte

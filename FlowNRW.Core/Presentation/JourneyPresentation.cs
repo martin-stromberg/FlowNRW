@@ -19,6 +19,19 @@ public static class JourneyPresentation
     /// <param name="result">Provider response.</param>
     /// <returns>Source, age and warnings.</returns>
     public static string Metadata<T>(ProviderResult<T> result) => $"Quelle: {result.Source}; Datenstand: {Time(result.RetrievedAt)}; Datenalter: {Math.Max(0, (DateTimeOffset.UtcNow - result.RetrievedAt).TotalMinutes):0} Min." + (result.IsFallback ? " Ersatzquelle (Fallback)." : "") + (result.IsStale ? " Veralteter Cache." : "") + (result.Warnings.Count > 0 ? " Anbieterwarnung: Daten sind möglicherweise unvollständig; eine Quelle konnte keine aktuellen Daten liefern." : "");
+    /// <summary>Formats only the actionable freshness and completeness warning for a compact result list.</summary>
+    /// <typeparam name="T">Provider item type.</typeparam>
+    /// <param name="result">Optional provider response.</param>
+    /// <returns>Empty text for a current complete primary response.</returns>
+    public static string CompactWarning<T>(ProviderResult<T>? result)
+    {
+        if (result is null) return "";
+        var warnings = new List<string>();
+        if (result.IsStale) warnings.Add("Zwischengespeicherte Daten");
+        if (result.IsFallback) warnings.Add("Ersatzquelle");
+        if (result.Warnings.Count > 0) warnings.Add("Daten möglicherweise unvollständig");
+        return string.Join(" · ", warnings);
+    }
     /// <summary>Formats a compact result.</summary>
     /// <param name="journey">Journey.</param>
     /// <returns>Journey label.</returns>

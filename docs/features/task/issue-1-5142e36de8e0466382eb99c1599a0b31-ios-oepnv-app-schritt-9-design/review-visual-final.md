@@ -1,5 +1,28 @@
 # Unabhängige Prüfung der visuellen Nacharbeit
 
+## Ergänzende unabhängige Breitprüfung, 04.10.2026
+
+Die folgenden Feststellungen ergänzen und aktualisieren die älteren Evidenzgrenzen dieses Berichts. Tatsächlich geöffnet wurden aus `artifacts/step9-visual-final/wide-full-light/` die zwölf Bilder `home-favorite-expanded`, `home-favorite-collapsed`, `home-distance-known`, `monitor-cancelled`, `stop-list`, `stop-list-returned`, `stop-monitor-cached`, `map-stations`, `map-native-list`, `map-offline`, `map-no-position` und `monitor-provider-error`. Vergleichsgrundlage waren außerdem die intakten Originalbilder `abfahrtsmonitor_live/screen.png` und `umgebungskarte_stationen/screen.png` aus dem entpackten aktualisierten Stitch-Entwurf sowie `docs/design/acceptance.md`.
+
+Der geprüfte Ordner enthält 23 PNGs mit 23 zugehörigen Manifestzeilen. Zuordnung: Basiscommit `81cdd69ae83f58133becfcd077deebaf0a1c36dc`, Build-SHA256 `D5523269D832EACCB89124BB7C49DD21DAC1364A7F762364EDBE98688BFB9B8B`, Windows MAUI, hell, 1024×768, DPI 96, Textskalierung 100 %. Das Manifest nennt einen sauberen versionierten Arbeitsbaum mit unversionierten Dateien. Dies ist kein vollständiger Matrix-PASS: `run.log` endet nach der erfolgreichen Größenprüfung von `OriginCoordinateMode`. Offlinekarte, Karte ohne Position, Monitorfehler und Suchformular wurden vorher aufgenommen. Ein Abbruch vor oder im Offlinezweig ist für diesen konkreten Lauf nicht belegt.
+
+### Visuell bestätigt
+
+- Breite Favoriten- und Monitoransichten übernehmen gerundete Karten, farbige Linienkennzeichnungen, hervorgehobene Zeiten und die abgestufte helle Flächenhierarchie des Entwurfs. Ziele, Badges und Zeitangaben überdecken sich in den betrachteten Bildern nicht. Die Smartphone-Referenz wird dabei als breite, auf 840 Einheiten begrenzte Inhaltsspalte adaptiert.
+- Die eingeklappte Karte zeigt Linien und Zeiten nebeneinander; aufgeklappt erscheint stattdessen die Abfahrtsliste. Die abweichende Soll-Zeit ist klein und durchgestrichen unter der Ist-Zeit. Das unveränderte Gleis erscheint einmal, ein Gleiswechsel mit geplantem Wert. Der Ausfall ist zusätzlich zur gestrichenen Zeit als „Fahrt fällt aus“ lesbar.
+- Nach Rückkehr aus dem Monitor sind beide Suchtreffer wieder sichtbar. Das Eingabefeld enthält dabei den ausgewählten Stationsnamen. Das belegt erhaltene Treffer im aufgezeichneten Rückweg.
+- Karte und native Listenalternative sind aufgenommen. Der Offlinezustand nennt die fehlende/veraltete Basiskarte und hält Stationsmarker sichtbar. Bei fehlenden Positionen zeigt die Karte keine erfundenen Marker. Die OSM-Attribution bleibt sichtbar. Synthetische Kacheln beweisen keine echte Kartendarstellung und keine echten geografischen Daten.
+- Der Providerfehler bleibt verständlich und gleichzeitig bleiben zuletzt bekannte Abfahrten sichtbar. Die normalen Monitorbilder zeigen keinen wiederkehrenden Aktualisierungserfolg oder Intervalltext mehr.
+
+### Restbefunde und Nachweisgrenzen
+
+1. **Textbereinigung noch unvollständig:** Suchtreffer und native Kartenliste zeigen weiterhin Providerkennung, Stop-ID/DHID und Koordinaten. Der Suchkopf enthält einen langen Quellen-/Fallback-/Altersabsatz sowie die wiederkehrenden Texte „Standort nur nach Aktion verwenden.“ und „Endpunkt übernommen.“ Das widerspricht dem Wunsch nach weniger technischen Alltagsinformationen. Fehler, veraltete/unvollständige Ergebnisse und fehlende Positionen müssen bei einer Verdichtung weiter verständlich bleiben; sichtbare Kartenattribution bleibt erforderlich.
+2. **Cachebild nicht hinreichend:** `stop-monitor-cached` zeigt einen gefüllten Monitor. Im Runner ist es aber der erste dort aufgezeichnete Öffnungsvorgang, und vor dem Bild wird auf `Departure0` gewartet. Das beweist weder einen erneuten Aufruf derselben Station noch eine sofortige Cacheanzeige während eines verzögerten Refreshes.
+3. **Unbekannte Entfernung nicht pauschal belegt:** Die Bilder mit Namen `home-distance-unknown` können bereits bekannte Entfernungen zeigen, weil die Standortbestimmung automatisch abgeschlossen ist. Die tatsächlich betrachtete Startansicht zeigt „Luftlinie: 111 m“ und einen separaten Hinweis auf einen Favoriten ohne Koordinaten. Der Dateiname allein ist kein Beleg des unbekannten Zustands aller Karten.
+4. Für neue Verbindungsfavoriten, Endpunkttausch und Verbindungsdetails wurde in dieser Prüfung kein aktuelles Bild abgenommen. Auch dunkel, schmal und große Schrift für die neu aufgenommenen Haltestellen-/Kartenpfade sind hier nicht nachgewiesen. Es erfolgte keine iOS-Prüfung.
+
+**Ergebnis:** Der helle breite Haltestellen-/Karten-/Abfahrtsstand ist teilweise visuell bestätigt; Suchrückkehr und erhaltene Fehlerdaten sind konkret sichtbar. Gesamtfreigabe von Schritt 9 bleibt wegen der genannten Textbefunde, Cache-/Verbindungs- und Matrixlücken sowie der offenen iOS-Geräteabnahme ausstehend. Bereits dokumentierte Token-Kontrastwerte werden durch diese Bildprüfung weder ersetzt noch erneut gemessen.
+
 Stand: 04.10.2026. Geprüft: uncommitted Änderungen an `DepartureCardView.cs`, `TransitVisuals.cs` und `WindowsDesignUiTests.ps1` auf Basis von `6eb05c2`; `docs/design/acceptance.md`, `inventory-visual-final.md` und `test-results-visual-final.md`.
 
 ## Status

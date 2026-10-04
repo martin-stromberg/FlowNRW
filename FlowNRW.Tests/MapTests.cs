@@ -23,6 +23,7 @@ public sealed class MapTests
         map.ShowStops(); var old = map.Session;
         Assert.Same(first, map.Stations[0].Candidate);
         Assert.Equal(new GeoCoordinate(51, 7), map.Stations[0].Position);
+        Assert.Equal("Same", map.Stations[0].Label);
         Assert.Null(map.Stations[1].Position); Assert.Contains("Keine Kartenposition", map.Stations[1].Label);
         await map.SelectAsync(old, -1); await map.SelectAsync(old, 20); Assert.Empty(departures.Pending);
         var opening = map.SelectAsync(old, 1); Assert.Same(second.Stop, departures.Stops[0]);

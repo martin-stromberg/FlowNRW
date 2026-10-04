@@ -78,7 +78,7 @@ public sealed class MapPage : ContentPage
                 LineBreakMode = LineBreakMode.WordWrap,
                 AutomationId = "MapStation" + station.Index,
                 Command = new AsyncRelayCommand(() => model.SelectAsync(session, station.Index), () => true, failure: _ => status.Text = "Monitor konnte nicht geöffnet werden.")
-            }, station.Position is null ? " · Keine Kartenposition vorhanden" : ""));
+            }, station.Position is null ? " · Keine Kartenposition vorhanden" : "", showTechnicalIdentity: false));
         layout.Children.Add(actions);
         layout.Children.Add(map);
         layout.Children.Add(new Label { Text = options.Attribution, AutomationId = "MapAttribution", FontSize = 13 });

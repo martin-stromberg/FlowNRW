@@ -137,6 +137,15 @@ public sealed class JourneySearchViewModelTests
 /// <summary>Display semantics around midnight and unknown realtime.</summary>
 public sealed class JourneyPresentationTests
 {
+    /// <summary>Only non-current or incomplete provider data receives a compact list warning.</summary>
+    [Fact]
+    public void CompactsStaleFallbackAndIncompleteWarnings()
+    {
+        Assert.Equal("", JourneyPresentation.CompactWarning<StopEvent>(new()));
+        var warning = JourneyPresentation.CompactWarning(new ProviderResult<StopEvent> { IsStale = true, IsFallback = true, Warnings = ["partial"] });
+        Assert.Equal("Zwischengespeicherte Daten · Ersatzquelle · Daten möglicherweise unvollständig", warning);
+    }
+
     /// <summary>German local dates, offset, walking and cancellations remain explicit.</summary>
     [Fact]
     public void DisplaysMidnightOffsetAndUnknownRealtime()

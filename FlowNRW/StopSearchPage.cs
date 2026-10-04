@@ -57,7 +57,6 @@ public sealed class StopSearchPage : ContentPage
         status.SetBinding(Label.TextProperty, nameof(model.SearchStatus));
         layout.Children.Add(status);
         var metadata = new Label { AutomationId = "StopSearchMetadata" };
-        metadata.SetBinding(Label.TextProperty, nameof(model.SearchMetadata));
         layout.Children.Add(metadata);
         var showMap = new AsyncRelayCommand(async () => { map.ShowStops(); await Shell.Current.GoToAsync("map"); },
             () => model.Stops.Count > 0 && !model.Lookup.IsBusy && !model.IsNearbyBusy, _ => Title = "Karte konnte nicht geöffnet werden");
@@ -78,13 +77,48 @@ public sealed class StopSearchPage : ContentPage
                     AutomationId = "StopMatch" + index,
                     Command = new AsyncRelayCommand(() => model.OpenAsync(candidate), () => !model.IsBusy,
                         _ => Title = "Monitor konnte nicht geöffnet werden")
-                }, model.DistanceLabel(candidate)));
+                }, model.DistanceLabel(candidate), showTechnicalIdentity: false));
             }
         }
-        model.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(model.Stops)) RenderMatches(); };
+        void RefreshInformation()
+        {
+            nearbyStatus.IsVisible = ShowsNearbyStatus();
+            status.IsVisible = ShowsSearchStatus();
+            metadata.Text = SearchWarning();
+            metadata.IsVisible = !string.IsNullOrWhiteSpace(metadata.Text);
+        }
+        model.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(model.Stops)) RenderMatches();
+            RefreshInformation();
+        };
         RenderMatches();
+        RefreshInformation();
         layout.Children.Add(matches);
         Content = TransitVisuals.Page(layout);
+    }
+
+    private bool ShowsNearbyStatus()
+    {
+        return model.IsNearbyBusy || model.IsNearbyFailure || model.NearbyResult is { Items.Count: 0 };
+    }
+
+    private bool ShowsSearchStatus()
+    {
+        if (model.IsNearbyBusy || model.NearbyResult is not null
+            || string.Equals(model.SearchStatus, model.NearbyStatus, StringComparison.Ordinal)) return false;
+        var value = model.SearchStatus;
+        return !string.IsNullOrWhiteSpace(value)
+            && !value.StartsWith("Adresse oder Haltestelle suchen", StringComparison.OrdinalIgnoreCase)
+            && !value.StartsWith("Bitte einen Treffer auswählen", StringComparison.OrdinalIgnoreCase)
+            && !value.StartsWith("Standort nur nach Aktion", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string SearchWarning()
+    {
+        return model.NearbyResult is { } nearby
+            ? JourneyPresentation.CompactWarning(nearby)
+            : JourneyPresentation.CompactWarning(model.Lookup.Result);
     }
 
     /// <inheritdoc />
