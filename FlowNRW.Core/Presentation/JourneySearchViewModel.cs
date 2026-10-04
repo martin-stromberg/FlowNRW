@@ -49,6 +49,12 @@ public sealed class JourneySearchViewModel : ObservableObject
             return Result is null ? "" : JourneyPresentation.Metadata(Result);
         }
     }
+    /// <summary>Gets a compact result-data warning suitable for primary journey views.</summary>
+    /// <returns>A concise warning, or an empty string for current complete data.</returns>
+    public string CompactWarning
+    {
+        get { return JourneyPresentation.CompactWarning(Result); }
+    }
     /// <summary>Route action.</summary>
     public AsyncRelayCommand SearchCommand { get; }
     /// <summary>Whether routing uses the current time.</summary>
@@ -222,5 +228,5 @@ public sealed class JourneySearchViewModel : ObservableObject
     }
     private void EndpointChanged(object? sender, EventArgs e) { CancelPending(); Result = null; SelectedJourney = null; SetStatus("Bitte Start und Ziel auswählen oder Verbindung suchen."); Refresh(); }
     private void SetStatus(string value) { Status = value; Notify(nameof(Status)); }
-    private void Refresh() { Notify(nameof(Result)); Notify(nameof(Journeys)); Notify(nameof(Metadata)); Notify(nameof(SelectedJourney)); Notify(nameof(IsBusy)); Notify(nameof(CanSearch)); SearchCommand.Refresh(); }
+    private void Refresh() { Notify(nameof(Result)); Notify(nameof(Journeys)); Notify(nameof(Metadata)); Notify(nameof(CompactWarning)); Notify(nameof(SelectedJourney)); Notify(nameof(IsBusy)); Notify(nameof(CanSearch)); SearchCommand.Refresh(); }
 }

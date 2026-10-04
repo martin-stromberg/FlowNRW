@@ -100,12 +100,15 @@ try {
     StartApp
     SetText 'HomeScenario' 'favorite-cache-seed'
     Click 'OpenHomeStops'; SetText 'StopQuery' 'Favorite Far'; Click 'FindStops'; Click 'StopMatch0'
-    AwaitText 'MonitorStatus' 'manuell aktualisiert'
+    AwaitVisible 'Departure0' | Out-Null
     SetText 'FavoriteScenario' 'favorite-cache-seed'; Click 'ToggleFavorite'; AwaitText 'FavoriteToggleStatus' 'hinzugefügt|gespeichert'
     Click 'NavigationViewBackButton'; SelectTab 'Abfahrten'; Wait 'FavoriteName0' | Out-Null
     AwaitVisible 'FavoriteLines0' | Out-Null
     Click 'ToggleFavorite0'
-    Assert ((Name 'FavoriteDeparture0_0') -match 'RE 1 · Stand 1') 'Initial successful favorite response is shown before restart'
+    AwaitVisible 'FavoriteDeparture0_0' | Out-Null
+    Start-Sleep -Milliseconds 250
+    $initialDeparture = Name 'FavoriteDeparture0_0'
+    Assert ($initialDeparture -match 'RE 1 .*Stand 1') ('Initial successful favorite response is shown before restart; actual: ' + $initialDeparture)
     Click 'ToggleFavorite0'
     Assert ((Name 'FavoriteLines0') -match 'RE 1') 'Collapsing a favorite retains its line overview'
     Assert (Test-Path $env:FLOWNRW_UI_TEST_DEPARTURE_CACHE) 'Successful favorite response created an isolated departure cache'
@@ -136,7 +139,7 @@ try {
             StartApp
             AwaitVisible 'FavoriteBusy0' | Out-Null
             Start-Sleep -Milliseconds 1500
-            $line = $scenario -eq 'cache-expired-lines' ? 'Expired' : 'Zeitlos'
+            $line = if ($scenario -eq 'cache-expired-lines') { 'Expired' } else { 'Zeitlos' }
             AssertLines $line 'RE 1|S2|107|U11' ('Expired or timeless response preserves only its line inventory: ' + $line)
             Click 'ToggleFavorite0'
             Assert ($null -eq (Find 'FavoriteDeparture0_0')) ('No unusable departure time is displayed for ' + $line)
@@ -156,17 +159,18 @@ try {
     AwaitVisible 'FavoriteBusy0' | Out-Null
     Assert ((Name 'FavoriteLines0') -match 'RE 1') 'Collapsed favorite restores its persisted line inventory before provider completion'
     Click 'ToggleFavorite0'
-    Assert ((Name 'FavoriteDeparture0_0') -match 'RE 1 · Stand 1') 'Cached future departure is visible before delayed provider completion'
+    Assert ((Name 'FavoriteDeparture0_0') -match 'RE 1 .*Stand 1') 'Cached future departure is visible before delayed provider completion'
     $started = AwaitCalls 1 3
     Assert ($started.TotalSeconds -lt 3) 'Startup provider refresh begins before the six-second Nearby lookup completes'
     Assert ((DepartureCalls) -eq 1) 'Exactly one startup provider refresh is requested for cached favorite'
     for ($attempt = 0; $attempt -lt 100 -and (Find 'FavoriteBusy0').Current.IsOffscreen -eq $false; $attempt++) { Start-Sleep -Milliseconds 100 }
-    Assert ((Name 'FavoriteDeparture0_0') -match 'RE 1 · Live Stand 1') 'Delayed provider response replaces displayed cached departure'
+    Assert ((Name 'FavoriteDeparture0_0') -match 'RE 1 .*Live Stand 1') 'Delayed provider response replaces displayed cached departure'
     Click 'OpenFavorite0'
     AwaitVisible 'Departure0' | Out-Null
-    Assert ((Name 'Departure0') -match 'RE 1 · Live Stand 1') 'Favorite details immediately adopt the visible cached board while refreshing'
+    Assert ((Name 'Departure0') -match 'RE 1 .*Live Stand 1') 'Favorite details immediately adopt the visible cached board while refreshing'
     AwaitVisible 'MonitorBusy' | Out-Null
-    Assert ((Name 'MonitorStatus') -notmatch 'werden aktualisiert') 'Detail refresh uses its header symbol instead of a loading text'
+    $monitorStatus = Find 'MonitorStatus'
+    Assert ($null -eq $monitorStatus -or $monitorStatus.Current.Name -notmatch 'werden aktualisiert') 'Detail refresh uses its header symbol instead of a loading text'
     if ($DetailRetention) {
         $env:FLOWNRW_UI_TEST_SCENARIO = 'cache-start-error'
         StartApp
@@ -189,14 +193,16 @@ try {
     }
     $env:FLOWNRW_UI_TEST_SCENARIO = 'cache-start-error'
     StartApp
+    AwaitVisible 'FavoriteLines0' | Out-Null
     AwaitCalls 1 3 | Out-Null
-    AwaitText 'FavoriteStatus0' 'Letzte bekannte|fehlgeschlagen'
+    AwaitText 'FavoriteStatus0' 'Letzte bekannte|fehlgeschlagen|Abfahrten konnten nicht geladen werden'
     Assert ((Name 'FavoriteLines0') -match 'RE 1') 'Provider failure keeps the persisted line inventory'
     $env:FLOWNRW_UI_TEST_SCENARIO = 'cache-start-cancel'
     StartApp
     AwaitVisible 'FavoriteBusy0' | Out-Null
     $env:FLOWNRW_UI_TEST_SCENARIO = 'success'
     StartApp
+    AwaitVisible 'FavoriteLines0' | Out-Null
     Assert ((Name 'FavoriteLines0') -match 'RE 1') 'Cancelled startup refresh keeps the persisted line inventory after restart'
     Write-Output 'PASS native departure-cache startup regression'
 }

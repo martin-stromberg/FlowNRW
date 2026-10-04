@@ -31,7 +31,7 @@ public sealed class JourneyCardView : Border
         }
         layout.Children.Add(badges);
         layout.Children.Add(TransitVisuals.Secondary("Ist: " + Clock(first?.Realtime.ActualTime) + " → " + Clock(last?.Realtime.ActualTime), id + "Realtime"));
-        if (first?.PlannedTime is { } date) layout.Children.Add(TransitVisuals.Secondary(JourneyPresentation.Time(date), id + "Date"));
+        if (first?.PlannedTime is { } date) layout.Children.Add(TransitVisuals.Secondary("Abfahrt: " + TimeZoneInfo.ConvertTime(date, TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin")).ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture), id + "Date"));
         if (journey.Legs.Any(leg => leg.Departure.Realtime.Cancelled == true || leg.Arrival.Realtime.Cancelled == true))
             layout.Children.Add(TransitVisuals.Text("Ausfall gemeldet", 15, true));
         open = new Button { Text = "Verbindung öffnen", AutomationId = id, Command = command, LineBreakMode = LineBreakMode.WordWrap };

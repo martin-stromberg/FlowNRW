@@ -40,12 +40,16 @@ public sealed class StopSearchPage : ContentPage
         var input = new Entry { AutomationId = "StopQuery", Placeholder = "z. B. Essen Hauptbahnhof" };
         SemanticProperties.SetDescription(input, "Haltestellenname oder Ort");
         input.SetBinding(Entry.TextProperty, "Lookup.Text");
+        var showMap = new AsyncRelayCommand(async () => { map.ShowStops(); await Shell.Current.GoToAsync("map"); },
+            () => model.Stops.Count > 0 && !model.Lookup.IsBusy && !model.IsNearbyBusy, _ => Title = "Karte konnte nicht geöffnet werden");
+        model.PropertyChanged += (_, _) => showMap.Refresh();
         var find = new Button { Text = "⌕", AutomationId = "FindStops", Command = model.Lookup.SearchCommand, HeightRequest = 48, WidthRequest = 48, Padding = new Thickness(0) };
         SemanticProperties.SetDescription(find, "Haltestelle suchen");
         var nearby = new Button { Text = "⌖", AutomationId = "FindNearbyStops", Command = model.NearbyCommand, HeightRequest = 48, WidthRequest = 48, Padding = new Thickness(0) };
         SemanticProperties.SetDescription(nearby, "Haltestellen in meiner Nähe");
-        var inputRow = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto), new(GridLength.Auto)], ColumnSpacing = 8 };
-        inputRow.Add(input, 0); inputRow.Add(find, 1); inputRow.Add(nearby, 2); searchCard.Children.Add(inputRow);
+        var showMapButton = TransitVisuals.SecondaryAction("⌖", "Haltestellen auf Karte zeigen", "ShowStopMap", showMap);
+        var inputRow = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto), new(GridLength.Auto), new(GridLength.Auto)], ColumnSpacing = 8 };
+        inputRow.Add(input, 0); inputRow.Add(find, 1); inputRow.Add(nearby, 2); inputRow.Add(showMapButton, 3); searchCard.Children.Add(inputRow);
         var nearbyStatus = new Label { AutomationId = "NearbyStatus" }; nearbyStatus.SetBinding(Label.TextProperty, nameof(model.NearbyStatus)); layout.Children.Add(nearbyStatus);
         var nearbyBusy = new ActivityIndicator { AutomationId = "NearbyBusy" };
         nearbyBusy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(model.IsNearbyBusy)); nearbyBusy.SetBinding(IsVisibleProperty, nameof(model.IsNearbyBusy)); layout.Children.Add(nearbyBusy);
@@ -58,11 +62,6 @@ public sealed class StopSearchPage : ContentPage
         layout.Children.Add(status);
         var metadata = new Label { AutomationId = "StopSearchMetadata" };
         layout.Children.Add(metadata);
-        var showMap = new AsyncRelayCommand(async () => { map.ShowStops(); await Shell.Current.GoToAsync("map"); },
-            () => model.Stops.Count > 0 && !model.Lookup.IsBusy && !model.IsNearbyBusy, _ => Title = "Karte konnte nicht geöffnet werden");
-        model.PropertyChanged += (_, _) => showMap.Refresh();
-        var showMapButton = TransitVisuals.SecondaryAction("⌖", "Haltestellen auf Karte zeigen", "ShowStopMap", showMap);
-        layout.Children.Add(showMapButton);
         var matches = new VerticalStackLayout { Spacing = 12 };
         void RenderMatches()
         {
@@ -111,7 +110,8 @@ public sealed class StopSearchPage : ContentPage
         return !string.IsNullOrWhiteSpace(value)
             && !value.StartsWith("Adresse oder Haltestelle suchen", StringComparison.OrdinalIgnoreCase)
             && !value.StartsWith("Bitte einen Treffer auswählen", StringComparison.OrdinalIgnoreCase)
-            && !value.StartsWith("Standort nur nach Aktion", StringComparison.OrdinalIgnoreCase);
+            && !value.StartsWith("Standort nur nach Aktion", StringComparison.OrdinalIgnoreCase)
+            && !value.StartsWith("Endpunkt übernommen", StringComparison.OrdinalIgnoreCase);
     }
 
     private string SearchWarning()

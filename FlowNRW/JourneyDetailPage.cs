@@ -37,7 +37,7 @@ public sealed class JourneyDetailPage : ContentPage
         var status = new Label { AutomationId = "DetailStatus", BindingContext = model.Session };
         status.SetBinding(Label.TextProperty, nameof(model.Session.Status));
         var metadata = new Label { AutomationId = "DetailMetadata", BindingContext = model.Session };
-        metadata.SetBinding(Label.TextProperty, nameof(model.Session.Metadata));
+        metadata.SetBinding(Label.TextProperty, nameof(model.Session.CompactWarning));
         var sourceState = new VerticalStackLayout { Spacing = 4, Padding = new Thickness(4, 0) };
         sourceState.Children.Add(status); sourceState.Children.Add(metadata);
         layout.Children.Add(sourceState);

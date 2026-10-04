@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Exe, [string]$ScreenshotDirectory = 'docs/help/design/verification/matrix', [ValidateSet('light','dark')][string]$Theme='light', [int]$Width=430, [int]$Height=900, [ValidateSet(100,150)][int]$TextScale=100, [string]$Scenario='success', [switch]$HomeOnly, [switch]$ConnectionOnly)
+param([Parameter(Mandatory)][string]$Exe, [string]$ScreenshotDirectory = 'docs/help/design/verification/matrix', [ValidateSet('light','dark')][string]$Theme='light', [int]$Width=430, [int]$Height=900, [ValidateSet(100,150)][int]$TextScale=100, [string]$Scenario='favorite-cache-seed', [switch]$HomeOnly, [switch]$ConnectionOnly)
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
