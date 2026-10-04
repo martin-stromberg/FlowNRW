@@ -11,8 +11,7 @@ offene Probleme sowie moegliche Weiterfuehrungen zusammen.
 auf einem Mac folgende Aktionen ermoeglichen:
 
 - `build`    : iOS-App bauen (optional mit Codesigning -> `.ipa`)
-- `simulator`: iOS-App bauen, im iOS-Simulator starten und Screenshot speichern;
-               mit `-Video` zusätzlich eine H.264-Simulatoraufnahme erzeugen
+- `simulator`: iOS-App bauen, im iOS-Simulator starten und Screenshot speichern
 - `device`   : iOS-App bauen und auf einem physischen Geraet starten
 - `store`    : signierten Release-Build erzeugen, validieren und zu
                App Store Connect hochladen (TestFlight); erhoeht automatisch
@@ -216,11 +215,6 @@ legt den zurückkopierten Screenshot unter
 `FlowNRW/bin/<Konfiguration>/net10.0-ios/<RID>/` ab. Voraussetzung ist
 schlüsselbasierter SSH-Zugriff zum Mac; die Simulator-App selbst wird dort
 geöffnet, sofern eine GUI-Sitzung verfügbar ist.
-
-Mit `-Video` startet der Simulatorpfad zusätzlich `xcrun simctl io
-recordVideo --codec=h264` auf dem Mac. Ohne `-NoPrompt` endet die Aufnahme mit
-Enter; mit `-NoPrompt` nach `-VideoSeconds` Sekunden. Die MOV-Datei wird wie
-der Screenshot zurück nach Windows kopiert.
 
 Dieser Workaround ist **nicht offiziell unterstuetzt** und könnte bei
 .NET-/Xcode-Updates Anpassungen benötigen.
