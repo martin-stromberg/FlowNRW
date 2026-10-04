@@ -240,7 +240,7 @@ public static class DesignWindow {
         Capture 'journey-walk-transfer' 'fahrtbegleiter_detail' 'ShowJourneyMap'
         Capture 'journey-walk-distance' 'fahrtbegleiter_detail' 'JourneyWalk2'
         Capture 'journey-following-leg' 'fahrtbegleiter_detail' 'JourneyDetailSection3'
-        Contains 'JourneyLine3' '^Bus 10$'; Contains 'JourneyOperator3' '^Betreiber: Fixture Bus$'
+        Contains 'JourneyLine3' '^Bus 10$'; Contains 'JourneyOperator3' '^Betreiber: Stadtwerke Essen$'
         Capture 'journey-transfer-summary' 'fahrtbegleiter_detail' 'JourneyDetailSection3'
         return
     }    Wait 'OpenHomeStops' | Out-Null
@@ -315,7 +315,7 @@ public static class DesignWindow {
     Capture 'journey-walk-distance' 'fahrtbegleiter_detail' 'JourneyWalk2'
     Capture 'journey-following-leg' 'fahrtbegleiter_detail' 'JourneyDetailSection3'
     Contains 'JourneyLine3' '^Bus 10$'
-    Contains 'JourneyOperator3' '^Betreiber: Fixture Bus$'
+    Contains 'JourneyOperator3' '^Betreiber: Stadtwerke Essen$'
     Capture 'journey-transfer-summary' 'fahrtbegleiter_detail' 'JourneyDetailSection3'; Back
     Click 'Journey1'; Click 'ShowJourneyMap'; Contains 'MapDataStatus' 'Keine darstellbare Geometrie'; Capture 'journey-no-geometry' 'fahrtbegleiter_detail'; Back; Back; Back
     SelectEndpoint 'Origin' 'route-empty'; Click 'SearchJourneys'; Status 'RoutingStatus' 'Keine Verbindung'; Capture 'no-journeys' 'verbindungssuche'

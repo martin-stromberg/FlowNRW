@@ -60,7 +60,7 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
     {
         return new StopEvent
         {
-            Identity = new() { Stop = stop, Line = line, Direction = "Essen Hauptbahnhof", Operator = "Fixture Bahn" },
+            Identity = new() { Stop = stop, Line = line, Direction = "Essen Hauptbahnhof", Operator = "Regionalverkehr NRW" },
             PlannedTime = planned,
             Realtime = new() { ActualTime = delay is { } value ? planned + value : null, Delay = delay, Cancelled = cancelled, PlannedPlatform = "1", Platform = platform }
         };
@@ -129,7 +129,8 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
         var kind = favorite ? text[9..].ToLowerInvariant() : "";
         var coordinate = text.Contains("map-missing") || kind == "missing" ? null :
             new GeoCoordinate(kind == "far" ? 51.5 : kind == "near" ? 51.4555 : 51.45 + index * .01, 7.01);
-        return new Address { Name = text + " Treffer " + index, Coordinate = coordinate,
+        var name = index == 0 ? text : text + " (Umgebung)";
+        return new Address { Name = name, Coordinate = coordinate,
             Stop = text.Contains("Adresse") ? null : new Stop { Id = favorite ? "fixture-favorite-" + kind + "-" + index : "fixture-" + index, Name = text, Source = "fixture", Dhid = "de:05113:001:" + index, Coordinate = coordinate } };
     }
 
@@ -137,9 +138,9 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
     {
         return new Journey
         {
-            Legs = [new JourneyLeg { Departure = Event(time, origin.Name, true), Arrival = Event(time.AddMinutes(20), "Umstieg", false), Line = new Line { Name = line, Operator = new Operator { Name = "Fixture Bahn" } }, Geometry = line == "RE 1" ? new GeoGeometry { Coordinates = [new(51.45, 7.01), new(51.46, 7.02), new(51.47, 7.03)] } : null },
+            Legs = [new JourneyLeg { Departure = Event(time, origin.Name, true), Arrival = Event(time.AddMinutes(20), "Umstieg", false), Line = new Line { Name = line, Operator = new Operator { Name = "Regionalverkehr NRW" } }, Geometry = line == "RE 1" ? new GeoGeometry { Coordinates = [new(51.45, 7.01), new(51.46, 7.02), new(51.47, 7.03)] } : null },
                 new JourneyLeg { Departure = Event(time.AddMinutes(20), "Umstieg", false), Arrival = Event(time.AddMinutes(25), "Bussteig", false), Walking = new WalkingSegment { DistanceMeters = 300, Duration = TimeSpan.FromMinutes(5), Geometry = line == "RE 1" ? new GeoGeometry { Coordinates = [new(51.47, 7.03), new(51.4705, 7.031)] } : null } },
-                new JourneyLeg { Departure = Event(time.AddMinutes(30), "Bussteig", false) with { Line = new Line { Name = "Bus 10", Mode = "bus", Operator = new Operator { Name = "Fixture Bus" } } }, Arrival = Event(time.AddMinutes(45), destination.Name, false) }],
+                new JourneyLeg { Departure = Event(time.AddMinutes(30), "Bussteig", false) with { Line = new Line { Name = "Bus 10", Mode = "bus", Operator = new Operator { Name = "Stadtwerke Essen" } } }, Arrival = Event(time.AddMinutes(45), destination.Name, false) }],
             Transfers = [new Transfer { Stop = new Stop { Name = "Umstieg" }, Duration = TimeSpan.FromMinutes(10) }]
         };
     }

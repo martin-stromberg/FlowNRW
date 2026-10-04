@@ -638,7 +638,7 @@ public static class MapPointer {
         SetText 'OriginText' 'unselected'; Assert (!(Wait 'SearchJourneys').Current.IsEnabled) 'Validation: unselected text cannot route'
         SetText 'OriginText' 'Adresse Essen'; Click 'OriginSearch'
         Assert ($null -ne (Wait 'OriginMatch1')) 'AddressEndpoints: ambiguous candidates rendered'
-        Click 'OriginMatch1'; Contains 'OriginSelection' 'Treffer 1'
+        Click 'OriginMatch1'; Contains 'OriginSelection' 'Umgebung'
         SelectEndpoint 'Destination' 'Adresse Berlin'
         Contains 'DestinationSelection' 'Adresse Berlin'
         Assert ($null -eq (Find 'OriginMetadata')) 'Endpoint selection does not expose provider metadata'
@@ -646,7 +646,7 @@ public static class MapPointer {
         Click 'SearchJourneys'; Contains 'RoutingStatus' 'geladen'
         $first = Name 'Journey0'; $second = Name 'Journey1'
         Assert ($first -match '16.09.2026 23:55' -and $second -match '17.09.2026 00:55') 'ResultsAndDetails: ordered results and midnight offset'
-        Contains 'Journey0' 'UTC\+02:00'; Contains 'Journey0' '1 Umstiege.*RE 1.*Fixture Bahn.*Fußweg.*Bus 10'
+        Contains 'Journey0' 'UTC\+02:00'; Contains 'Journey0' '1 Umstiege.*RE 1.*Regionalverkehr NRW.*Fußweg.*Bus 10'
         Contains 'ResultsMetadata' 'Quelle:.*Datenalter:.*Fallback.*Veralteter Cache.*Anbieterwarnung'
         Snapshot 'native-results'
         if ($ScreenshotDirectory) {
@@ -672,6 +672,8 @@ public static class MapPointer {
         SetText 'OriginLatitude' '51,4556'; SetText 'OriginLongitude' '7.0116'; Click 'OriginSearch'
         Toggle 'DestinationCoordinateMode'; SetText 'DestinationLatitude' '52.52'; SetText 'DestinationLongitude' '13,405'; Click 'DestinationSearch'
         Contains 'OriginSelection' '51.4556'; Contains 'DestinationSelection' '13.405'
+        # Both coordinate commands publish their endpoint bindings asynchronously.
+        Start-Sleep -Milliseconds 750
         Click 'SearchJourneys'; Wait 'Journey0' | Out-Null; Back
         Toggle 'OriginCoordinateMode'; Toggle 'DestinationCoordinateMode'; Write-Output 'PASS CoordinateEndpoints and Validation recovery'
         SetText 'OriginText' 'slow old'; Click 'OriginSearch'; Contains 'OriginStatus' 'geladen'
