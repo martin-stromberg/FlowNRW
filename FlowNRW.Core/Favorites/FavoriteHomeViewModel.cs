@@ -11,6 +11,7 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     private readonly Func<IDepartureService> departureFactory;
     private readonly ICurrentLocationService location;
     private readonly IStopSearchService? nearby;
+    private readonly IDepartureCacheStore? cache;
     private readonly SemaphoreSlim persistence = new(1, 1);
     private readonly List<FavoriteMonitorViewModel> savedOrder = [];
     private bool loaded;
@@ -23,9 +24,11 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     /// <param name="departureFactory">Creates an independent service for each card.</param>
     /// <param name="location">Explicit current-position provider.</param>
     /// <param name="nearby">Nearby-stop service.</param>
-    public FavoriteHomeViewModel(IFavoriteStore store, Func<IDepartureService> departureFactory, ICurrentLocationService location, IStopSearchService? nearby = null)
+    /// <param name="cache">Optional durable cache for last-known departure boards.</param>
+    public FavoriteHomeViewModel(IFavoriteStore store, Func<IDepartureService> departureFactory, ICurrentLocationService location,
+        IStopSearchService? nearby = null, IDepartureCacheStore? cache = null)
     {
-        this.store = store; this.departureFactory = departureFactory; this.location = location; this.nearby = nearby;
+        this.store = store; this.departureFactory = departureFactory; this.location = location; this.nearby = nearby; this.cache = cache;
         LocationCommand = new AsyncRelayCommand(UpdateDistancesAsync, () => !IsLocating, _ => SetLocationFailure("Standort konnte nicht ermittelt werden."));
     }
 
@@ -60,7 +63,26 @@ public sealed class FavoriteHomeViewModel : ObservableObject
             var unique = stops.DistinctBy(stop => (stop.Source, stop.Id)).ToArray();
             if (unique.Length > 100 || unique.Any(stop => string.IsNullOrWhiteSpace(stop.Id) || string.IsNullOrWhiteSpace(stop.Source)))
                 throw new InvalidDataException("Invalid favorite identity.");
-            savedOrder.AddRange(unique.Select(stop => new FavoriteMonitorViewModel(stop, departureFactory())));
+            savedOrder.AddRange(unique.Select(CreateCard));
+            if (cache is not null)
+            {
+                try
+                {
+                    var keys = savedOrder.Select(card => new DepartureCacheKey(card.Stop.Source, card.Stop.Id)).ToArray();
+                    var cached = await cache.LoadAsync(cancellationToken).WaitAsync(cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await cache.RemoveOrphansAsync(keys, cancellationToken).WaitAsync(cancellationToken);
+                    var byKey = cached.Where(entry => keys.Contains(entry.Key)).ToDictionary(entry => entry.Key);
+                    var now = DateTimeOffset.Now;
+                    foreach (var card in savedOrder)
+                    {
+                        if (byKey.TryGetValue(new DepartureCacheKey(card.Stop.Source, card.Stop.Id), out var entry) && !card.Restore(entry, now))
+                            await cache.RemoveAsync(entry.Key, cancellationToken).WaitAsync(cancellationToken);
+                    }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+                catch (Exception) { }
+            }
             loaded = true;
             SortCards(); SetStatus(savedOrder.Count == 0 ? "Noch keine Favoriten gespeichert." : $"{savedOrder.Count} Favoriten gespeichert.");
         }
@@ -72,6 +94,10 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     /// <summary>Starts independent initial loads without repeating completed successful card requests.</summary>
     /// <returns>All initial requests finishing or being cancelled.</returns>
     public Task RefreshMissingAsync() => Task.WhenAll(Cards.Where(card => card.Result is null && !card.IsBusy).Select(card => card.RefreshAsync()));
+
+    /// <summary>Starts a regular non-blocking provider refresh for every current card, including restored local boards.</summary>
+    /// <returns>All started refreshes finishing or being cancelled.</returns>
+    public Task RefreshAtStartupAsync() => Task.WhenAll(Cards.Where(card => !card.IsBusy).Select(card => card.RefreshAutomaticallyAsync()));
 
     /// <summary>Loads nearby stops for the same explicit position used for favorite distances.</summary>
     /// <param name="cancellationToken">Cancels the current location or nearby-stop lookup.</param>
@@ -170,8 +196,17 @@ public sealed class FavoriteHomeViewModel : ObservableObject
                 desired.Add(stop);
             }
             await store.SaveAsync(desired);
-            if (existing is not null) { existing.CancelPending(); savedOrder.Remove(existing); }
-            else savedOrder.Add(new FavoriteMonitorViewModel(stop, departureFactory()));
+            if (existing is not null)
+            {
+                existing.CancelPending();
+                savedOrder.Remove(existing);
+                if (cache is not null)
+                {
+                    try { await cache.RemoveAsync(new DepartureCacheKey(existing.Stop.Source, existing.Stop.Id)); }
+                    catch (Exception) { }
+                }
+            }
+            else savedOrder.Add(CreateCard(stop));
             SortCards();
             SetStatus(existing is null ? "Favorit gespeichert." : "Favorit entfernt.");
         }
@@ -231,5 +266,24 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     }
 
     private static bool SameIdentity(Stop first, Stop second) => first.Source == second.Source && first.Id == second.Id;
+
+    private FavoriteMonitorViewModel CreateCard(Stop stop)
+    {
+        FavoriteMonitorViewModel? card = null;
+        card = new FavoriteMonitorViewModel(stop, departureFactory(), entry => PersistAsync(card, entry));
+        return card;
+    }
+
+    private async Task PersistAsync(FavoriteMonitorViewModel? card, DepartureCacheEntry entry)
+    {
+        if (cache is null || card is null) return;
+        await persistence.WaitAsync();
+        try
+        {
+            if (Contains(card)) await cache.UpsertAsync(entry);
+        }
+        finally { persistence.Release(); }
+    }
+
     private void SetStatus(string value) { Status = value; Notify(nameof(Status)); }
 }

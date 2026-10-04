@@ -4,14 +4,18 @@ Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 $previousFavoritePath = $env:FLOWNRW_UI_TEST_FAVORITES
 $previousRefreshPath = $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS
+$previousDepartureCachePath = $env:FLOWNRW_UI_TEST_DEPARTURE_CACHE
+$previousScenario = $env:FLOWNRW_UI_TEST_SCENARIO
 $refreshTestDirectory = Join-Path (Get-Location) ('artifacts/tests/refresh-regression/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $refreshTestDirectory -Force | Out-Null
 $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = Join-Path $refreshTestDirectory 'refresh-settings.json'
 [IO.File]::WriteAllText($env:FLOWNRW_UI_TEST_REFRESH_SETTINGS, '0')
+$env:FLOWNRW_UI_TEST_SCENARIO = 'success'
 if ($Favorites) {
     $testDirectory = Join-Path (Get-Location) ('artifacts/tests/favorites/' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $testDirectory -Force | Out-Null
     $env:FLOWNRW_UI_TEST_FAVORITES = Join-Path $testDirectory 'favorites.json'
+    $env:FLOWNRW_UI_TEST_DEPARTURE_CACHE = Join-Path $testDirectory 'departure-cache.json'
 }
 $app = Start-Process -FilePath $Exe -PassThru -WindowStyle Hidden
 try {
@@ -186,19 +190,29 @@ public static class NativeWindowCapture {
         Write-Output 'PASS home nearby selection opens its exact departure monitor'
         Contains 'HomeStatus' 'Keine Favoriten|keine Favoriten|Haltestelle'
         Assert ((Wait 'OpenHomeStops').Current.IsEnabled) 'Empty home offers actual stop lookup'
+        SetText 'HomeScenario' 'favorite-cache-seed'
         FindFavoriteMonitor 'Favorite Far'
         SetText 'FavoriteScenario' 'store-error'; Click 'ToggleFavorite'
         Status 'FavoriteToggleStatus' 'fehlgeschlagen|nicht gespeichert|Speicherfehler'
         Contains 'ToggleFavorite' 'hinzufügen|speichern'
-        SetText 'FavoriteScenario' 'success'; Click 'ToggleFavorite'; Status 'FavoriteToggleStatus' 'hinzugefügt|gespeichert'
-        BackHome; FavoriteCount 1
+        SetText 'FavoriteScenario' 'favorite-cache-seed'; Click 'ToggleFavorite'; Status 'FavoriteToggleStatus' 'hinzugefügt|gespeichert'
+        BackHome; FavoriteCount 1; SetText 'HomeScenario' 'success'
         Contains 'FavoriteName0' 'Favorite Far'; Status 'FavoriteStatus0' 'manuell aktualisiert'
         Contains 'FavoriteDeparture0_0' 'RE 1'; Contains 'FavoriteMetadata0' 'Quelle:.*Datenalter:.*Fallback'
         Contains 'FavoriteDistance0' 'unbekannt'
         FindFavoriteMonitor 'Favorite Far'; Contains 'ToggleFavorite' 'entfernen'
         BackHome; FavoriteCount 1
+        $env:FLOWNRW_UI_TEST_SCENARIO = 'favorite-slow'
         RestartFavorites; FavoriteCount 1; Contains 'FavoriteName0' 'Favorite Far'
         Contains 'FavoriteDistance0' 'unbekannt'
+        Status 'FavoriteStatus0' 'Letzter Stand wird aktualisiert|werden aktualisiert'
+        Contains 'FavoriteDeparture0_0' 'RE 1'
+        Assert ((DepartureCount 'fixture-favorite-far-0') -eq 1) 'Cached favorite starts one background provider request'
+        Status 'FavoriteStatus0' 'automatisch aktualisiert'
+        Contains 'FavoriteDeparture0_0' 'RE 1 · Live Stand 1'
+        $env:FLOWNRW_UI_TEST_SCENARIO = 'success'
+        SetText 'HomeScenario' 'success'
+        Write-Output 'PASS cached future departures are visible before the delayed startup refresh and are then replaced'
         Write-Output 'PASS failed add is not reported as saved; retry, duplicate recognition and process persistence'
         AddFavorite 'Favorite Near'; FavoriteCount 2
         AddFavorite 'Favorite Missing'; FavoriteCount 3
@@ -683,5 +697,7 @@ public static class MapPointer {
     if (!$app.HasExited) { Stop-Process -Id $app.Id }
     if ($Favorites) { $env:FLOWNRW_UI_TEST_FAVORITES = $previousFavoritePath }
     $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = $previousRefreshPath
+    $env:FLOWNRW_UI_TEST_DEPARTURE_CACHE = $previousDepartureCachePath
+    $env:FLOWNRW_UI_TEST_SCENARIO = $previousScenario
 }
 

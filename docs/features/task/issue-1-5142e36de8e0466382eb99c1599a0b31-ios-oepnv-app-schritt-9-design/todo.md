@@ -20,6 +20,7 @@
 | [x] | 10c | Code-Review des aktualisierten Gesamtdiffs | review-draft-refresh.md |
 | [ ] | 10d | Nativen Windows-Designmatrixlauf für die aktualisierte Oberfläche in Hell/Dunkel durchführen, einschließlich Nearby-Drilldown-Screenshot | test-results-draft-refresh.md |
 | [ ] | 10e | iOS-Geräteabnahme für Safe Areas, Systemthema, Dynamic Type und VoiceOver durchführen | test-results-draft-refresh.md |
+| [ ] | 10f | Favoriten-Abfahrtcache unter Windows nativ starten: Cacheanzeige vor verzögerter Anbieterantwort und anschließende Ersetzung prüfen | test-results-departure-cache.md |
 | [ ] | 12 | Dokumentation/README/Release Notes | docs/help/design |
 | [ ] | – | Abschlusscommit und Projektabnahme | Git |
 

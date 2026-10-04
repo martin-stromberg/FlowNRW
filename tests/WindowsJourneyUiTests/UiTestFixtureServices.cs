@@ -33,20 +33,20 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
         var scenario = location?.Scenario ?? "success";
         location?.RecordDeparture(stop.Id);
         var favoriteTarget = stop.Id == "fixture-favorite-far-0";
-        await Task.Delay(stop.Name.Contains("monitor-slow") || scenario == "refresh-slow" || favoriteTarget && scenario == "favorite-slow" ? 6000 : 700);
+        await Task.Delay(stop.Name.Contains("monitor-slow") || scenario == "refresh-slow" || favoriteTarget && scenario is "favorite-slow" or "cache-start-slow-nearby" ? 6000 : 700);
         var sequence = stop.Name.Contains("monitor-sequence");
         var error = stop.Name.Contains("monitor-error") || scenario == "refresh-error" || sequence && count == 3 || favoriteTarget && scenario == "favorite-error";
         var empty = stop.Name.Contains("monitor-empty") || sequence && count == 4;
         return new ProviderResult<StopEvent>
         {
-            Items = error || empty ? [] : [Departure(stop, departure.AddMinutes(5), "RE 1 · Stand " + count, TimeSpan.FromMinutes(3), false, "2"),
+            Items = error || empty ? [] : [Departure(stop, departure.AddMinutes(5), favoriteTarget && scenario is "favorite-slow" or "cache-start-slow-nearby" ? "RE 1 · Live Stand " + count : "RE 1 · Stand " + count, TimeSpan.FromMinutes(3), false, "2"),
                 Departure(stop, departure.AddMinutes(10), "S2", TimeSpan.Zero, false, "1"),
                 Departure(stop, departure.AddMinutes(15), "107", null, null, null),
                 Departure(stop, departure.AddMinutes(20), "U11", null, true, null)],
             ErrorCode = error ? "fixture_unavailable" : null,
             Source = "UI-Fixture " + stop.Name + " " + stop.Id,
             RetrievedAt = scenario == "resume-fresh" ? DateTimeOffset.UtcNow : DateTimeOffset.UtcNow.AddMinutes(-2),
-            IsFallback = true, IsStale = scenario != "resume-fresh", Warnings = ["fixture_warning"]
+            IsFallback = true, IsStale = scenario is not ("resume-fresh" or "favorite-cache-seed"), Warnings = ["fixture_warning"]
         };
     }
 
@@ -78,7 +78,7 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
     public async Task<ProviderResult<NearbyStopResult>> NearbyAsync(GeoCoordinate coordinate, CancellationToken cancellationToken = default)
     {
         var scenario = location?.Scenario ?? "success";
-        await Task.Delay(scenario == "nearby-slow" ? 6000 : 600);
+        await Task.Delay(scenario is "nearby-slow" or "cache-start-slow-nearby" ? 6000 : 600);
         var newest = coordinate.Latitude > 51.49;
         var name = newest ? "Neue Umgebung" : "Umgebung";
         return new ProviderResult<NearbyStopResult>

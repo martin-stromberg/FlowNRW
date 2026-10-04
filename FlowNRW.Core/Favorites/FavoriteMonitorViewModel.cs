@@ -9,15 +9,17 @@ namespace FlowNRW.Core.Favorites;
 public sealed class FavoriteMonitorViewModel : ObservableObject
 {
     private readonly IDepartureService departures;
+    private readonly Func<DepartureCacheEntry, Task>? persist;
     private CancellationTokenSource? request;
     private long revision;
 
     /// <summary>Creates a card with an independent service scope.</summary>
     /// <param name="stop">Complete saved identity.</param>
     /// <param name="departures">Independent departure service.</param>
-    public FavoriteMonitorViewModel(Stop stop, IDepartureService departures)
+    /// <param name="persist">Optional durable cache writer for accepted successful results.</param>
+    public FavoriteMonitorViewModel(Stop stop, IDepartureService departures, Func<DepartureCacheEntry, Task>? persist = null)
     {
-        Stop = stop; this.departures = departures;
+        Stop = stop; this.departures = departures; this.persist = persist;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => !IsBusy, _ => SetFailure());
     }
 
@@ -67,6 +69,23 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
         return freshness.IsStale(Result) ? RefreshCoreAsync(true, cancellationToken) : Task.CompletedTask;
     }
 
+    /// <summary>Restores a successful board only when it belongs to this card and still has future departures.</summary>
+    /// <param name="entry">Cached board keyed by technical favorite identity.</param>
+    /// <param name="now">Current instant used to reject expired departures.</param>
+    /// <returns>Whether a usable local board was applied.</returns>
+    internal bool Restore(DepartureCacheEntry entry, DateTimeOffset now)
+    {
+        if (entry.Key.Source != Stop.Source || entry.Key.Id != Stop.Id || entry.Result.ErrorCode is not null || entry.Result.IsStale) return false;
+        var retained = entry.Result.Items.Where(item => EffectiveTime(item) is { } time && time >= now)
+            .OrderBy(item => EffectiveTime(item)!.Value).ToArray();
+        if (retained.Length == 0) return false;
+        Result = entry.Result with { Items = retained };
+        LastAttempt = null;
+        Status = "Letzter Stand wird aktualisiert …";
+        RefreshBindings();
+        return true;
+    }
+
     private async Task RefreshCoreAsync(bool automatic, CancellationToken cancellationToken = default)
     {
         if (IsBusy) return;
@@ -89,6 +108,16 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
                         .OrderBy(item => EffectiveTime(item) ?? DateTimeOffset.MaxValue).ToArray()
                 };
                 Status = Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · {(automatic ? "automatisch" : "manuell")} aktualisiert.";
+                if (!Result.IsStale && persist is not null)
+                {
+                    var cached = Result with
+                    {
+                        Items = Result.Items.Where(item => EffectiveTime(item) is { } time && time >= started)
+                            .OrderBy(item => EffectiveTime(item)!.Value).ToArray()
+                    };
+                    try { await persist(new DepartureCacheEntry { Source = Stop.Source, StopId = Stop.Id, Result = cached }); }
+                    catch (Exception) { }
+                }
             }
         }
         catch (OperationCanceledException) { if (version == revision) Status = "Aktualisierung abgebrochen."; }

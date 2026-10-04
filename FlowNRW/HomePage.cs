@@ -113,8 +113,8 @@ public sealed class HomePage : ContentPage
             await model.LoadAsync();
             if (version != appearance) return;
             RenderCards(); ReconcileRefreshLoops();
+            if (version == appearance && foreground.IsActive) _ = RefreshAtStartupAsync(version);
             await model.RefreshNearbyAsync();
-            if (foreground.IsActive) await model.RefreshMissingAsync();
         }
         catch (Exception) { Title = "Favoriten konnten nicht geladen werden"; }
     }
@@ -188,6 +188,12 @@ public sealed class HomePage : ContentPage
     {
         try { await model.RefreshMissingAsync(); }
         catch (Exception) { Title = "Abfahrten konnten nicht geladen werden"; }
+    }
+
+    private async Task RefreshAtStartupAsync(long version)
+    {
+        try { await model.RefreshAtStartupAsync(); }
+        catch (Exception) when (version == appearance) { Title = "Abfahrten konnten nicht aktualisiert werden"; }
     }
 
     private void RenderCards()

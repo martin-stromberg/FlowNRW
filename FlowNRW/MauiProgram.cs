@@ -126,9 +126,19 @@ public static class MauiProgram
             return new JsonFavoriteStore(Path.Combine(FileSystem.AppDataDirectory, "favorites.json"));
 #endif
         });
+        builder.Services.AddSingleton<IDepartureCacheStore>(_ =>
+        {
+#if UI_TEST_FIXTURES
+            var path = Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_DEPARTURE_CACHE")
+                ?? Path.Combine(FileSystem.CacheDirectory, "UiTest", "departure-cache.json");
+#else
+            var path = Path.Combine(FileSystem.AppDataDirectory, "departure-cache.json");
+#endif
+            return new JsonDepartureCacheStore(path);
+        });
         builder.Services.AddSingleton(services => new FavoriteHomeViewModel(services.GetRequiredService<IFavoriteStore>(),
             () => services.GetRequiredService<IDepartureService>(), services.GetRequiredService<ICurrentLocationService>(),
-            services.GetRequiredService<IStopSearchService>()));
+            services.GetRequiredService<IStopSearchService>(), services.GetRequiredService<IDepartureCacheStore>()));
         builder.Services.AddSingleton<HomePage>();
         var mapOptions = new MapOptions
         {
