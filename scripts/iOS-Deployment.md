@@ -11,7 +11,8 @@ offene Probleme sowie moegliche Weiterfuehrungen zusammen.
 auf einem Mac folgende Aktionen ermoeglichen:
 
 - `build`    : iOS-App bauen (optional mit Codesigning -> `.ipa`)
-- `simulator`: iOS-App bauen, im iOS-Simulator starten und Screenshot speichern
+- `simulator`: iOS-App bauen, im iOS-Simulator starten und Screenshot speichern;
+               mit `-Video` zusätzlich eine H.264-Simulatoraufnahme erzeugen
 - `device`   : iOS-App bauen und auf einem physischen Geraet starten
 - `store`    : signierten Release-Build erzeugen, validieren und zu
                App Store Connect hochladen (TestFlight); erhoeht automatisch
@@ -113,7 +114,7 @@ und wird automatisch in der Vorschau geoeffnet.
 
 ## Bekannte Probleme und Limitierungen
 
-### `simulator` / `device` auf Windows: `hostpolicy.dll` Fehler
+### `device` auf Windows: `hostpolicy.dll` Fehler
 
 `dotnet build -t:Run` fuer iOS/tvOS wird von Microsoft auf Windows **nicht**
 unterstuetzt. Das bewirkt, dass `dotnet` versucht, die iOS-DLL lokal als
@@ -125,8 +126,14 @@ execute the application was not found in '...\net10.0-ios\iossimulator-x64\'.
 ```
 
 Dies ist ein bekanntes .NET-MAUI/.NET-iOS-Problem. Visual Studio umgeht es,
-indem es eine eigene IDE-interne Deployment-Pipeline nutzt (Pair-to-Mac ->
-`xcrun simctl` / `mlaunch` auf dem Mac).
+indem es eine eigene IDE-interne Deployment-Pipeline nutzt.
+
+Für `simulator` umgeht dieses Skript die Einschränkung ebenfalls: Der Build
+läuft per Pair-to-Mac, das Skript sucht anschließend die vollständige `.app`
+im Remote-Build-Cache des Macs, bootet den Simulator per `xcrun simctl`,
+installiert und startet die App dort und kopiert einen Screenshot per SSH nach
+Windows zurück. Der lokale, von Pair-to-Mac zurückgespiegelte App-Ordner wird
+nicht für die Simulator-Installation verwendet.
 
 ### `Microsoft.iOS` wurde nicht gefunden
 
@@ -201,12 +208,22 @@ Fuer `store`/`upload` ist die SSH-Delegation umgesetzt (siehe oben);
 App-Ausgabe (inkl. Managed-Exceptions bei Absturz) ins lokale Terminal.
 `list` fragt per SSH `devicectl list devices` + `simctl list` ab.
 
-Offen bleibt der SSH-Pfad fuer `simulator` — das Skript koennte nach dem
-Build dieselben `xcrun simctl`-Befehle remote ausfuehren, die
-`Invoke-SimulatorMac` lokal nutzt (boot/install/launch/screenshot).
+`simulator` läuft auf Windows über `Invoke-SimulatorViaSsh`: Ohne `-Device`
+wählt es einen verfügbaren iPhone-Simulator auf dem Mac, bevorzugt ein
+Pro-Max-Modell. Es ermittelt die Mac-Architektur für den passenden Simulator-
+Runtime-Identifier, installiert die vollständige Remote-App, startet sie und
+legt den zurückkopierten Screenshot unter
+`FlowNRW/bin/<Konfiguration>/net10.0-ios/<RID>/` ab. Voraussetzung ist
+schlüsselbasierter SSH-Zugriff zum Mac; die Simulator-App selbst wird dort
+geöffnet, sofern eine GUI-Sitzung verfügbar ist.
 
-Dieser Workaround ist **nicht offiziell unterstuetzt** und koennte bei
-.NET-/Xcode-Updates wieder brechen.
+Mit `-Video` startet der Simulatorpfad zusätzlich `xcrun simctl io
+recordVideo --codec=h264` auf dem Mac. Ohne `-NoPrompt` endet die Aufnahme mit
+Enter; mit `-NoPrompt` nach `-VideoSeconds` Sekunden. Die MOV-Datei wird wie
+der Screenshot zurück nach Windows kopiert.
+
+Dieser Workaround ist **nicht offiziell unterstuetzt** und könnte bei
+.NET-/Xcode-Updates Anpassungen benötigen.
 
 ### Automatisierte UI-Tests mit Appium / WinAppDriver
 

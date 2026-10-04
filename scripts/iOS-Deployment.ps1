@@ -7,7 +7,8 @@
 
     Moegliche Aktionen:
         build     -> iOS-App bauen (mit Codesigning: .ipa)
-        simulator -> App bauen, im iOS-Simulator starten und Screenshot speichern (nur auf macOS)
+        simulator -> App bauen, im iOS-Simulator starten und Screenshot speichern.
+                     Auf Windows per Pair-to-Mac-Build und SSH an den Mac delegiert.
         device    -> App bauen und auf einem echten iOS-Geraet starten (nur auf macOS)
         store     -> Signierten Release-Build erzeugen, validieren und zu App Store Connect
                      hochladen (TestFlight). Erhoeht automatisch die Buildnummer
@@ -69,6 +70,10 @@ param(
     [string]$ApiIssuerId = $env:FLOWNRW_IOS_API_ISSUER_ID,
     [Parameter(HelpMessage = "Pfad zu iTMSTransporter auf dem Mac. Ueberschreibt die automatische Suche (Transporter-App, /usr/local/itms, Xcode, PATH, Spotlight).")]
     [string]$TransporterPath = $env:FLOWNRW_IOS_TRANSPORTER_PATH,
+    [Parameter(HelpMessage = "Bei 'simulator': nach dem Start zusätzlich eine H.264-Videoaufnahme erstellen.")]
+    [switch]$Video,
+    [Parameter(HelpMessage = "Dauer der Videoaufnahme in Sekunden bei -NoPrompt (Standard: 30).")]
+    [int]$VideoSeconds = 30,
     [Parameter(HelpMessage = "Pfad zu einer vorhandenen .ipa (nur Aktion 'upload').")]
     [string]$IpaPath = "",
     [Parameter(HelpMessage = "Bei 'device' via SSH: App-Output (--console) nach dem Start streamen (Ctrl+C zum Loesen).")]
@@ -207,6 +212,22 @@ done
         $parts = $_ -split '\|', 3
         [pscustomobject]@{ Name = $parts[0]; DevProfile = ($parts[1] -eq 'true'); Team = $parts[2] }
     } | Sort-Object Name -Unique)
+}
+
+function Get-RemoteSimulatorUdid {
+    # Ein großes iPhone wird bevorzugt, damit der zurückkopierte Screenshot
+    # auch als aussagekräftiger visueller Nachweis dient.
+    $out = (Invoke-MacCapture -Script 'xcrun simctl list devices available -j') -join "`n"
+    if (-not $out) { return $null }
+    try { $runtimes = ($out | ConvertFrom-Json).devices } catch { return $null }
+    $phones = @($runtimes.PSObject.Properties.Value | ForEach-Object { $_ } | Where-Object {
+        $_.isAvailable -and $_.name -like 'iPhone*'
+    })
+    if ($phones.Count -eq 0) { return $null }
+    $selected = @($phones | Where-Object { $_.name -like '*Pro Max*' } | Select-Object -First 1)
+    if (-not $selected) { $selected = $phones[0] }
+    Write-Host "Simulator: $($selected.name) ($($selected.udid))" -ForegroundColor Gray
+    return $selected.udid
 }
 
 function Get-RemoteDevices {
@@ -1136,6 +1157,136 @@ xcrun devicectl device install app --device "$Device" "`$APP"
     Write-Host "App gestartet. Tipp: -Console streamt die App-Ausgabe (inkl. Crash-Details) ins Terminal." -ForegroundColor Green
 }
 
+function Invoke-SimulatorViaSsh {
+    # Pair-to-Mac synchronisiert das lokale .app-Bundle nicht verlässlich
+    # zurück. Deshalb wird die vollständige .app im Remote-Build-Cache auf
+    # dem Mac gesucht, dort mit simctl installiert und nur der Screenshot
+    # nach Windows kopiert.
+    $architecture = (@(Invoke-MacCapture -Script 'uname -m') | Select-Object -First 1)
+    if (-not $architecture) {
+        Write-Host "Fehler: Architektur des Macs konnte nicht ermittelt werden (SSH)." -ForegroundColor Red
+        exit 1
+    }
+    $rid = if ($RuntimeIdentifier) { $RuntimeIdentifier }
+        elseif ($architecture.Trim() -eq 'arm64') { 'iossimulator-arm64' }
+        else { 'iossimulator-x64' }
+    $config = Get-Configuration -Action "simulator"
+    $udid = if ($Device) { $Device } else { Get-RemoteSimulatorUdid }
+    if (-not $udid) {
+        Write-Host "Fehler: Kein verfügbarer iPhone-Simulator auf dem Mac gefunden." -ForegroundColor Red
+        Write-Host "Bitte -Device mit einer UDID angeben oder einen Simulator in Xcode erstellen." -ForegroundColor Yellow
+        exit 1
+    }
+
+    $rspLines = New-Object System.Collections.Generic.List[string]
+    Add-PropertyLine -List $rspLines -Name "RuntimeIdentifier" -Value $rid
+    Add-PropertyLine -List $rspLines -Name "ServerAddress" -Value $ServerAddress
+    Add-PropertyLine -List $rspLines -Name "ServerUser" -Value $ServerUser
+    Add-PropertyLine -List $rspLines -Name "TcpPort" -Value $TcpPort
+    Add-PropertyLine -List $rspLines -Name "ServerPassword" -Value $ServerPassword
+    Add-PropertyLine -List $rspLines -Name "_DotNetRootRemoteDirectory" -Value $DotNetRootRemoteDirectory
+    $rspPath = New-ResponseFile -Lines $rspLines
+    try {
+        Write-Host "Baue iOS-Simulator-App via Pair-to-Mac ($config/$rid) ..." -ForegroundColor Cyan
+        & dotnet build $projectPath -f $framework -c $config "@$rspPath"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Build fehlgeschlagen (Exit-Code: $LASTEXITCODE)." -ForegroundColor Red
+            exit 1
+        }
+    }
+    finally {
+        Remove-Item -Path $rspPath -ErrorAction SilentlyContinue
+    }
+
+    $remoteScreenshot = '$HOME/ios-uploads/flownrw-simulator-screenshot.png'
+    $remoteScript = @"
+set -e
+APP=`$( { find "`$HOME/Library/Caches/maui/PairToMac/Builds" -type d -name 'FlowNRW.app'; \
+         find "`$HOME/Library/Caches/Xamarin/mtbs/builds" -type d -name 'FlowNRW.app'; } 2>/dev/null \
+    | grep "/bin/$config/$framework/$rid/" \
+    | while IFS= read -r d; do [ -x "`$d/FlowNRW" ] && stat -f '%m %N' "`$d"; done \
+    | sort -rn | head -1 | cut -d' ' -f2- )
+if [ -z "`$APP" ]; then
+    echo "FEHLER: FlowNRW.app nicht im Remote-Build-Cache gefunden (bin/$config/$framework/$rid/)."
+    exit 1
+fi
+echo "==> App: `$APP"
+UDID="$udid"
+echo "==> Simulator: `$UDID"
+BOOT_OUT=`$(xcrun simctl boot "`$UDID" 2>&1) || { echo "`$BOOT_OUT" | grep -qi 'Booted' || { echo "`$BOOT_OUT"; exit 1; }; }
+SIM_APP="`$(xcode-select -p)/Applications/Simulator.app"
+open "`$SIM_APP" 2>/dev/null || open -a Simulator 2>/dev/null || echo "WARNUNG: Simulator-Fenster konnte nicht geöffnet werden."
+PLIST="`$APP/Info.plist"; [ -f "`$PLIST" ] || PLIST="`$APP/Contents/Info.plist"
+BUNDLEID=`$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "`$PLIST")
+echo "==> Bundle-ID: `$BUNDLEID"
+if ! xcrun simctl install "`$UDID" "`$APP"; then
+    xcrun simctl uninstall "`$UDID" "`$BUNDLEID" || true
+    xcrun simctl install "`$UDID" "`$APP"
+fi
+xcrun simctl launch "`$UDID" "`$BUNDLEID"
+sleep 5
+mkdir -p "`$HOME/ios-uploads"
+xcrun simctl io "`$UDID" screenshot "$remoteScreenshot"
+echo "==> Screenshot: $remoteScreenshot"
+"@
+    Invoke-OnMac -Script $remoteScript -Description "Simulator-Deployment auf dem Mac"
+
+    $localDirectory = Join-Path $repoRoot "FlowNRW/bin/$config/$framework/$rid"
+    if (-not (Test-Path $localDirectory)) { New-Item -ItemType Directory -Path $localDirectory | Out-Null }
+    $localScreenshot = Join-Path $localDirectory "simulator-screenshot-$(Get-Date -Format 'yyyyMMdd-HHmmss').png"
+    Write-Host "Hole Screenshot vom Mac ..." -ForegroundColor Cyan
+    Copy-FileFromMac -RemotePath $remoteScreenshot -LocalPath $localScreenshot
+    Write-Host "Screenshot gespeichert: $localScreenshot" -ForegroundColor Green
+    Write-Host "Die App läuft weiter und ist im Simulator-Fenster auf dem Mac bedienbar." -ForegroundColor Gray
+    if ($Video) { Invoke-RemoteVideoRecording -Udid $udid -LocalDirectory $localDirectory }
+    Invoke-Item $localScreenshot
+}
+
+function Invoke-RemoteVideoRecording {
+    param([string]$Udid, [string]$LocalDirectory)
+    $remoteVideo = '$HOME/ios-uploads/flownrw-simulator-preview.mov'
+    $remotePid = '$HOME/ios-uploads/flownrw-recordVideo.pid'
+    $remoteLog = '$HOME/ios-uploads/flownrw-recordVideo.log'
+    $startScript = @"
+set -e
+mkdir -p "`$HOME/ios-uploads"
+rm -f "$remoteVideo" "$remotePid" "$remoteLog"
+nohup xcrun simctl io "$Udid" recordVideo --codec=h264 "$remoteVideo" >"$remoteLog" 2>&1 < /dev/null &
+echo `$! > "$remotePid"
+sleep 1
+kill -0 `$(cat "$remotePid") 2>/dev/null || { echo "FEHLER: Videoaufnahme konnte nicht gestartet werden:"; cat "$remoteLog"; exit 1; }
+echo "Aufnahme gestartet (PID `$(cat "$remotePid"))"
+"@
+    Invoke-OnMac -Script $startScript -Description "Start der Simulator-Videoaufnahme"
+    if ($NoPrompt) {
+        Write-Host "Nehme $VideoSeconds Sekunden auf ..." -ForegroundColor Cyan
+        Start-Sleep -Seconds $VideoSeconds
+    }
+    else {
+        Write-Host "Aufnahme läuft – bediene die App im Simulator-Fenster auf dem Mac." -ForegroundColor Cyan
+        Read-Host "Enter zum Stoppen der Aufnahme" | Out-Null
+    }
+    $stopScript = @"
+PID=`$(cat "$remotePid" 2>/dev/null || true)
+if [ -n "`$PID" ]; then
+    kill -INT "`$PID" 2>/dev/null || true
+    for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 "`$PID" 2>/dev/null || break; sleep 1; done
+fi
+rm -f "$remotePid"
+if [ ! -s "$remoteVideo" ]; then
+    echo "FEHLER: Videodatei fehlt oder ist leer:"
+    cat "$remoteLog" 2>/dev/null || true
+    exit 1
+fi
+ls -lh "$remoteVideo"
+"@
+    Invoke-OnMac -Script $stopScript -Description "Stoppen der Simulator-Videoaufnahme"
+    $localVideo = Join-Path $LocalDirectory "simulator-preview-$(Get-Date -Format 'yyyyMMdd-HHmmss').mov"
+    Write-Host "Hole Video vom Mac ..." -ForegroundColor Cyan
+    Copy-FileFromMac -RemotePath $remoteVideo -LocalPath $localVideo
+    Write-Host "Simulator-Vorschau gespeichert: $localVideo" -ForegroundColor Green
+}
+
 function Invoke-List {
     if ($runningOnMacOS) {
         Write-Host "Verfuegbare iOS-Simulatoren:" -ForegroundColor Cyan
@@ -1162,8 +1313,9 @@ function Show-Menu {
     Write-Host "4) Simulatoren/Geraete anzeigen"
     Write-Host "5) Release-Build + Upload zu App Store Connect (TestFlight)"
     Write-Host "6) Vorhandene .ipa validieren + hochladen"
+    Write-Host "7) Build + iOS-Simulator + Video aufnehmen"
     Write-Host "==============================="
-    $choice = Read-Host "Bitte waehlen (1-6)"
+    $choice = Read-Host "Bitte waehlen (1-7)"
 
     switch ($choice) {
         "1" { $script:Action = "build" }
@@ -1172,6 +1324,7 @@ function Show-Menu {
         "4" { $script:Action = "list" }
         "5" { $script:Action = "store" }
         "6" { $script:Action = "upload" }
+        "7" { $script:Action = "simulator"; $script:Video = $true }
         default {
             Write-Host "Ungueltige Auswahl." -ForegroundColor Red
             exit 1
@@ -1190,8 +1343,8 @@ try {
             Invoke-Build
         }
         "simulator" {
-            Assert-PairToMacAvailable
-            Invoke-Run -Action "simulator"
+            if ($runningOnWindows -and $ServerAddress -and $ServerUser) { Invoke-SimulatorViaSsh }
+            else { Assert-PairToMacAvailable; Invoke-Run -Action "simulator" }
         }
         "device" {
             if ($runningOnWindows -and $ServerAddress -and $ServerUser) {
