@@ -1,4 +1,4 @@
-param([Parameter(Mandatory = $true)][string]$Exe, [switch]$InventoryOnly, [switch]$ExpiredOnly, [switch]$DetailRetention)
+param([Parameter(Mandatory = $true)][string]$Exe, [string]$ScreenshotDirectory, [switch]$InventoryOnly, [switch]$ExpiredOnly, [switch]$DetailRetention)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
@@ -8,10 +8,17 @@ using System.Runtime.InteropServices;
 public static class DepartureCacheWindow {
  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int command);
+ [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+ [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr h);
+ [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint flags);
 }
 "@
 
-$keys = @('FLOWNRW_UI_TEST_FAVORITES', 'FLOWNRW_UI_TEST_DEPARTURE_CACHE', 'FLOWNRW_UI_TEST_REFRESH_SETTINGS', 'FLOWNRW_UI_TEST_SCENARIO')
+if ($ScreenshotDirectory) {
+    New-Item -ItemType Directory -Force $ScreenshotDirectory | Out-Null
+    $ScreenshotDirectory = (Resolve-Path $ScreenshotDirectory).Path
+}
+$keys = @('FLOWNRW_UI_TEST_FAVORITES', 'FLOWNRW_UI_TEST_DEPARTURE_CACHE', 'FLOWNRW_UI_TEST_REFRESH_SETTINGS', 'FLOWNRW_UI_TEST_SCENARIO', 'FLOWNRW_UI_TEST_HIDE_CONTROLS')
 $previous = @{}
 foreach ($key in $keys) { $previous[$key] = [Environment]::GetEnvironmentVariable($key) }
 $directory = Join-Path (Get-Location) ('artifacts/tests/departure-cache/' + [Guid]::NewGuid().ToString('N'))
@@ -95,6 +102,40 @@ function AssertLines([string]$required, [string]$forbidden, [string]$message) {
     $actual = Name 'FavoriteLines0'
     Assert ($actual -match $required -and $actual -notmatch $forbidden) ($message + '; actual: ' + $actual)
 }
+$script:manifest = $null
+function Snapshot([string]$name, [string]$scenario) {
+    if (!$ScreenshotDirectory) { return }
+    Add-Type -AssemblyName System.Drawing
+    $handle = [IntPtr]$script:window.Current.NativeWindowHandle
+    [DepartureCacheWindow]::SetForegroundWindow($handle) | Out-Null
+    Start-Sleep -Milliseconds 400
+    $rect = $script:window.Current.BoundingRectangle
+    $bitmap = New-Object Drawing.Bitmap(([int]$rect.Width), ([int]$rect.Height))
+    $graphics = [Drawing.Graphics]::FromImage($bitmap)
+    try {
+        $dc = $graphics.GetHdc()
+        try { if (![DepartureCacheWindow]::PrintWindow($handle, $dc, 2)) { throw 'Own window capture unavailable' } }
+        finally { $graphics.ReleaseHdc($dc) }
+        $bitmap.Save((Join-Path $ScreenshotDirectory ($name + '.png')), [Drawing.Imaging.ImageFormat]::Png)
+    } finally { $graphics.Dispose(); $bitmap.Dispose() }
+    if ($null -eq $script:manifest) {
+        $commit = (git rev-parse HEAD).Trim()
+        $statusLines = @(git status --porcelain)
+        $tracked = @($statusLines | Where-Object { $_ -notmatch '^\?\?' })
+        $untracked = @($statusLines | Where-Object { $_ -match '^\?\?' })
+        $workingTree = if ($tracked.Count -gt 0) { 'tracked files modified' } elseif ($untracked.Count -gt 0) { 'tracked files clean; untracked files present' } else { 'clean' }
+        $buildPath = Join-Path (Split-Path $Exe) 'FlowNRW.dll'
+        $sha256 = [Security.Cryptography.SHA256]::Create()
+        try { $buildHash = ([BitConverter]::ToString($sha256.ComputeHash([IO.File]::ReadAllBytes($buildPath)))).Replace('-', '') }
+        finally { $sha256.Dispose() }
+        $script:manifest = @{ commit = $commit; workingTree = $workingTree; buildHash = $buildHash; dpi = [DepartureCacheWindow]::GetDpiForWindow($handle) }
+    }
+    $bounds = $script:window.Current.BoundingRectangle
+    $theme = if ($env:FLOWNRW_UI_TEST_THEME) { $env:FLOWNRW_UI_TEST_THEME } else { 'system' }
+    $textScale = if ($env:FLOWNRW_UI_TEST_TEXT_SCALE) { [int]$env:FLOWNRW_UI_TEST_TEXT_SCALE } else { 100 }
+    [pscustomobject]@{ image = $name + '.png'; commit = $script:manifest.commit; workingTree = $script:manifest.workingTree; buildSha256 = $script:manifest.buildHash; platform = 'Windows native MAUI'; theme = $theme; logicalWidth = [int][Math]::Round($bounds.Width * 96 / $script:manifest.dpi); logicalHeight = [int][Math]::Round($bounds.Height * 96 / $script:manifest.dpi); physicalWidth = [int]$bounds.Width; physicalHeight = [int]$bounds.Height; dpi = $script:manifest.dpi; textScale = $textScale; scaleMethod = 'UiTest app text scaling'; scenario = $scenario; reference = 'abfahrtsmonitor_live'; fixtureControls = 'hidden'; timestamp = [DateTimeOffset]::Now.ToString('O') } | ConvertTo-Json -Compress | Add-Content (Join-Path $ScreenshotDirectory 'matrix.jsonl')
+    Write-Output ('CAPTURE ' + $name)
+}
 
 try {
     StartApp
@@ -154,17 +195,29 @@ try {
     }
 
     $env:FLOWNRW_UI_TEST_SCENARIO = 'cache-start-slow-nearby'
+    if ($ScreenshotDirectory) { $env:FLOWNRW_UI_TEST_HIDE_CONTROLS = '1' }
     StartApp
+    if ($ScreenshotDirectory) { $env:FLOWNRW_UI_TEST_HIDE_CONTROLS = $previous['FLOWNRW_UI_TEST_HIDE_CONTROLS'] }
     Wait 'FavoriteName0' | Out-Null
     AwaitVisible 'FavoriteBusy0' | Out-Null
     Assert ((Name 'FavoriteLines0') -match 'RE 1') 'Collapsed favorite restores its persisted line inventory before provider completion'
+    if ($ScreenshotDirectory) { Snapshot 'cache-start-slow-nearby-cached' 'cache-during-refresh' }
     Click 'ToggleFavorite0'
     Assert ((Name 'FavoriteDeparture0_0') -match 'RE 1 .*Stand 1') 'Cached future departure is visible before delayed provider completion'
-    $started = AwaitCalls 1 3
-    Assert ($started.TotalSeconds -lt 3) 'Startup provider refresh begins before the six-second Nearby lookup completes'
-    Assert ((DepartureCalls) -eq 1) 'Exactly one startup provider refresh is requested for cached favorite'
+    if ($ScreenshotDirectory) {
+        $busyDuringRefresh = Find 'FavoriteBusy0'
+        $scrollItem = $null
+        if ($null -ne $busyDuringRefresh -and $busyDuringRefresh.TryGetCurrentPattern([System.Windows.Automation.ScrollItemPattern]::Pattern, [ref]$scrollItem)) { $scrollItem.ScrollIntoView() }
+        if ($null -ne $busyDuringRefresh -and -not $busyDuringRefresh.Current.IsOffscreen) { Snapshot 'cache-start-slow-nearby-cached-expanded' 'cache-during-refresh-expanded' }
+    }
+    else {
+        $started = AwaitCalls 1 3
+        Assert ($started.TotalSeconds -lt 3) 'Startup provider refresh begins before the six-second Nearby lookup completes'
+        Assert ((DepartureCalls) -eq 1) 'Exactly one startup provider refresh is requested for cached favorite'
+    }
     for ($attempt = 0; $attempt -lt 100 -and (Find 'FavoriteBusy0').Current.IsOffscreen -eq $false; $attempt++) { Start-Sleep -Milliseconds 100 }
     Assert ((Name 'FavoriteDeparture0_0') -match 'RE 1 .*Live Stand 1') 'Delayed provider response replaces displayed cached departure'
+    if ($ScreenshotDirectory) { Snapshot 'cache-start-slow-nearby-live' 'cache-after-refresh' }
     Click 'OpenFavorite0'
     AwaitVisible 'Departure0' | Out-Null
     Assert ((Name 'Departure0') -match 'RE 1 .*Live Stand 1') 'Favorite details immediately adopt the visible cached board while refreshing'
