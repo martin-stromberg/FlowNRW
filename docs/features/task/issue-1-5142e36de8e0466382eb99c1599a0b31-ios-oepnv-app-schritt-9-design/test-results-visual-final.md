@@ -105,3 +105,19 @@ Der isolierte native Lauf **hell, 1024×768, 100 %, `favorite-cache-seed`, `-Con
 Die UIA-Prüfung bestätigte Touchziele für Startsuche (48×48), Standort (48×48), Koordinatenmodus (62×48) und die zunächst unterhalb des sichtbaren Scrollbereichs liegende Verbindungssuche (792×44). Der Runner scrollt diese Kontrolle nun vor der Boundsmessung sichtbar; das ist eine Testkorrektur, keine Produktänderung.
 
 Ein anfänglicher Lauf blieb am nicht mehr vorhandenen `JourneyDetailSection4` stehen, obwohl die vorangehenden Detailbilder bereits erzeugt waren. Die aktuelle Detailansicht endet bei `JourneyDetailSection3`; der letzte Capture referenziert daher diesen vorhandenen Abschlusszustand. Ein weiterer Lauf wurde einmal durch eine noch laufende asynchrone Bindungsaktualisierung nach zweimaligem Tausch abgebrochen. Nach einer kurzen Stabilisierung vor der Routensuche lief die gesamte Serie erfolgreich durch.
+
+### Dark Mode, breite Verbindungsansichten, 04.10.2026
+
+Die gleiche isolierte Serie lief anschließend mit **dunklem Thema, 1024×768, 100 %, `favorite-cache-seed`, `-ConnectionOnly`** vollständig durch. Die elf Aufnahmen liegen unter [wide-connection-dark](../../../../artifacts/step9-visual-final/dark-wide-connections): Formular, Validierungszustand, gewählte und getauschte Endpunkte, Ergebnisliste, Verbindungsfavorit sowie alle erfassten Detail- und Umstiegszustände.
+
+Die vier interaktiven Prüfungen bestanden auch im dunklen Thema: Startsuche 48×48, Standort 48×48, Koordinatenmodus 62×48 und Verbindungssuche 792×44 logische Einheiten. Der Lauf bestätigt außerdem die sichtbare Favoritaktion im Ergebniskopf und den Erhalt der Detailpfade (`JourneyDetailSection2`, `JourneyWalk2`, `JourneyDetailSection3`).
+
+Bei der ersten Sichtprüfung fiel in der Ergebnisüberschrift ein kodierter Ortsname (`DÃ¼sseldorf`) auf. Die Produktdaten waren nicht betroffen: Windows PowerShell 5 las den UTF-8-Quelltext des Screenshot-Runners ohne BOM über die lokale Codepage und übergab den Suchtext beschädigt an die Fixture. Der Runner erzeugt den Umlaut jetzt explizit über `[char]0x00FC`. Der wiederholte vollständige Lauf zeigt in [der Ergebnisansicht](../../../../artifacts/step9-visual-final/dark-wide-connections/dark-1024-768-100-favorite-cache-seed-journey-results.png) korrekt „Düsseldorf Hauptbahnhof“.
+
+Damit sind die breiten Windows-Verbindungsansichten in Hell und Dunkel visuell aufgezeichnet. Die iOS-Geräteabnahme, die Touch-/VoiceOver-Prüfung auf iOS und ein visueller Nachweis für Haltestellen-Suche → Cachemonitor → Rückkehr bleiben weiterhin offen.
+
+### Kartenfixture bereinigt, 04.10.2026
+
+Die breite Haltestellenkarte enthielt in ihren synthetischen Kacheln den technischen Schriftzug `KARTENFIXTURE z/x/y`. Der Schriftzug war nur ein Hilfsmittel der Windows-UiTest-Fixture, wirkte in den Designbildern jedoch wie ein sichtbarer Testmodus. Die Fixture zeichnet jetzt statt dessen eine neutrale Kartengeometrie; Zoomsteuerung, Raster und Stationsmarker bleiben erhalten. Die neu aufgenommene [breite Kartenansicht](../../../../artifacts/step9-visual-final/wide-full-light-clean-map/light-1024-768-100-favorite-cache-seed-map-stations.png) zeigt keine technische Kachelkennung mehr.
+
+Die Änderung wurde mit `dotnet build FlowNRW/FlowNRW.csproj -c UiTest -p:TreatWarningsAsErrors=true --no-restore` geprüft: 0 Warnungen, 0 Fehler. Der vollständige Designrunner erzeugte die Haltestellensuche, den Monitor und die Rückkehr zur Trefferliste sowie die Karte erneut. Der Lauf wird für den anschließenden Verbindungsabschnitt weiterhin in getrennte, vollständig erfolgreiche `-ConnectionOnly`-Serien aufgeteilt; diese isolierte Serie ist der belastbare Nachweis für die dortigen Interaktionen.

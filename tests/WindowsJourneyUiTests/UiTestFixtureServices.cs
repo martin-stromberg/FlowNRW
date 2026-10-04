@@ -21,7 +21,7 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
     public async Task<MapTile> GetAsync(int zoom, int x, int y, CancellationToken cancellationToken)
     {
         await Task.Delay(50, cancellationToken);
-        var svg = $"<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><rect width='256' height='256' fill='#edf2f5' stroke='#aabbcc'/><path d='M0 128H256M128 0V256' stroke='#aabbcc'/><text x='12' y='25' font-size='14'>KARTENFIXTURE {zoom}/{x}/{y}</text></svg>";
+        var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><rect width='256' height='256' fill='#edf2f5' stroke='#aabbcc'/><path d='M0 128H256M128 0V256' stroke='#aabbcc'/><path d='M-20 205 C55 165 155 235 276 175' fill='none' stroke='#c4d5c0' stroke-width='16'/><path d='M-20 205 C55 165 155 235 276 175' fill='none' stroke='#ffffff' stroke-width='3'/></svg>";
         return new("data:image/svg+xml;base64," + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(svg)));
     }
 

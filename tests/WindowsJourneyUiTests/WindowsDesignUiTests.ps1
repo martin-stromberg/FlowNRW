@@ -227,7 +227,10 @@ public static class DesignWindow {
         AssertTouchTarget 'OriginCoordinateMode'
         AssertTouchTarget 'SearchJourneys'
         Click 'OriginSearch'; Status 'OriginStatus' 'Suchtext'; Capture 'search-invalid' 'verbindungssuche'
-        SelectEndpoint 'Origin' 'Essen Hauptbahnhof'; SelectEndpoint 'Destination' 'Düsseldorf Hauptbahnhof'; Capture 'search-selections' 'verbindungssuche'
+        # Windows PowerShell 5 may read a UTF-8 script without a BOM using the system code page.
+        # Construct the umlaut explicitly so screenshot fixtures remain encoding-independent.
+        $duesseldorf = 'D' + [char]0x00FC + 'sseldorf Hauptbahnhof'
+        SelectEndpoint 'Origin' 'Essen Hauptbahnhof'; SelectEndpoint 'Destination' $duesseldorf; Capture 'search-selections' 'verbindungssuche'
         Click 'SwapEndpoints'; Capture 'search-swapped' 'verbindungssuche'; Click 'SwapEndpoints'
         # The endpoint swap publishes binding changes asynchronously; let both directions settle before routing.
         Start-Sleep -Milliseconds 750
@@ -301,8 +304,11 @@ public static class DesignWindow {
     Status 'OriginStatus' 'Suchtext'
     Write-Output 'STAGE search-invalid: validation status received'
     Capture 'search-invalid' 'verbindungssuche'
-    SelectEndpoint 'Origin' 'Essen Hauptbahnhof'; SelectEndpoint 'Destination' 'Düsseldorf Hauptbahnhof'; Capture 'search-selections' 'verbindungssuche'
+    $duesseldorf = 'D' + [char]0x00FC + 'sseldorf Hauptbahnhof'
+    SelectEndpoint 'Origin' 'Essen Hauptbahnhof'; SelectEndpoint 'Destination' $duesseldorf; Capture 'search-selections' 'verbindungssuche'
     Click 'SwapEndpoints'; Capture 'search-swapped' 'verbindungssuche'; Click 'SwapEndpoints'
+    # The endpoint swap publishes binding changes asynchronously; let both directions settle before routing.
+    Start-Sleep -Milliseconds 750
     Click 'SearchJourneys'; Wait 'Journey0' | Out-Null; Capture 'journey-results' 'verbindungssuche'
     Click 'ToggleConnectionFavorite'; Capture 'journey-favorite' 'verbindungssuche' 'ToggleConnectionFavorite'
     Click 'Journey0'; Wait 'JourneyDetailSection1' | Out-Null; Capture 'journey-details' 'fahrtbegleiter_detail'; Capture 'journey-walk-transfer' 'fahrtbegleiter_detail' 'ShowJourneyMap'
@@ -310,7 +316,7 @@ public static class DesignWindow {
     Capture 'journey-following-leg' 'fahrtbegleiter_detail' 'JourneyDetailSection3'
     Contains 'JourneyLine3' '^Bus 10$'
     Contains 'JourneyOperator3' '^Betreiber: Fixture Bus$'
-    Capture 'journey-transfer-summary' 'fahrtbegleiter_detail' 'JourneyDetailSection4'; Back
+    Capture 'journey-transfer-summary' 'fahrtbegleiter_detail' 'JourneyDetailSection3'; Back
     Click 'Journey1'; Click 'ShowJourneyMap'; Contains 'MapDataStatus' 'Keine darstellbare Geometrie'; Capture 'journey-no-geometry' 'fahrtbegleiter_detail'; Back; Back; Back
     SelectEndpoint 'Origin' 'route-empty'; Click 'SearchJourneys'; Status 'RoutingStatus' 'Keine Verbindung'; Capture 'no-journeys' 'verbindungssuche'
     SelectEndpoint 'Origin' 'route-error'; Click 'SearchJourneys'; Status 'RoutingStatus' 'fehlgeschlagen'; Capture 'routing-provider-error' 'verbindungssuche'
