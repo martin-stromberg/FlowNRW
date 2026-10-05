@@ -32,3 +32,9 @@ Er ergänzt die bestehende breite Journey-Regression und wird nicht als ausgefü
 Die iOS-Geräteabnahme bleibt getrennt: lokaler Cache, sofortige Anzeige, laufende Aktualisierung, Abbruch und VoiceOver müssen auf dem bereitgestellten Gerät geprüft werden.
 
 Der native Fixturelauf muss in einer aktiven Desktop-Sitzung ausgeführt werden. Ein Lauf mit versteckt gestarteter App lieferte keinen aktiven Fenster-Lifecycle und damit erwartungsgemäß keine Startaktualisierung; der Fixture-Start aktiviert deshalb vor den Assertions jetzt sein eigenes Fenster. Ein erfolgreicher Prozessnachweis ist noch nachzutragen.
+
+## Ausgeführter Prozessnachweis, 05.10.2026
+
+Der native Fixturelauf wurde über `artifacts/night-runner.ps1` auf Commit `97b940f` (sauberer Arbeitsbaum) erfolgreich abgeschlossen: `PASS native departure cache regression` — protokolliert in `artifacts/night-departure-cache-*.log`. Die Abdeckung umfasst gespeicherte Abfahrten vor der verzögerten Antwort, Ersetzung durch Live-Daten, Detailhandoff, Fehler- und Abbruchretention sowie Persistenz über einen Prozessneustart.
+
+Der visuelle Beleg liegt als eigenständiges Bildpaar vor: `artifacts/step9-visual-final/cache-refresh/cache-start-slow-nearby-cached.png` zeigt die wiederhergestellten Abfahrtszeilen mit laufendem Aktualisierungsindikator (Manifestszenario `cache-during-refresh`); `cache-start-slow-nearby-live.png` zeigt die eingetroffenen Livezeilen (`cache-after-refresh`). Beide Manifestzeilen nennen Commit `97b940f`, Build-SHA256 `175DBAB0…095D` und `tracked files clean; untracked files present`.
