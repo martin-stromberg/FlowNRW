@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using FlowNRW.Core.Diagnostics;
 using FlowNRW.Core.Refresh;
 
 namespace FlowNRW;
@@ -29,6 +30,8 @@ public partial class App : Application
     {
         this.shell = shell;
         this.lifecycle = lifecycle;
+        AppLog.LoadEnabled();
+        AppLog.Write("lifecycle", "app started");
         InitializeComponent();
 #if UI_TEST_FIXTURES
         UserAppTheme = Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_THEME") switch { "light" => AppTheme.Light, "dark" => AppTheme.Dark, _ => AppTheme.Unspecified };
@@ -51,11 +54,11 @@ public partial class App : Application
 #else
         var pinActive = false;
 #endif
-        window.Activated += (_, _) => lifecycle.SetActive(true);
-        window.Deactivated += (_, _) => { if (!pinActive) lifecycle.SetActive(false); };
-        window.Stopped += (_, _) => { if (!pinActive) lifecycle.SetActive(false); };
-        window.Resumed += (_, _) => lifecycle.SetActive(true);
-        window.Destroying += (_, _) => lifecycle.SetActive(false);
+        window.Activated += (_, _) => { AppLog.Write("lifecycle", "window activated"); lifecycle.SetActive(true); };
+        window.Deactivated += (_, _) => { if (!pinActive) { AppLog.Write("lifecycle", "window deactivated"); lifecycle.SetActive(false); } };
+        window.Stopped += (_, _) => { if (!pinActive) { AppLog.Write("lifecycle", "window stopped"); lifecycle.SetActive(false); } };
+        window.Resumed += (_, _) => { AppLog.Write("lifecycle", "window resumed"); lifecycle.SetActive(true); };
+        window.Destroying += (_, _) => { AppLog.Write("lifecycle", "window destroying"); lifecycle.SetActive(false); };
         return window;
     }
 }

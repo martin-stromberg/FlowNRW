@@ -62,9 +62,9 @@ public sealed class FavoriteDepartureCacheIntegrationTests
         Assert.Contains("Letzte bekannte", card.Status);
     }
 
-    /// <summary>A future event from an expired cache response is not shown on the home card.</summary>
+    /// <summary>A future event from an expired cache response stays visible and marked stale.</summary>
     [Fact]
-    public async Task LoadAsync_DoesNotRestoreStaleBoardWithFutureDeparture()
+    public async Task LoadAsync_RestoresStaleBoardWithFutureDepartureAsMarkedStale()
     {
         var stop = Stop("stale");
         var clock = new TransitTestClock { Now = DateTimeOffset.UtcNow };
@@ -82,7 +82,10 @@ public sealed class FavoriteDepartureCacheIntegrationTests
 
         await home.LoadAsync();
 
-        Assert.Null(Assert.Single(home.Cards).Result);
+        var restored = Assert.Single(home.Cards).Result;
+        Assert.NotNull(restored);
+        Assert.True(restored.IsStale);
+        Assert.Single(restored.Items);
     }
 
     /// <summary>A board with no remaining future departure is removed from durable cache during hydration.</summary>

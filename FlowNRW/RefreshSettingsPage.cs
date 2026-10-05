@@ -1,3 +1,4 @@
+using FlowNRW.Core.Diagnostics;
 using FlowNRW.Core.Presentation;
 using FlowNRW.Core.Refresh;
 using System.ComponentModel;
@@ -38,6 +39,27 @@ public sealed class RefreshSettingsPage : ContentPage
         status.IsVisible = ShowsStatus();
         var current = new Label { AutomationId = "RefreshIntervalStatus" };
         current.SetBinding(Label.TextProperty, nameof(model.Description));
+        var logging = new Switch { AutomationId = "LoggingEnabled", IsToggled = AppLog.Enabled };
+        SemanticProperties.SetDescription(logging, "Protokollierung aktivieren");
+        var logStatus = new Label { AutomationId = "LogStatus" };
+        var sendLog = new Button
+        {
+            Text = "Protokoll senden",
+            AutomationId = "SendLog",
+            Command = new AsyncRelayCommand(async () =>
+            {
+                logStatus.Text = "";
+                try
+                {
+                    var message = new EmailMessage("FlowNRW Diagnoseprotokoll", AppLog.ReadAll(), "mstromberg84+flow@gmail.com");
+                    if (File.Exists(AppLog.FilePath)) message.Attachments = [new EmailAttachment(AppLog.FilePath)];
+                    await Email.ComposeAsync(message);
+                    logStatus.Text = "Protokoll-E-Mail geöffnet.";
+                }
+                catch (Exception) { logStatus.Text = "E-Mail konnte nicht geöffnet werden. Bitte erneut versuchen."; }
+            }, () => true, _ => logStatus.Text = "E-Mail konnte nicht geöffnet werden. Bitte erneut versuchen.")
+        };
+        logging.Toggled += (_, args) => AppLog.SetEnabled(args.Value);
         Content = new ScrollView
         {
             Content = new VerticalStackLayout
@@ -48,7 +70,8 @@ public sealed class RefreshSettingsPage : ContentPage
                 {
                     new Border { Padding = 16, Content = new VerticalStackLayout { Spacing = 12, Children = { TransitVisuals.Text("Abfahrten automatisch laden", 22, true), interval } } },
                     new Button { Text = "Speichern", AutomationId = "SaveRefreshSettings", Command = save },
-                    status, current
+                    status, current,
+                    new Border { Padding = 16, Content = new VerticalStackLayout { Spacing = 12, Children = { TransitVisuals.Text("Diagnose", 22, true), new HorizontalStackLayout { Spacing = 12, Children = { TransitVisuals.Text("Protokollierung"), logging } }, sendLog, logStatus } } }
                 }
             }
         };

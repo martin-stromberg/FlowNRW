@@ -275,6 +275,7 @@ public sealed class StopMonitorViewModel : ObservableObject
             source.Token.ThrowIfCancellationRequested();
             if (version != revision) return;
             LastAttempt = result;
+            Diagnostics.AppLog.Write("monitor", $"{SelectedStop.Name}: items={result.Items.Count} error={result.ErrorCode ?? "-"} fallback={result.IsFallback} stale={result.IsStale} warnings={result.Warnings.Count}");
             if (result.ErrorCode is not null || (!IsComplete(result) && Result is not null))
                 SetFailure();
             else
@@ -334,7 +335,7 @@ public sealed class StopMonitorViewModel : ObservableObject
     private void StoreSession(Stop stop, ProviderResult<StopEvent> result)
     {
         if (string.IsNullOrWhiteSpace(stop.Source) || string.IsNullOrWhiteSpace(stop.Id)
-            || result.Items.Count > 100 || !IsComplete(result)) return;
+            || result.Items.Count > 100 || result.ErrorCode is not null) return;
         var key = (stop.Source, stop.Id);
         sessionBoards[key] = new SessionBoard(result, ++sessionOrder);
         while (sessionBoards.Count > MaximumSessionBoards)

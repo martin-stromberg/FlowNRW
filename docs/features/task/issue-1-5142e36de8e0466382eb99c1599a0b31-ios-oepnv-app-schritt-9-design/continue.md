@@ -1,16 +1,12 @@
 # Offene Aufgaben
 
-Aktualisiert am: 05.10.2026 (Abend)
+Aktualisiert am: 05.10.2026 (Nacht)
 
-Native Windows-Nachweiskette komplett grün auf Commit `97b940f`. Die erste iOS-Geräteabnahme lieferte drei Produktbefunde, die im Folgecommit behoben sind:
+Zweiter iOS-Gerätedurchgang durch den Nutzer: Abfahrten laden jetzt (degradierte Antworten werden angezeigt statt als Fehler), aber der Abruf meldet zwischendurch weiterhin Fehlschläge — vom Nutzer vorläufig als akzeptabel bewertet, Ursachenanalyse über das neue Diagnoseprotokoll. Weitere Befunde behoben: persistierte Cache-Boards werden nach Neustart wiederhergestellt (vorher nur Linien), der Session-Cache nimmt degradierte fehlerfreie Antworten auf (erneut geöffnete Station zeigt vorherige Abfahrten), und die Detailansicht zeigt bei gelöschter Auswahl den konkreten Sitzungsstatus.
 
-1. Degradierte Abfahrtsantworten (Ersatzquelle/Warnung/veraltet) wurden als Fehler angezeigt statt mit Hinweis gerendert — behoben in `StopMonitorViewModel`/`FavoriteMonitorViewModel` (vollständige Boards bleiben bevorzugt, Persistenz nur für komplette Antworten).
-2. `UTC+02:00`-Offset in Verbindungszeiten — `JourneyPresentation.EventTime` zeigt `HH:mm` mit `Vortag`/`Folgetag`-Präfix.
-3. Umstiege hingen als Sammelblock unter der Timeline — `JourneyTimelineView` rendert sie positionsgetreu zwischen den Transitabschnitten.
+Neue Funktion implementiert: `AppLog` Diagnoseprotokoll — in den Einstellungen aktivierbar, sendbar via Mail an mstromberg84+flow@gmail.com. Bitte beim nächsten Gerätetest aktivieren und bei Abfahrtsfehlern das Protokoll senden — es enthält HTTP-Status/Dauer je Anfrage und Monitorergebnis-Markierungen (error/fallback/stale/warnings).
 
-- [ ] iOS-Geräteabnahme auf dem Bugfix-Build wiederholen; vor allem Abfahrts-/Cache-Checkpunkte 1–5 aus `ios-device-acceptance.md` erneut durchlaufen. Scheitert der Abfahrtsabruf weiter, Geräte-Netzwerklog sichern (echte Providerstörung vs. Darstellungsschwelle).
-- [ ] Native Refresh-/Lifecycle-/Departure-Cache-Regressionen sowie eine Designmatrix auf dem neuen Build erneut laufen lassen (Nacht-Runner `artifacts/night-runner.ps1`) und die Manifeste aktualisieren.
+- [ ] iOS-Geräteabnahme auf dem neuen Build wiederholen: insbesondere Cache-Checkpunkte (Abfahrten sichtbar vor Refresh-Abschluss, erneutes Öffnen derselben Station) und 'Protokoll senden' bei Fehlern.
+- [ ] Native Refresh-/Lifecycle-/Journey-Regressionen und eine Designmatrix auf dem neuen Build nachlaufen lassen (Nacht-Runner `artifacts/night-runner.ps1`).
 - [ ] Dokumentation/README/Release Notes finalisieren (Schritt 12).
-- [ ] Danach Projektabnahme, Abschlusscommit und Merge vorbereiten; Schritt 9 bleibt „In Arbeit“.
-
-Hinweis: `artifacts/` ist gitignoriert; Endmatrix-Manifeste verweisen auf Commit `97b940f` mit Build-SHA256 `175DBAB0…095D`.
+- [ ] Danach Projektabnahme, Abschlusscommit und Merge vorbereiten; Schritt 9 bleibt „In Arbeit".

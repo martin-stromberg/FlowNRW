@@ -84,11 +84,10 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
         var storedLines = entry.Lines ?? [];
         Lines = (storedLines.Count > 0 ? storedLines : entry.Result.Items.Select(LineName))
             .Where(line => !string.IsNullOrWhiteSpace(line)).Distinct(StringComparer.Ordinal).OrderBy(line => line, StringComparer.Ordinal).ToArray();
-        if (freshness.IsStale(entry.Result)) { RefreshBindings(); return false; }
         var retained = entry.Result.Items.Where(item => EffectiveTime(item) is { } time && time >= now)
             .OrderBy(item => EffectiveTime(item)!.Value).ToArray();
         if (retained.Length == 0) { RefreshBindings(); return false; }
-        Result = entry.Result with { Items = retained };
+        Result = entry.Result with { Items = retained, IsStale = entry.Result.IsStale || freshness.IsStale(entry.Result) };
         LastAttempt = null;
         Status = "Letzter Stand wird aktualisiert …";
         RefreshBindings();
@@ -115,6 +114,7 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
             source.Token.ThrowIfCancellationRequested();
             if (version != revision) return;
             LastAttempt = result;
+            Diagnostics.AppLog.Write("favorite", $"{Stop.Name}: items={result.Items.Count} error={result.ErrorCode ?? "-"} fallback={result.IsFallback} stale={result.IsStale} warnings={result.Warnings.Count}");
             if (result.ErrorCode is not null || (!IsComplete(result) && Result is not null)) SetFailure();
             else
             {

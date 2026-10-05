@@ -94,9 +94,9 @@ public sealed class FavoriteHomeViewModel : ObservableObject
         finally { persistence.Release(); }
     }
 
-    /// <summary>Starts independent initial loads without repeating completed successful card requests.</summary>
+    /// <summary>Starts independent initial loads for empty or expired boards without repeating completed requests.</summary>
     /// <returns>All initial requests finishing or being cancelled.</returns>
-    public Task RefreshMissingAsync() => Task.WhenAll(Cards.Where(card => card.Result is null && !card.IsBusy).Select(card => card.RefreshAsync()));
+    public Task RefreshMissingAsync() => Task.WhenAll(Cards.Where(card => freshness.IsStale(card.Result) && !card.IsBusy).Select(card => card.RefreshAsync()));
 
     /// <summary>Starts a regular non-blocking provider refresh for every current card, including restored local boards.</summary>
     /// <returns>All started refreshes finishing or being cancelled.</returns>

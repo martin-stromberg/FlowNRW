@@ -46,3 +46,17 @@ Pro Gerätekonfiguration die Checkpunkte mit `Bestanden`, `Fehler` oder `Nicht a
 **Befund 3:** Der Umstieg erschien als Sammelkarte am Ende der Timeline statt zwischen den Fahrten. Behoben: `JourneyTimelineView` rendert Umstiege jetzt positionsgetreu zwischen den Transitabschnitten.
 
 **Wiederholungsbedarf:** Die iOS-Geräteabnahme ist nach dem Bugfix-Build erneut durchzuführen; insbesondere die Abfahrts-/Cache-Checkpunkte 1–5 stehen noch aus. Falls der Abfahrtsabruf weiterhin scheitert, wird ein Protokoll des Geräte-Netzwerkverkehrs benötigt, um eine echte Providerstörung von der Darstellungsschwelle zu unterscheiden.
+
+### Wiederholungsprüfung, 05.10.2026 (zweiter Gerätedurchgang)
+
+**Neu bestanden:** Abfahrten laden jetzt mit angezeigten Zeiten (Befund 1 wirkt); aufgeklappte Favoritenkarte zeigt Abfahrten; Stationsmonitor lädt und listet; beide Detailbefunde (UTC-Offset, Umstieg-Position) als erledigt markiert.
+
+**Restbefund 1:** Der Abruf ist unzuverlässig — zwischendurch erscheint „konnten nicht geladen werden" trotz angezeigter Zeiten. Als vorläufig akzeptabel bewertet; Ursachenanalyse läuft über das neue Diagnoseprotokoll.
+
+**Restbefund 2 (behoben):** Nach Neustart zeigten Favoritenkarten nur Linienbadges ohne Zeiten — der Restore-Pfad verwarf jede älter als 30 s liegende persistierte Antwort (`freshness.IsStale` in `FavoriteMonitorViewModel.Restore`). Behoben: zukünftige Abfahrten werden als `IsStale`-markiertes Board wiederhergestellt und sofort aktualisiert.
+
+**Restbefund 3 (behoben):** Erneut geöffnete Station zeigte keine Session-Abfahrten — `StoreSession` speicherte nur vollständige Antworten, degradierte reale Antworten wurden verworfen. Behoben: jede fehlerfreie Antwort geht in den Session-Cache.
+
+**Restbefund 4 (behoben):** Verbindungsdetails zeigten „Keine Verbindung gewählt" — der Fallback-Text überschrieb den eigentlichen Grund. Behoben: `JourneyDetailViewModel.Details` zeigt bei gelöschter Auswahl den konkreten Sitzungsstatus (z. B. „nicht mehr eindeutig bestätigt").
+
+**Neue Funktion (nutzerseitig angefordert):** Diagnoseprotokoll in den Einstellungen — Schalter „Protokollierung aktivieren" plus „Protokoll senden"-Button, der das Protokoll per Mail an `mstromberg84+flow@gmail.com` öffnet (Log-Datei als Anhang, Inhalt zusätzlich im Text). Protokolliert werden HTTP-Aufrufe mit Status/Dauer, Monitorergebnisse (Fehler/Fallback/Veraltung/Warnungen) und Fenster-Lifecycle. Umgesetzt in `FlowNRW.Core/Diagnostics/AppLog.cs` und `RefreshSettingsPage.cs`.
