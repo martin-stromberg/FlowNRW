@@ -242,10 +242,10 @@ public static class DesignWindow {
         Click 'ToggleConnectionFavorite'; Capture 'journey-favorite' 'verbindungssuche' 'ToggleConnectionFavorite'
         Click 'Journey0'; Wait 'JourneyDetailSection1' | Out-Null; Capture 'journey-details' 'fahrtbegleiter_detail'
         Capture 'journey-walk-transfer' 'fahrtbegleiter_detail' 'ShowJourneyMap'
-        Capture 'journey-walk-distance' 'fahrtbegleiter_detail' 'JourneyWalk2'
-        Capture 'journey-following-leg' 'fahrtbegleiter_detail' 'JourneyDetailSection3'
-        Contains 'JourneyLine3' '^Bus 10$'; Contains 'JourneyOperator3' '^Betreiber: Stadtwerke Essen$'
-        Capture 'journey-transfer-summary' 'fahrtbegleiter_detail' 'JourneyDetailSection3'
+        Capture 'journey-walk-distance' 'fahrtbegleiter_detail' 'JourneyWalk3'
+        Capture 'journey-following-leg' 'fahrtbegleiter_detail' 'JourneyDetailSection4'
+        Contains 'JourneyLine4' '^Bus 10$'; Contains 'JourneyOperator4' '^Betreiber: Stadtwerke Essen$'
+        Capture 'journey-transfer-summary' 'fahrtbegleiter_detail' 'JourneyDetailSection2'
         return
     }    Wait 'OpenHomeStops' | Out-Null
     if ($env:FLOWNRW_DESIGN_SEARCH_ONLY -eq '1') {
@@ -316,11 +316,11 @@ public static class DesignWindow {
     Click 'SearchJourneys'; Wait 'Journey0' | Out-Null; Capture 'journey-results' 'verbindungssuche'
     Click 'ToggleConnectionFavorite'; Capture 'journey-favorite' 'verbindungssuche' 'ToggleConnectionFavorite'
     Click 'Journey0'; Wait 'JourneyDetailSection1' | Out-Null; Capture 'journey-details' 'fahrtbegleiter_detail'; Capture 'journey-walk-transfer' 'fahrtbegleiter_detail' 'ShowJourneyMap'
-    Capture 'journey-walk-distance' 'fahrtbegleiter_detail' 'JourneyWalk2'
-    Capture 'journey-following-leg' 'fahrtbegleiter_detail' 'JourneyDetailSection3'
-    Contains 'JourneyLine3' '^Bus 10$'
-    Contains 'JourneyOperator3' '^Betreiber: Stadtwerke Essen$'
-    Capture 'journey-transfer-summary' 'fahrtbegleiter_detail' 'JourneyDetailSection3'; Back
+    Capture 'journey-walk-distance' 'fahrtbegleiter_detail' 'JourneyWalk3'
+    Capture 'journey-following-leg' 'fahrtbegleiter_detail' 'JourneyDetailSection4'
+    Contains 'JourneyLine4' '^Bus 10$'
+    Contains 'JourneyOperator4' '^Betreiber: Stadtwerke Essen$'
+    Capture 'journey-transfer-summary' 'fahrtbegleiter_detail' 'JourneyDetailSection2'; Back
     Click 'Journey1'; Click 'ShowJourneyMap'; Contains 'MapDataStatus' 'Keine darstellbare Geometrie'; Capture 'journey-no-geometry' 'fahrtbegleiter_detail'; Back; Back; Back
     SelectEndpoint 'Origin' 'route-empty'; Click 'SearchJourneys'; Status 'RoutingStatus' 'Keine Verbindung'; Capture 'no-journeys' 'verbindungssuche'
     SelectEndpoint 'Origin' 'route-error'; Click 'SearchJourneys'; Status 'RoutingStatus' 'fehlgeschlagen'; Capture 'routing-provider-error' 'verbindungssuche'

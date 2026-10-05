@@ -692,8 +692,9 @@ public static class MapPointer {
         $selectedOrigin = Name 'OriginSelection'; $selectedDestination = Name 'DestinationSelection'
         Click 'SearchJourneys'; Contains 'RoutingStatus' 'geladen'
         $first = Name 'Journey0'; $second = Name 'Journey1'
-        Assert ($first -match '16.09.2026 23:55' -and $second -match '17.09.2026 00:55') 'ResultsAndDetails: ordered results and midnight offset'
-        Contains 'Journey0' 'UTC\+02:00'; Contains 'Journey0' '1 Umstiege.*RE 1.*Regionalverkehr NRW.*Fußweg.*Bus 10'
+        Assert ($first -match '23:55' -and $second -match '00:55') 'ResultsAndDetails: ordered results and midnight offset'
+        Assert ($first -notmatch 'UTC') 'ResultsAndDetails: no technical timezone offset shown'
+        Contains 'Journey0' 'Folgetag'; Contains 'Journey0' '1 Umstiege.*RE 1.*Regionalverkehr NRW.*Fußweg.*Bus 10'
         Contains 'ResultsMetadata' 'Quelle:.*Datenalter:.*Fallback.*Veralteter Cache.*Anbieterwarnung'
         Snapshot 'native-results'
         if ($ScreenshotDirectory) {
@@ -704,7 +705,7 @@ public static class MapPointer {
             $transform.Resize($bounds.Width, $bounds.Height)
         }
         Click 'Journey0'; Contains 'JourneyDetailSection1' 'Ausfall'; Contains 'JourneyDetailSection1' 'keine Echtzeitdaten'
-        Contains 'JourneyDetailSection1' '23:58'; Contains 'JourneyDetailSection2' '300 m'; Contains 'JourneyDetailSection4' 'Umstieg.*10 Min'
+        Contains 'JourneyDetailSection1' '23:58'; Contains 'JourneyDetailSection2' 'Umstieg.*10 Min'; Contains 'JourneyDetailSection3' '300 m'
         Snapshot 'native-details'
         Back; Assert ((Name 'Journey0') -eq $first) 'BackNavigation: result preserved'
         Back; Assert ((Name 'OriginSelection') -eq $selectedOrigin -and (Name 'DestinationSelection') -eq $selectedDestination) 'BackNavigation: endpoints preserved'

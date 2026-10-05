@@ -33,4 +33,16 @@ Pro Gerätekonfiguration die Checkpunkte mit `Bestanden`, `Fehler` oder `Nicht a
 
 | Gerät / iOS | Build / Commit | Modus / Textgröße | Orientierung | Ergebnis / offene Punkte |
 |---|---|---|---|---|
-| Noch nicht ausgeführt |  |  |  | iOS-Geräteabnahme liegt beim Nutzer. |
+| iPhone (nutzerseitiger Test, 05.10.2026) | Commit `97b940f` | Standard | Hochformat | Teilweise bestanden; drei Produktbefunde in Arbeit — siehe Befundliste |
+
+### Befundliste der Geräteprüfung, 05.10.2026
+
+**Bestanden:** Favoritenkarten starten zugeklappt mit sofort sichtbaren gespeicherten Linienbadges; verweigerte GPS-Freigabe erzeugt einen verständlichen Hinweis; Favorit als Start/Ziel wählbar; unbekannte Haltestelle suchbar; „Jetzt“-Abruf liefert Verbindungen; Linienanzeige korrekt; Favoritenstatus in der Ergebnisliste umschaltbar; gespeicherte Verbindung übernimmt Start/Ziel; Endpunkttausch funktioniert; Detailansicht öffnet.
+
+**Befund 1 (kritisch):** Der Abfahrtsabruf schlägt auf dem Gerät durchgehend fehl („Abfahrten konnten nicht geladen werden. Bitte erneut versuchen.“), während die Verbindungssuche funktioniert. Folgefehler: Cache-Wiederaufnahme, aufgeklappte Favoritenkarte und erneut geöffneter Haltestellenmonitor waren nicht testbar. Ursache: `IsComplete` lehnte jede degradierte Antwort (Ersatzquelle, Warnung, veraltete Daten) als Fehler ab — reale Abfahrtsantworten tragen regelmäßig solche Merkmale. Behoben: nutzbare Antworten ohne `ErrorCode` werden jetzt mit kompaktem Hinweis „Daten möglicherweise unvollständig oder veraltet.“ angezeigt; ein vorhandenes vollständiges Board wird wie bisher bevorzugt behalten; Persistenz/Sessioncache bleiben auf vollständige Antworten beschränkt (`StopMonitorViewModel.cs`, `FavoriteMonitorViewModel.cs`).
+
+**Befund 2:** Verbindungsdetails zeigten `UTC+02:00`-Offsets. Behoben: Zeiten erscheinen als `HH:mm`; weicht der Tag vom ersten Fahrtabschnitt ab, steht `Vortag`/`Folgetag` davor (`JourneyPresentation.EventTime`).
+
+**Befund 3:** Der Umstieg erschien als Sammelkarte am Ende der Timeline statt zwischen den Fahrten. Behoben: `JourneyTimelineView` rendert Umstiege jetzt positionsgetreu zwischen den Transitabschnitten.
+
+**Wiederholungsbedarf:** Die iOS-Geräteabnahme ist nach dem Bugfix-Build erneut durchzuführen; insbesondere die Abfahrts-/Cache-Checkpunkte 1–5 stehen noch aus. Falls der Abfahrtsabruf weiterhin scheitert, wird ein Protokoll des Geräte-Netzwerkverkehrs benötigt, um eine echte Providerstörung von der Darstellungsschwelle zu unterscheiden.

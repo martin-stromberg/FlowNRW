@@ -115,7 +115,7 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
             source.Token.ThrowIfCancellationRequested();
             if (version != revision) return;
             LastAttempt = result;
-            if (!IsComplete(result)) SetFailure();
+            if (result.ErrorCode is not null || (!IsComplete(result) && Result is not null)) SetFailure();
             else
             {
                 Result = result with
@@ -123,7 +123,9 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
                     Items = result.Items.Where(item => EffectiveTime(item) is { } time && time >= started)
                         .OrderBy(item => EffectiveTime(item)!.Value).ToArray()
                 };
-                Status = Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · {(automatic ? "automatisch" : "manuell")} aktualisiert.";
+                Status = result.Warnings.Count > 0 || result.IsFallback || result.IsStale
+                    ? "Daten möglicherweise unvollständig oder veraltet."
+                    : Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · {(automatic ? "automatisch" : "manuell")} aktualisiert.";
                 if (IsComplete(result))
                 {
                     Lines = result.Items.Select(LineName).Where(line => !string.IsNullOrWhiteSpace(line)).Distinct(StringComparer.Ordinal).OrderBy(line => line, StringComparer.Ordinal).ToArray();

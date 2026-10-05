@@ -325,6 +325,7 @@ public sealed class HomePage : ContentPage
 
     private static bool ShowsFavoriteStatus(FavoriteMonitorViewModel card) => card.Status.Contains("Keine nächsten", StringComparison.OrdinalIgnoreCase)
         || card.Status.Contains("Letzter Stand", StringComparison.OrdinalIgnoreCase)
+        || card.Status.Contains("unvollständig", StringComparison.OrdinalIgnoreCase)
         || card.Status.Contains("fehlgeschlagen", StringComparison.OrdinalIgnoreCase)
         || card.Status.Contains("nicht geladen", StringComparison.OrdinalIgnoreCase);
 }

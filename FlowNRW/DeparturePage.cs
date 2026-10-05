@@ -137,6 +137,7 @@ public sealed class DeparturePage : ContentPage
         var status = model.Status;
         monitorStatus.IsVisible = !model.IsBusy
             && (status.Contains("Keine nächsten", StringComparison.OrdinalIgnoreCase)
+                || status.Contains("unvollständig", StringComparison.OrdinalIgnoreCase)
                 || status.Contains("fehlgeschlagen", StringComparison.OrdinalIgnoreCase)
                 || status.Contains("nicht geladen", StringComparison.OrdinalIgnoreCase)
                 || status.Contains("abgebrochen", StringComparison.OrdinalIgnoreCase)

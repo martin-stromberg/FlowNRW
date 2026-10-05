@@ -146,14 +146,27 @@ public sealed class JourneyPresentationTests
         Assert.Equal("Daten möglicherweise unvollständig", warning);
     }
 
-    /// <summary>German local dates, offset, walking and cancellations remain explicit.</summary>
+    /// <summary>Local clock readings mark cross-day events instead of technical offsets.</summary>
     [Fact]
-    public void DisplaysMidnightOffsetAndUnknownRealtime()
+    public void DisplaysDayLabelsAndUnknownRealtime()
     {
         var time = DateTimeOffset.Parse("2026-09-15T22:05:00Z");
         var journey = new Journey { Legs = [new() { Walking = new() { DistanceMeters = 200 }, Departure = new() { PlannedTime = time, Realtime = new() { Cancelled = true } } }] };
         var detail = JourneyPresentation.Detail(journey);
-        Assert.Contains("16.09.2026 00:05 UTC+02:00", detail); Assert.Contains("Fußweg", detail); Assert.Contains("keine Echtzeitdaten", detail); Assert.Contains("Ausfall", detail); Assert.Contains("unbekannt", detail);
+        Assert.DoesNotContain("UTC", detail);
+        Assert.Contains("00:05", detail); Assert.Contains("Fußweg", detail); Assert.Contains("keine Echtzeitdaten", detail); Assert.Contains("Ausfall", detail); Assert.Contains("unbekannt", detail);
+    }
+
+    /// <summary>Overnight arrivals are labeled as following day relative to the journey departure.</summary>
+    [Fact]
+    public void LabelsOvernightArrivalAsFollowingDay()
+    {
+        var departure = DateTimeOffset.Parse("2026-09-16T21:55:00Z");
+        var arrival = departure.AddMinutes(45);
+        var journey = new Journey { Legs = [new() { Departure = new() { PlannedTime = departure }, Arrival = new() { PlannedTime = arrival } }] };
+        var detail = JourneyPresentation.Detail(journey);
+        Assert.Contains("23:55", detail);
+        Assert.Contains("Folgetag 00:40", detail);
     }
 }
 

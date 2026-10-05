@@ -275,7 +275,7 @@ public sealed class StopMonitorViewModel : ObservableObject
             source.Token.ThrowIfCancellationRequested();
             if (version != revision) return;
             LastAttempt = result;
-            if (!IsComplete(result))
+            if (result.ErrorCode is not null || (!IsComplete(result) && Result is not null))
                 SetFailure();
             else
             {
@@ -285,7 +285,9 @@ public sealed class StopMonitorViewModel : ObservableObject
                         .OrderBy(item => EffectiveTime(item) ?? DateTimeOffset.MaxValue).ToArray()
                 };
                 StoreSession(SelectedStop, Result);
-                SetStatus(Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · {(automatic ? "automatisch" : "manuell")} aktualisiert.");
+                SetStatus(result.Warnings.Count > 0 || result.IsFallback || result.IsStale
+                    ? "Daten möglicherweise unvollständig oder veraltet."
+                    : Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · {(automatic ? "automatisch" : "manuell")} aktualisiert.");
             }
         }
         catch (OperationCanceledException)

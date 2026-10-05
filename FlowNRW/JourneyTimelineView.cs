@@ -23,8 +23,11 @@ public sealed class JourneyTimelineView : VerticalStackLayout
         summaryCard.Children.Add(TransitVisuals.Secondary(duration + journey.Transfers.Count + (journey.Transfers.Count == 1 ? " Umstieg" : " Umstiege")));
         Children.Add(new Border { Padding = 16, Content = summaryCard });
         var index = 1;
+        var legIndex = 0;
+        var transitIndex = -1;
         foreach (var leg in journey.Legs)
         {
+            legIndex++;
             var title = leg.Walking is not null ? "Fußweg" : leg.Line?.Name ?? leg.Departure.Line?.Name ?? leg.Departure.Identity.Line ?? "Linie unbekannt";
             var origin = string.IsNullOrWhiteSpace(leg.Departure.Identity.Stop.Name) ? "Start unbekannt" : leg.Departure.Identity.Stop.Name;
             var destination = string.IsNullOrWhiteSpace(leg.Arrival.Identity.Stop.Name) ? "Ziel unbekannt" : leg.Arrival.Identity.Stop.Name;
@@ -33,33 +36,37 @@ public sealed class JourneyTimelineView : VerticalStackLayout
             if (badge.Content is Label lineLabel) lineLabel.AutomationId = "JourneyLine" + index;
             heading.Add(badge, 0);
             var names = TransitVisuals.Text(origin + " → " + destination, 17, true, "JourneyDetailSection" + index);
-            if (index < descriptions.Length) SemanticProperties.SetDescription(names, descriptions[index]);
+            if (legIndex < descriptions.Length) SemanticProperties.SetDescription(names, descriptions[legIndex]);
             heading.Add(names, 1);
             var content = new VerticalStackLayout { Spacing = 10 };
             content.Children.Add(heading);
-            content.Children.Add(Event("Abfahrt", leg.Departure));
-            content.Children.Add(Event("Ankunft", leg.Arrival));
+            content.Children.Add(Event("Abfahrt", leg.Departure, first));
+            content.Children.Add(Event("Ankunft", leg.Arrival, first));
             if (leg.Walking is { } walk)
                 content.Children.Add(TransitVisuals.Secondary("Fußweg · " + (walk.DistanceMeters?.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "unbekannt") + " m · " + (walk.Duration?.TotalMinutes.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "unbekannt") + " Min.", "JourneyWalk" + index));
             else if ((leg.Line?.Operator?.Name ?? leg.Departure.Line?.Operator?.Name ?? leg.Departure.Identity.Operator) is { Length: > 0 } operatorName)
                 content.Children.Add(TransitVisuals.Secondary("Betreiber: " + operatorName, "JourneyOperator" + index));
             Children.Add(new Border { Padding = 16, AutomationId = "JourneyTimeline" + index++, Content = content });
+            if (leg.Walking is null && ++transitIndex < journey.Transfers.Count)
+            {
+                var transfer = journey.Transfers[transitIndex];
+                Children.Add(new Border { Padding = 16, Content = TransitVisuals.Text("Umstieg: " + (string.IsNullOrWhiteSpace(transfer.Stop?.Name) ? "Haltestelle unbekannt" : transfer.Stop.Name) + " · " + (transfer.Duration?.TotalMinutes.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "unbekannt") + " Min.", id: "JourneyDetailSection" + index) });
+                index++;
+            }
         }
-        if (journey.Transfers.Count > 0)
-            Children.Add(new Border { Padding = 16, Content = TransitVisuals.Text(string.Join("\n", journey.Transfers.Select(transfer => "Umstieg: " + (string.IsNullOrWhiteSpace(transfer.Stop?.Name) ? "Haltestelle unbekannt" : transfer.Stop.Name) + " · " + (transfer.Duration?.TotalMinutes.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "unbekannt") + " Min.")), id: "JourneyDetailSection" + index) });
     }
 
-    private static VerticalStackLayout Event(string title, StopEvent item)
+    private static VerticalStackLayout Event(string title, StopEvent item, DateTimeOffset? reference)
     {
         var stack = new VerticalStackLayout { Spacing = 4, Padding = new Thickness(4, 0) };
         var times = new Grid { ColumnDefinitions = [new(GridLength.Auto), new(GridLength.Star)], ColumnSpacing = 10 };
         times.Add(TransitVisuals.Text(title, 15, true), 0);
         var time = new VerticalStackLayout { Spacing = 0, HorizontalOptions = LayoutOptions.End };
         var actual = item.Realtime.ActualTime ?? item.PlannedTime;
-        time.Children.Add(TransitVisuals.Text(JourneyPresentation.Time(actual), 15, true));
+        time.Children.Add(TransitVisuals.Text(JourneyPresentation.EventTime(actual, reference), 15, true));
         if (item.Realtime.ActualTime is { } actualTime && item.PlannedTime is { } planned && actualTime != planned)
         {
-            var scheduled = TransitVisuals.Secondary(JourneyPresentation.Time(planned));
+            var scheduled = TransitVisuals.Secondary(JourneyPresentation.EventTime(planned, reference));
             scheduled.FontSize = 12;
             scheduled.TextDecorations = TextDecorations.Strikethrough;
             time.Children.Add(scheduled);
