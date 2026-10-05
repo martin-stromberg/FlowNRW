@@ -18,9 +18,9 @@
 | [x] | 10a | Tester-Korrekturen K1–K7 umsetzen und erneut prüfen | correction-tasks.md |
 | [x] | 10b | Aktualisierten Stitch-Entwurf erfassen, Nearby-Drilldown korrigieren und Kernseiten visuell vereinheitlichen | requirement-draft-refresh.md, draft-refresh-plan.md |
 | [x] | 10c | Code-Review des aktualisierten Gesamtdiffs | review-draft-refresh.md |
-| [ ] | 10d | Nativen Windows-Designmatrixlauf für die aktualisierte Oberfläche in Hell/Dunkel durchführen, einschließlich Nearby-Drilldown-Screenshot | test-results-draft-refresh.md |
+| [x] | 10d | Nativen Windows-Designmatrixlauf für die aktualisierte Oberfläche in Hell/Dunkel durchführen, einschließlich Nearby-Drilldown-Screenshot | test-results-visual-final.md (Commit 97b940f, vier Matrizen PASS) |
 | [ ] | 10e | iOS-Geräteabnahme für Safe Areas, Systemthema, Dynamic Type und VoiceOver durchführen | test-results-draft-refresh.md |
-| [ ] | 10f | Favoriten-Abfahrtcache unter Windows nativ starten: Cacheanzeige vor verzögerter Anbieterantwort und anschließende Ersetzung prüfen | test-results-departure-cache.md |
+| [x] | 10f | Favoriten-Abfahrtcache unter Windows nativ starten: Cacheanzeige vor verzögerter Anbieterantwort und anschließende Ersetzung prüfen | artifacts/step9-visual-final/cache-refresh (Commit 97b940f) |
 | [ ] | 12 | Dokumentation/README/Release Notes | docs/help/design |
 | [ ] | – | Abschlusscommit und Projektabnahme | Git |
 
@@ -41,3 +41,5 @@
 03.10.2026: Der aktualisierte Stitch-Entwurf ist als Lifecycle-Anforderung, Bestandsaufnahme und Kleinplan dokumentiert. Der Home-Nearby-Drilldown wurde identitätsvalidiert repariert, mit Core-Test und Fixture-Pfad abgesichert; Startseite, Monitor, Suche, Detail und Karte wurden ausschließlich innerhalb des vorhandenen Funktionsumfangs visuell überarbeitet. Core-Tests: 256/256; UiTest-Build: 0 Warnungen/0 Fehler; PowerShell-Syntaxprüfung: bestanden. Der native Windows-Designmatrixlauf für diesen Refresh in Hell/Dunkel und die iOS-Geräteabnahme sind weiterhin ausdrücklich offen.
 
 04.10.2026: Rückmeldung zu überflüssigen Informationstexten umgesetzt: Favoritenzähler, Übersichts-Panel und erfolgreiche Statuswiederholungen auf der Startseite entfernt. Lade-, Leer-, Fehler- und Cachehinweise bleiben kontextgebunden sichtbar. Die Einstellungsseite wurde auf Auswahl, Speichern, effektiven Wert und relevante Rückmeldungen verdichtet; die Karte zeigt keine technische Punktanzahl. Kernprüfungen: 267/267 Core-Tests, UiTest-Build Windows/iOS 0/0, PowerShell-Syntax und Diffprüfung bestanden. Die native Designmatrix bleibt in einer interaktiven Sitzung offen.
+
+05.10.2026: Native Windows-Nachweiskette abgeschlossen auf Commit 97b940f (Build 175DBAB0…095D, sauberer Arbeitsbaum): alle acht nativen Regressionen (journey-*, departure-cache, refresh, lifecycle) und alle vier finalen Designmatrizen (430×900 hell, 430×900 dunkel 150 %, 1024×768 hell/dunkel) plus Cache-während-Refresh-Bildpaar bestanden. Produktfix: Entfernen-Button der verbleibenden Favoritenkarte blieb nach einer Löschung deaktiviert (IsSaving-Race) — in HomePage.cs behoben. Verbleibend: iOS-Geräteabnahme (nutzerseitig), Dokumentation/Release Notes, Projektabschluss.

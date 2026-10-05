@@ -1,5 +1,15 @@
 # Unabhängige Prüfung der visuellen Nacharbeit
 
+## Abschließende Nachprüfung, 05.10.2026
+
+Tatsächlich geöffnet wurden die neuen Endmatrix-Bilder `light-430-900-100-favorite-cache-seed-home-favorite-expanded`, `light-430-900-100-favorite-cache-seed-stop-list-returned`, `light-430-900-100-favorite-cache-seed-map-offline`, `light-1024-768-100-favorite-cache-seed-journey-results`, `dark-430-900-150-favorite-cache-seed-monitor-delayed`, `dark-430-900-150-favorite-cache-seed-monitor-provider-error`, `dark-430-900-150-favorite-cache-seed-map-stations`, `dark-430-900-150-favorite-cache-seed-journey-details` sowie beide Bilder `cache-start-slow-nearby-cached`/`cache-start-slow-nearby-live` unter `artifacts/step9-visual-final/`. Alle Manifestzeilen dieser Läufe nennen Commit `97b940f7c0263ace017e6ccecff4662806f000c3`, Build-SHA256 `175DBAB03BAB615DE93000C7217A43F56491CA9350844D31045890339164095D` und einen sauberen versionierten Arbeitsbaum.
+
+**Visuell bestätigt:** Drei persistente beschriftete Bereiche; gerundete Karten mit den hellen bzw. dunklen Flächentokens; farbige Linienbadges mit textlich lesbaren Ausfällen und Gleiswechseln; kompakte Unvollständigkeits- und Fehlermeldungen ohne technische IDs; beschriftete Datumsangaben; OSM-Attribution; fehlerhafte Anzeige von zuletzt bekannten Abfahrten; Cacheanzeige mit sichtbarem Ladeindikator während des Refreshs. Bei 150 % Textskalierung ist nichts überlagert; einzelne Datums-/Zeitzonenangaben brechen sauber um. Gegenüber den früheren Befunden sind Erfolgserklärtexte, Ordinalsuffixe in Stationsnamen und überlange Diagnosetexte nicht mehr vorhanden.
+
+**Nachweisgrenzen:** synthetische Kacheln (kein reales OSM-Material), `monitor-error` als Szenario-/Stationsname im Fehlerbild, UIAutomation-unerreichbare Elemente unterhalb der sichtbaren Karten-WebView (die Infofläche wurde stattdessen über Listenansicht und den umschaltenden Barrierefreiheitsnamen belegt). **Die iOS-Geräteabnahme bleibt ausstehend und ist Voraussetzung für den Abschluss von Schritt 9.**
+
+**Urteil für Windows:** alle Abnahmekriterien aus `docs/design/acceptance.md` sind auf dem Endcommit visuell und funktional nachgewiesen; keine offenen Produktbefunde.
+
 ## Ergänzende unabhängige Breitprüfung, 04.10.2026
 
 Die folgenden Feststellungen ergänzen und aktualisieren die älteren Evidenzgrenzen dieses Berichts. Tatsächlich geöffnet wurden aus `artifacts/step9-visual-final/wide-full-light/` die zwölf Bilder `home-favorite-expanded`, `home-favorite-collapsed`, `home-distance-known`, `monitor-cancelled`, `stop-list`, `stop-list-returned`, `stop-monitor-cached`, `map-stations`, `map-native-list`, `map-offline`, `map-no-position` und `monitor-provider-error`. Vergleichsgrundlage waren außerdem die intakten Originalbilder `abfahrtsmonitor_live/screen.png` und `umgebungskarte_stationen/screen.png` aus dem entpackten aktualisierten Stitch-Entwurf sowie `docs/design/acceptance.md`.

@@ -1,5 +1,37 @@
 # Unabhängige visuelle Nachprüfung – Schritt 9
 
+## Finaler Nachweis – 05.10.2026
+
+Geprüft wurde die vollständige finale Bildmatrix auf Commit `97b940f` (Build-SHA256 `175DBAB0…095D`, `tracked files clean; untracked files present`):
+
+- `artifacts/step9-visual-final/light-narrow-final/` — hell, 430×900, 100 %
+- `artifacts/step9-visual-final/dark-narrow-final-150/` — dunkel, 430×900, 150 %
+- `artifacts/step9-visual-final/light-wide-final/` und `dark-wide-final/` — 1024×768, 100 %
+- `artifacts/step9-visual-final/cache-refresh/` — Cache während verzögertem Refresh
+
+Tatsächlich geöffnet und gegen `docs/design/acceptance.md` sowie die Stitch-Referenzen bewertet wurden u. a. die Favoriten-Startseite (eingeklappt/aufgeklappt, bekannte und unbekannte Entfernung), der Abfahrtsmonitor in den Zuständen normal/verspätet/abgebrochen/unbekannt/Providerfehler, Haltestellensuche samt Rückkehr, Stationskarte mit Auswahl, Offline- und Positionsfehlern sowie nativer Listenalternative, Verbindungsformular mit Validierung, Ergebnisliste und Verbindungsdetails, Einstellungen und beide Cache-Bilder.
+
+### Stand der früheren Befunde
+
+- Der überflüssige Erfolgstext „Endpunkt übernommen.“ in der Suchliste ist entfallen; sichtbar bleibt nur die kompakte Unvollständigkeitswarnung.
+- Ergebnis- und Suchkarten nennen plausible Stations-/Betreibertexte (z. B. „Essen Hauptbahnhof“, „Düsseldorf Hauptbahnhof“, „Regionalverkehr NRW“) ohne technische IDs, DHIDs oder Koordinaten. Treffernamen wie „Essen Hauptbahnhof (Umgebung)“ sind verständlich.
+- Ergebniskarten zeigen das Datum beschriftet („Abfahrt: 16.09.2026“) statt einer unbeschrifteten UTC-Angabe; Ausfälle sind textlich („Ausfall gemeldet“, „Fahrt fällt aus“) lesbar.
+- Der Cache während des Refreshs ist mit dem eigenständigen Bildpaar `cache-start-slow-nearby-cached.png`/`cache-start-slow-nearby-live.png` belegt: gespeicherte Abfahrten bleiben mit sichtbarem Ladeindikator stehen und werden danach durch Livezeilen ersetzt.
+- Schmale und große Schrift (430×900 bei 100 % und 150 %) sowie beide Themes sind jetzt für Startseite, Monitor, Suche, Verbindung, Detail, Karte und Einstellungen belegt. Bei 150 % bleibt alles ohne Überlagerung lesbar; in den Verbindungsdetails bricht `UTC +02:00` sauber um.
+- Die Aktionsfläche „Haltestellen auf Karte zeigen“ steht in der Suchkarte und ist semantisch beschrieben; die Stationsliste bleibt nach der Monitorrückkehr erhalten.
+
+### Verbleibende Beobachtungen (keine Produktbefunde)
+
+- `monitor-provider-error` zeigt den Szenarionamen `monitor-error` als Stationskopf — nachvollziehbares Fixture-Artefakt der Fehlerbildung, kein Produktname.
+- Die Karte nutzt absichtlich die synthetische Kachelfläche; reale OSM-Kacheln sind damit nicht bewiesen, die Attribution bleibt lesbar.
+- UIAutomation erreicht keine Elemente unterhalb der sichtbaren Karten-WebView (Plattformgrenze); die Karteninformationsfläche wurde daher in der Listenansicht bzw. über den nachweislich umschaltenden Barrierefreiheitsnamen geprüft.
+
+### Urteil
+
+Die Windows-Oberfläche erfüllt die Abnahmekriterien anhand der sauberen, eindeutig zugeordneten Endmatrix in allen verlangten Größen-, Theme- und Skalierungsvarianten. Es gibt keine offenen Produktbefunde aus der Bildprüfung. Die iOS-Geräteabnahme bleibt separat ausstehend; bis dahin ist Schritt 9 nicht abgeschlossen.
+
+---
+
 Prüfdatum: 04.10.2026. Geprüft wurden die verbindlichen Kriterien in `docs/design/acceptance.md`, die Stitch-Referenzbilder für Haltestellensuche, Karte, Abfahrtsmonitor, Verbindungssuche und Verbindungsdetail sowie folgende native Windows-Aufnahmen:
 
 - `artifacts/step9-visual-final/wide-full-light-clean-copy/`: insbesondere Haltestellenliste, Rückkehr aus dem Monitor, gecachter Haltestellenmonitor, Stationskarte, Auswahl, Offline- und Positionsfehlerzustand.

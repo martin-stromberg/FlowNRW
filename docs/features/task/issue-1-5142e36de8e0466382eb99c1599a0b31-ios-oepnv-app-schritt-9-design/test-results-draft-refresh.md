@@ -23,12 +23,17 @@ Damit ist der zuvor stille Klickpfad von einer nicht gespeicherten nahen Haltest
 
 Hinweis zum Sichtbarkeitsvertrag: Erfolgreiche Aktualisierungen werden seit der Textverdichtung ohne `MonitorStatus`/`FavoriteStatus`-Text und ohne `MonitorMetadata` dargestellt. Refresh- und Lifecycle-Regressionen prüfen Abschlusszustände deshalb über die Busy-Indikatoren (`MonitorBusy`, `FavoriteBusy*`) und die sichtbar bleibenden Fehler- und Datenstandstexte („Letzte bekannte“, „Datenstand“, „nicht gespeichert“). Vollständige Antworten liefert die Fixture über die Szenarien `complete`/`complete-slow`/`resume-fresh`; das Monitor-ViewModel rendert `Departure0` nur für vollständige, nicht veraltete Ergebnisse.
 
+## Abgeschlossener Nachweis, 05.10.2026
+
+Der vollständige native Matrix- und Regressionslauf liegt auf Commit `97b940f` (Build-SHA256 `175DBAB0…095D`, sauberer Arbeitsbaum) vor: alle vier Designmatrizen (430×900 hell/dunkel-150 %, 1024×768 hell/dunkel) mit je 37 PNGs plus das zweiteilige Cache-Refresh-Paar wurden mit `PASS native design matrix sequence` abgeschlossen; die nativen Regressionen `journey-*`, `departure-cache`, `refresh` und `lifecycle` sind über den Retry-Runner `artifacts/night-runner.ps1` alle bestanden. Details stehen in `test-results-visual-final.md` und `review-visual-current.md`.
+
+Zusätzlich wurde ein Produktfehler behoben: Nach dem Entfernen eines Favoriten blieben die verbleibenden Entfernen-Schaltflächen wegen des während `IsSaving` neu gerenderten `CanExecute`-Ergebnisses dauerhaft deaktiviert; `HomePage.cs` invalidiert das Kommando jetzt bei `IsSaving`-Wechseln (`97b940f`).
+
 ## Noch offene Abnahme
 
-- Den nativen Windows-Designmatrixlauf für die aktualisierten Oberflächen in Hell und Dunkel ausführen und die neuen Screenshots prüfen. Er muss mindestens Startseite/Nearby-Drilldown, Abfahrtsmonitor, Suche, Verbindungsdetail sowie Haltestellensuche/Karte enthalten.
 - Die iOS-Geräteabnahme durch den Nutzer durchführen: Safe Areas, Systemthema, Dynamic Type, VoiceOver sowie Installation und Start auf dem Gerät.
 
-Diese offenen Punkte sind keine als bestanden behaupteten UIAutomation-Ergebnisse.
+Dieser offene Punkt ist keine als bestanden behauptete UIAutomation-Messung.
 
 ## Nicht übernommene Artefakte
 

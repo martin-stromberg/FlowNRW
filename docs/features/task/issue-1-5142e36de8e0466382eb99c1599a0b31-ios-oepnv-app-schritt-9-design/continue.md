@@ -1,12 +1,11 @@
 # Offene Aufgaben
 
-Erstellt am: 03.10.2026
+Aktualisiert am: 05.10.2026
 
-Die Implementierung, Bildnachprüfung und Coretests sind abgeschlossen. Der Lifecycle bleibt für die folgenden externen bzw. noch nicht belastbar nachgewiesenen Prüfungen offen:
+Die native Windows-Nachweiskette ist auf Commit `97b940f` vollständig bestanden: vier Designmatrizen (hell/dunkel, 430×900 bei 100 %/150 %, 1024×768), Cache-während-Refresh-Bilder, alle Journey-/Cache-/Refresh-/Lifecycle-Regressionen, UiTest-Build 0/0 und Core-Tests 279/279. Die visuelle Endprüfung findet keine offenen Produktbefunde mehr; Detailergebnisse stehen in `test-results-visual-final.md` und `review-visual-current.md`.
 
-- [ ] Windows-Release-Solution-Build außerhalb der Sandboxgrenze erneut mit 0 Warnungen/Fehlern ausführen.
-- [ ] Vollständigen finalen Kartenlauf erneut ausführen und einen nichtleeren Log sichern; `maps-oct2-accessible.log` ist der bisherige vollständige Nachweis, `maps-final.log` bleibt ungültig.
-- [ ] Erneuten vollständigen Refresh-/Lifecycle-Regressionstest auf dem finalen Build durchführen.
-- [ ] Danach `test-results.md`, Projektabnahme und Abschlusscommit aktualisieren.
+- [ ] iOS-Geräteabnahme durch den Nutzer: Safe Areas, Systemthema hell/dunkel, Dynamic Type inklusive großer Textgrößen, VoiceOver, Hoch-/Querformat, reale GPS-Nähe, Monitor während Refresh, Offline-/Positionsfehler und Start mit gespeichertem Favoritencache auf mindestens einem kleinen und einem großen iPhone. Ergebnisse in `ios-device-acceptance.md` eintragen.
+- [ ] Dokumentation/README/Release Notes finalisieren (Schritt 12 der Aufgabenliste).
+- [ ] Danach Projektabnahme, Abschlusscommit und Merge vorbereiten; Schritt 9 bleibt bis zur iOS-Abnahme „In Arbeit“.
 
-Grund: Der privilegierte Windows-Build wurde durch die automatische Freigabe wegen des Nutzungslimits blockiert; der Sandbox-Build scheitert am Zugriff auf `C:\Users\Martin\AppData\Local\Microsoft SDKs`. Ein leerer Kartenlog darf nicht als bestanden gelten.
+Hinweis: `artifacts/` ist gitignoriert; die Manifeste der Endmatrix liegen unter `artifacts/step9-visual-final/` und verweisen auf Commit `97b940f` mit Build-SHA256 `175DBAB0…095D`.

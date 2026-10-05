@@ -133,3 +133,36 @@ Für unvollständige Suchantworten zeigt die Haltestellensuche nur noch die hand
 Der überwachte native Lauf **dunkel, 1024×768, 100 %, `favorite-cache-seed`** endete mit `PASS native design matrix sequence`. Die Aufnahmen unter [dark-full-final](../../../../artifacts/step9-visual-final/dark-full-final) decken Home, Monitorzustände, Haltestellensuche und Rückkehr, Karte einschließlich Auswahl/Offline/fehlender Position, Monitorfehler, Verbindungsformular und Validierung, Tausch, Verbindungsfavorit, Detail- und Umstiegsansichten sowie leere, fehlerhafte und ladende Routensuche ab. Die UIA-Prüfung bestätigte 48×48 für Such- und Standortaktion, 62×48 für den Koordinatenmodus und 792×44 für die Verbindungssuche.
 
 Der Runner lief als getrennter PowerShell-Prozess mit vollständigem Log, damit seine Laufzeit nicht vom kurzen Aufruffeld begrenzt wird. Eine .NET-SHA-256-Berechnung ersetzt dabei die nicht in jeder Windows-PowerShell-Umgebung verfügbare Funktion `Get-FileHash`.
+
+## Abschließender vollständiger Matrixnachweis – 05.10.2026
+
+Alle vier verbindlichen Matrixläufe wurden auf demselben Commit `97b940f7c0263ace017e6ccecff4662806f000c3` mit identischem Build-SHA256 `175DBAB03BAB615DE93000C7217A43F56491CA9350844D31045890339164095D` neu ausgeführt. Jede Manifestzeile meldet `tracked files clean; untracked files present`, Plattform `Windows native MAUI`, DPI 96, ausgeblendete Fixture-Steuerung und den Szenario-/Referenzbezug.
+
+| Konfiguration | Ergebnis | Artefakt |
+|---|---|---|
+| Hell, 430×900, 100 % | `PASS native design matrix sequence`, 37 PNGs + 37 Manifestzeilen | [light-narrow-final](../../../../artifacts/step9-visual-final/light-narrow-final) |
+| Dunkel, 430×900, 150 % | `PASS native design matrix sequence`, 37 PNGs + 37 Manifestzeilen | [dark-narrow-final-150](../../../../artifacts/step9-visual-final/dark-narrow-final-150) |
+| Hell, 1024×768, 100 % | `PASS native design matrix sequence`, 37 PNGs + 37 Manifestzeilen | [light-wide-final](../../../../artifacts/step9-visual-final/light-wide-final) |
+| Dunkel, 1024×768, 100 % | `PASS native design matrix sequence`, 37 PNGs + 37 Manifestzeilen | [dark-wide-final](../../../../artifacts/step9-visual-final/dark-wide-final) |
+| Cache während verzögertem Refresh | `PASS native departure cache regression`, 2 PNGs + 2 Manifestzeilen | [cache-refresh](../../../../artifacts/step9-visual-final/cache-refresh) |
+
+Der Cachebeleg zeigt `cache-start-slow-nearby-cached.png` mit den wiederhergestellten Abfahrtsbadges (107, RE 1, S2, U11) **und** dem sichtbaren Aktualisierungsindikator in der Kartenkopfzeile, danach `cache-start-slow-nearby-live.png` mit den eingetroffenen Livezeilen („RE 1 · Live Stand 1“). Die Liste bleibt während des verzögerten Refreshs gefüllt.
+
+## Native Vollregressionen auf demselben Commit
+
+Über `artifacts/night-runner.ps1` (Fokus-Überwachung, Wiederholversuche, Orphan-Aufräumen) auf `97b940f` bestanden, jeweils mit Protokoll unter `artifacts/night-<name>-<versuch>.log`:
+
+- `journey-default`, `journey-monitors`, `journey-favorites`, `journey-maps`, `journey-locations`
+- `departure-cache` (Cache-/Fehler-/Abbruch-Retention, Detailhandoff, Persistenz über Prozessneustart)
+- `refresh` (echte 30-Sekunden-Intervalle, Persistenz, Aus/Wechsel, Navigation/Aktivität, Überlappung, Fehlerretention, Speicherfehler)
+- `lifecycle` (frischer/abgelaufener Monitor, Fehlerretention, Abbruch, unabhängige Favoritenkarten, Route-/Detail-Wiederaufnahme)
+
+Zusammen mit dem UiTest-Build (0 Warnungen/0 Fehler) und der Core-Suite (279/279) ist die native Windows-Funktionsnachweiskette auf dem Abnahmecommit vollständig.
+
+## Bekannte Nachweisgrenzen des Endstands
+
+- Die Kartenbilder verwenden absichtlich die synthetische Kachelfläche der Fixture; echte OSM-Kacheln werden dadurch nicht bewiesen. Die Attribution ist in allen Kartenbildern lesbar.
+- Das Fehlerbild `monitor-provider-error` zeigt den Szenarionamen `monitor-error` als Stationskopf — ein erkennbares Fixture-Artefakt, kein Produktname.
+- Unter der sichtbaren Karten-WebView liegende Elemente erreichen den UIAutomation-Baum nicht; die Karteninformationsfläche wird daher über die Listenansicht bzw. den nachweislich umgeschalteten Barrierefreiheitsnamen („Kartendaten schließen“) geprüft.
+- Bei 150 % Textskalierung bricht `UTC +02:00` in den Verbindungsdetails in eine eigene Zeile um; der Inhalt bleibt vollständig lesbar.
+- Die iOS-Geräteabnahme bleibt ausdrücklich offen und ist nicht Teil dieses Windows-Nachweises.
