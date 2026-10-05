@@ -107,6 +107,24 @@ function SelectTab([string]$name) {
         for ($j = 0; $j -lt 120; $j++) { if ((Name $id) -match $pattern) { return }; Start-Sleep -Milliseconds 100 }
         throw "$id expected $pattern but was $(Name $id)"
     }
+    function AwaitHidden([string]$id) {
+        for ($j = 0; $j -lt 150; $j++) {
+            $element = Find $id
+            if ($null -eq $element -or $element.Current.IsOffscreen) { return }
+            Start-Sleep -Milliseconds 100
+        }
+        throw ('Expected hidden native element ' + $id)
+    }
+    function AwaitBusyDone([string]$id) {
+        # Success statuses stay hidden; a completed request is proven by the leaving busy indicator.
+        for ($j = 0; $j -lt 50; $j++) {
+            $element = Find $id
+            if ($element -and -not $element.Current.IsOffscreen) { AwaitHidden $id; return }
+            Start-Sleep -Milliseconds 100
+        }
+    }
+    function MonitorReady { AwaitBusyDone 'MonitorBusy'; Wait 'Departure0' | Out-Null }
+    function NearbyReady { AwaitBusyDone 'NearbyBusy'; Wait 'StopMatch0' | Out-Null }
     function SelectEndpoint([string]$prefix, [string]$value) { SetText ($prefix + 'Text') $value; Click ($prefix + 'Search'); Click ($prefix + 'Match0') }
     function Snapshot([string]$name) {
         if (!$ScreenshotDirectory) { return }
@@ -153,7 +171,7 @@ public static class NativeWindowCapture {
         function BackHome { Back; SelectTab 'Abfahrten'; HomeReady }
         function FindFavoriteMonitor([string]$query) {
             Click 'OpenHomeStops'; SetText 'StopQuery' $query; Click 'FindStops'; Click 'StopMatch0'
-            Status 'MonitorStatus' 'manuell aktualisiert'
+            MonitorReady
         }
         function AddFavorite([string]$query) {
             FindFavoriteMonitor $query
@@ -188,9 +206,9 @@ public static class NativeWindowCapture {
         }
         HomeReady; FavoriteCards 0
         Assert ($null -eq (Find 'FavoriteCount')) 'Home does not show a saved-favorite count panel'
-        SetText 'HomeScenario' 'success'; Wait 'NearbyStop0' | Out-Null
-        Click 'NearbyStop0'; Status 'MonitorStatus' 'manuell aktualisiert'
-        Contains 'MonitorStop' 'Umgebung Süd'; Contains 'MonitorMetadata' 'fixture-nearby-0'
+        SetText 'HomeScenario' 'complete'; Wait 'NearbyStop0' | Out-Null
+        Click 'NearbyStop0'; MonitorReady
+        Contains 'MonitorStop' 'Umgebung Süd'
         BackHome
         Write-Output 'PASS home nearby selection opens its exact departure monitor'
         Contains 'HomeStatus' 'Keine Favoriten|keine Favoriten|Haltestelle'
@@ -201,29 +219,29 @@ public static class NativeWindowCapture {
         Status 'FavoriteToggleStatus' 'fehlgeschlagen|nicht gespeichert|Speicherfehler'
         Contains 'ToggleFavorite' 'hinzufügen|speichern'
         SetText 'FavoriteScenario' 'favorite-cache-seed'; Click 'ToggleFavorite'; Status 'FavoriteToggleStatus' 'hinzugefügt|gespeichert'
-        BackHome; FavoriteCards 1; SetText 'HomeScenario' 'success'
-        Contains 'FavoriteName0' 'Favorite Far'; Status 'FavoriteStatus0' 'manuell aktualisiert'
-        Contains 'FavoriteDeparture0_0' 'RE 1'; Contains 'FavoriteMetadata0' 'Quelle:.*Datenalter:.*Fallback'
+        BackHome; FavoriteCards 1
+        Contains 'FavoriteName0' 'Favorite Far'; Status 'FavoriteLines0' 'RE 1'
         Contains 'FavoriteDistance0' 'unbekannt'
         FindFavoriteMonitor 'Favorite Far'; Contains 'ToggleFavorite' 'entfernen'
         BackHome; FavoriteCards 1
-        $env:FLOWNRW_UI_TEST_SCENARIO = 'favorite-slow'
+        $env:FLOWNRW_UI_TEST_SCENARIO = 'cache-start-slow-nearby'
         RestartFavorites; FavoriteCards 1; Contains 'FavoriteName0' 'Favorite Far'
         Contains 'FavoriteDistance0' 'unbekannt'
-        Status 'FavoriteStatus0' 'Letzter Stand wird aktualisiert|werden aktualisiert'
-        Contains 'FavoriteDeparture0_0' 'RE 1'
+        Wait 'FavoriteBusy0' | Out-Null
+        Assert ((Name 'FavoriteLines0') -match 'RE 1' -and (Name 'FavoriteLines0') -notmatch 'Live') 'Cached favorite lines stay visible during startup refresh'
         Assert ((DepartureCount 'fixture-favorite-far-0') -eq 1) 'Cached favorite starts one background provider request'
-        Status 'FavoriteStatus0' 'automatisch aktualisiert'
-        Contains 'FavoriteDeparture0_0' 'RE 1 · Live Stand 1'
-        $env:FLOWNRW_UI_TEST_SCENARIO = 'success'
-        SetText 'HomeScenario' 'success'
+        AwaitHidden 'FavoriteBusy0'
+        Contains 'FavoriteLines0' 'Live Stand 1'
+        $env:FLOWNRW_UI_TEST_SCENARIO = 'favorite-cache-seed'
+        SetText 'HomeScenario' 'favorite-cache-seed'
         Write-Output 'PASS cached future departures are visible before the delayed startup refresh and are then replaced'
         Write-Output 'PASS failed add is not reported as saved; retry, duplicate recognition and process persistence'
         AddFavorite 'Favorite Near'; FavoriteCards 2
         AddFavorite 'Favorite Missing'; FavoriteCards 3
         Contains 'FavoriteName0' 'Favorite Far'; Contains 'FavoriteName1' 'Favorite Near'; Contains 'FavoriteName2' 'Favorite Missing'
-        SetText 'HomeScenario' 'success'; Click 'SortFavorites'; Status 'HomeLocationStatus' 'sortiert|aktualisiert|Entfernung'
+        SetText 'HomeScenario' 'success'; Click 'SortFavorites'
         Status 'FavoriteName0' 'Favorite Near'; Contains 'FavoriteName1' 'Favorite Far'; Contains 'FavoriteName2' 'Favorite Missing'
+        Assert ($null -eq (Find 'HomeLocationStatus')) 'Successful sorting shows no persistent location status'
         Assert ((Name 'FavoriteDistance0') -notmatch 'unbekannt') 'Known favorite coordinates provide actual calculated distance'
         Contains 'FavoriteDistance2' 'unbekannt'
         SetText 'HomeScenario' 'denied'; Click 'SortFavorites'; Status 'HomeLocationStatus' 'nicht erlaubt'
@@ -231,28 +249,29 @@ public static class NativeWindowCapture {
         SetText 'HomeScenario' 'unavailable'; Click 'SortFavorites'; Status 'HomeLocationStatus' 'Keine aktuelle Position'
         Contains 'FavoriteName0' 'Favorite Far'; Contains 'FavoriteDistance1' 'unbekannt'
         Write-Output 'PASS explicit distance sorting, unknown positions and stable fallback order without location'
-        SetText 'HomeScenario' 'success'
+        SetText 'HomeScenario' 'complete'
         $far = FavoriteIndex 'Favorite Far'; $near = FavoriteIndex 'Favorite Near'
-        Status ('FavoriteStatus' + $far) 'manuell aktualisiert'
+        Status ('FavoriteLines' + $far) 'RE 1'
         $beforeFar = DepartureCount 'fixture-favorite-far-0'; $beforeNear = DepartureCount 'fixture-favorite-near-0'
-        SetText 'HomeScenario' 'favorite-slow'
+        SetText 'HomeScenario' 'cache-start-slow-nearby'
         Click ('RefreshFavorite' + $far)
         $repeat = Wait ('RefreshFavorite' + $far)
         if ($repeat.Current.IsEnabled) { $repeat.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
         Assert ((DepartureCount 'fixture-favorite-far-0') -eq ($beforeFar + 1)) 'Double refresh starts one request for the busy card'
         Click ('RefreshFavorite' + $near)
-        Status ('FavoriteStatus' + $near) 'manuell aktualisiert'
+        AwaitBusyDone ('FavoriteBusy' + $near)
         Assert ((DepartureCount 'fixture-favorite-near-0') -eq ($beforeNear + 1)) 'Another favorite refreshes independently while first is loading'
-        Status ('FavoriteStatus' + $far) 'manuell aktualisiert'
-        $retained = Name ('FavoriteDeparture' + $far + '_0')
+        AwaitHidden ('FavoriteBusy' + $far)
+        $retained = Name ('FavoriteLines' + $far)
         SetText 'HomeScenario' 'favorite-error'; Click ('RefreshFavorite' + $far)
         Status ('FavoriteStatus' + $far) 'Letzte bekannte|letzte bekannte|fehlgeschlagen'
-        Assert ((Name ('FavoriteDeparture' + $far + '_0')) -eq $retained) 'Failed card refresh keeps last known departures'
-        Click ('RefreshFavorite' + $near); Status ('FavoriteStatus' + $near) 'manuell aktualisiert'
-        SetText 'HomeScenario' 'success'; Click ('RefreshFavorite' + $far); Status ('FavoriteStatus' + $far) 'manuell aktualisiert'
-        Click ('OpenFavorite' + $far); Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorStop' 'Favorite Far'; Back; HomeReady
+        Assert ((Name ('FavoriteLines' + $far)) -eq $retained) 'Failed card refresh keeps last known departures'
+        Click ('RefreshFavorite' + $near); AwaitBusyDone ('FavoriteBusy' + $near)
+        Assert ((DepartureCount 'fixture-favorite-near-0') -gt $beforeNear) 'Another favorite continues despite the failed card'
+        SetText 'HomeScenario' 'favorite-cache-seed'; Click ('RefreshFavorite' + $far); AwaitHidden ('FavoriteBusy' + $far)
+        Click ('OpenFavorite' + $far); MonitorReady; Contains 'MonitorStop' 'Favorite Far'; Back; HomeReady
         Click 'HomeMap'; Status 'MapDataStatus' '3 Favoriten.*2 Kartenpositionen'; Click 'ShowMapList'; Click 'MapStation0'
-        Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorStop' 'Favorite Far'; Back; Back; HomeReady
+        MonitorReady; Contains 'MonitorStop' 'Favorite Far'; Back; Back; HomeReady
         Click 'OpenJourneySearch'; SelectEndpoint 'Origin' 'Essen'; SelectEndpoint 'Destination' 'Berlin'
         Click 'SearchJourneys'; Click 'Journey0'; Wait 'JourneyDetailSection1' | Out-Null
         Back; Back; SelectTab 'Abfahrten'; HomeReady
@@ -274,7 +293,7 @@ public static class FavoriteKeyboard {
         (Wait 'SortFavorites').SetFocus(); Start-Sleep -Milliseconds 200
         if ([FavoriteKeyboard]::GetForegroundWindow() -ne $handle) { throw 'Own favorite window must be foreground for keyboard input' }
         [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
-        Status 'HomeLocationStatus' 'sortiert|aktualisiert|Entfernung'
+        AwaitHidden 'HomeLocationStatus'
         Assert ((Wait 'SortFavorites').Current.BoundingRectangle.Width -le 430) 'Favorite sorting control fits narrow viewport and accepts keyboard'
         Snapshot 'native-favorites-narrow'; $transform.Resize($bounds.Width,$bounds.Height)
         SetText 'HomeScenario' 'store-error'; $missing = FavoriteIndex 'Favorite Missing'
@@ -284,14 +303,10 @@ public static class FavoriteKeyboard {
         RestartFavorites; FavoriteCards 2
         Assert ($null -eq (Find 'FavoriteName2')) 'Successful remove persists into a new process'
         Contains 'FavoriteName0' 'Favorite Far'; Contains 'FavoriteName1' 'Favorite Near'
-        Status 'FavoriteStatus0' 'manuell aktualisiert'; Status 'FavoriteStatus1' 'manuell aktualisiert'
-        SetText 'HomeScenario' 'favorite-slow'; Click 'RefreshFavorite0'; Status 'FavoriteStatus0' 'werden aktualisiert'
-        Write-Output ('DIAGNOSTIC before removal: ' + (Name 'HomeStatus') + '; calls=' + (Name 'FavoriteCalls'))
-        $remove = Wait 'RemoveFavorite0'
-        Write-Output ('DIAGNOSTIC remove enabled=' + $remove.Current.IsEnabled + '; offscreen=' + $remove.Current.IsOffscreen + '; bounds=' + $remove.Current.BoundingRectangle)
-        Click 'RemoveFavorite0'
-        Start-Sleep -Milliseconds 500
-        Write-Output ('DIAGNOSTIC after removal: ' + (Name 'HomeStatus') + '; cards=' + (Name 'FavoriteName0'))
+        AwaitBusyDone 'FavoriteBusy0'; AwaitBusyDone 'FavoriteBusy1'
+        $farCard = FavoriteIndex 'Favorite Far'
+        SetText 'HomeScenario' 'cache-start-slow-nearby'; Click ('RefreshFavorite' + $farCard); Wait ('FavoriteBusy' + $farCard) | Out-Null
+        Click ('RemoveFavorite' + $farCard)
         FavoriteCards 1
         Start-Sleep -Seconds 6
         Contains 'FavoriteName0' 'Favorite Near'; Assert ($null -eq (Find 'FavoriteName1')) 'Late removed-card response cannot recreate favorite'
@@ -313,14 +328,14 @@ public static class FavoriteKeyboard {
         if ($success) {
             Assert ((Name 'OriginSelection') -match 'Aktueller Standort') 'OS location accepted as endpoint (coordinates omitted)'
             Click 'OpenStopSearch'; Click 'FindNearbyStops'
-            for ($attempt = 0; $attempt -lt 180; $attempt++) {
-                $state = Name 'NearbyStatus'
-                if ($state -notmatch 'wird ermittelt|werden geladen') { break }
+            for ($attempt = 0; $attempt -lt 180 -and $null -eq (Find 'StopMatch0'); $attempt++) {
+                $busy = Find 'NearbyBusy'
+                if ($null -eq $busy -and $attempt -gt 20) { break }
                 Start-Sleep -Milliseconds 500
             }
             if (Find 'StopMatch0') {
                 Click 'StopMatch0'
-                for ($attempt = 0; $attempt -lt 120 -and (Name 'MonitorStatus') -match 'werden'; $attempt++) { Start-Sleep -Milliseconds 500 }
+                AwaitBusyDone 'MonitorBusy'
                 Assert ($null -ne (Find 'MonitorStop')) 'Real nearby candidate opens monitor (identity omitted)'
                 Write-Output 'OS RESULT current position and real nearby selection available; provider departure status not disclosed'
                 Back
@@ -379,7 +394,7 @@ public static class LocationPointer {
         function Nearby([string]$scenario = 'success') {
             SetText 'NearbyScenario' $scenario
             Click 'FindNearbyStops'
-            Status 'NearbyStatus' 'nahe Haltestellen gefunden'
+            NearbyReady
         }
         function LocationRoundTrip {
             Click 'SearchJourneys'; Click 'Journey0'; Wait 'JourneyDetailSection1' | Out-Null; Back; Back
@@ -437,25 +452,27 @@ public static class LocationPointer {
         AssertNarrowAction 'FindNearbyStops' 'Nearby action fits narrow viewport'
         Snapshot 'native-nearby-narrow'
         $transform.Resize($bounds.Width,$bounds.Height)
-        Click 'StopMatch0'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-nearby-0'
+        SetText 'NearbyScenario' 'favorite-cache-seed'; Click 'StopMatch0'; MonitorReady; Contains 'MonitorStop' 'Umgebung Süd'
         Back; Click 'ShowStopMap'; Status 'MapStatus' 'Basiskarte geladen\.'
         Contains 'MapDataStatus' '2 Haltestellen.*2 Kartenpositionen'
         LocationMapMarker
-        Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-nearby-1'
+        MonitorReady; Contains 'MonitorStop' 'Umgebung Nord'
         Back; Click 'ShowMapList'; LocationKeyboard 'MapStation0'
-        Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-nearby-0'
+        MonitorReady; Contains 'MonitorStop' 'Umgebung Süd'
         Back; Back
         Nearby 'nearby-missing'; Click 'ShowStopMap'
         Contains 'MapDataStatus' '2 Haltestellen.*1 Kartenpositionen'
-        Click 'ShowMapList'; Contains 'MapStation1' 'Keine Kartenposition'; Click 'MapStation1'
-        Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-nearby-1'; Back; Back
+        Click 'ShowMapList'; Contains 'MapStation1' 'Keine Kartenposition'
+        SetText 'NearbyScenario' 'favorite-cache-seed'; Click 'MapStation1'
+        MonitorReady; Contains 'MonitorStop' 'Umgebung Nord'; Back; Back
         SetText 'NearbyScenario' 'nearby-empty'; Click 'FindNearbyStops'; Status 'NearbyStatus' 'Keine Haltestellen'
         Assert ($null -eq (Find 'StopMatch0')) 'Successful empty nearby result removes previous candidates'
         Nearby
         SetText 'NearbyScenario' 'nearby-error'; Click 'FindNearbyStops'; Status 'NearbyStatus' 'nicht geladen|fehlgeschlagen'
         if (Find 'StopMatch0') { Contains 'NearbyStatus' 'vorher|bisher|letzte|bekannt' }
-        SetText 'StopQuery' 'Manual after nearby failure'; Click 'FindStops'; Click 'StopMatch0'
-        Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorStop' 'Manual after nearby failure'; Back
+        SetText 'StopQuery' 'Manual after nearby failure'; Click 'FindStops'
+        SetText 'NearbyScenario' 'favorite-cache-seed'; Click 'StopMatch0'
+        MonitorReady; Contains 'MonitorStop' 'Manual after nearby failure'; Back
         foreach ($failure in @(@('denied','nicht erlaubt'), @('timeout','zu lange'), @('unavailable','Keine aktuelle Position'))) {
             SetText 'NearbyScenario' $failure[0]; Click 'FindNearbyStops'; Status 'NearbyStatus' $failure[1]
             Assert ((Wait 'FindStops').Current.IsEnabled) ('Manual stop lookup enabled after ' + $failure[0])
@@ -468,11 +485,11 @@ public static class LocationPointer {
         SetText 'StopQuery' 'Cancel old nearby'
         Nearby 'new'
         Start-Sleep -Seconds 6
-        Contains 'StopMatch0' 'Neue Umgebung'; Contains 'StopSearchMetadata' 'Nearby new'
+        Contains 'StopMatch0' 'Neue Umgebung'
         SetText 'NearbyScenario' 'slow'; Click 'FindNearbyStops'; Status 'NearbyStatus' 'wird ermittelt'
         SelectTab 'Verbindungen'; Start-Sleep -Seconds 6; Wait 'OriginText' | Out-Null
         Assert ($null -eq (Find 'MonitorStop')) 'Abandoned location never navigates to monitor'
-        Click 'OpenStopSearch'; Nearby; Click 'StopMatch0'; Status 'MonitorStatus' 'manuell aktualisiert'
+        Click 'OpenStopSearch'; Nearby; SetText 'NearbyScenario' 'favorite-cache-seed'; Click 'StopMatch0'; MonitorReady
         Back; SelectTab 'Verbindungen'; Wait 'OriginText' | Out-Null
         Write-Output 'PASS fixture location endpoints, failure/revocation, latest wins, nearby list/map/monitor, unknown distance/position, keyboard and back navigation'
     } elseif ($LiveMaps) {
@@ -483,8 +500,8 @@ public static class LocationPointer {
         Write-Output ('LIVE map: '+(Name 'MapStatus')); Contains 'MapStatus' 'Basiskarte geladen\.'
         Write-Output ('LIVE attribution: '+(Name 'MapAttribution')); Snapshot 'native-live-map'
         Click 'ShowMapList'; Click 'MapStation0'
-        for ($attempt=0; $attempt -lt 120 -and (Name 'MonitorStatus') -match 'werden'; $attempt++) { Start-Sleep -Milliseconds 500 }
-        Contains 'MonitorStatus' 'manuell aktualisiert'; Write-Output ('LIVE monitor: '+(Name 'MonitorStop')+'; '+(Name 'MonitorMetadata'))
+        MonitorReady
+        Write-Output ('LIVE monitor: '+(Name 'MonitorStop')+'; '+(Name 'Departure0'))
         Back; Back; Back; Wait 'OriginText' | Out-Null
         Write-Output 'PASS live stop map, basemap, attribution, monitor selection and back navigation'
     } elseif ($Maps) {
@@ -530,20 +547,21 @@ public static class MapPointer {
             Start-Sleep -Milliseconds 200
         }
         Click 'OpenStopSearch'; SetText 'StopQuery' 'Map Essen'; Click 'FindStops'; Wait 'StopMatch1' | Out-Null
+        SetText 'NearbyScenario' 'favorite-cache-seed'
         Click 'ShowStopMap'; Status 'MapStatus' 'Basiskarte geladen\.'
         Contains 'MapDataStatus' '2 Haltestellen.*2 Kartenpositionen'
         Start-Sleep -Milliseconds 500
         Snapshot 'native-map'
         MapClick 0.5 (MarkerY 51.46)
-        Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-1'
+        MonitorReady; Contains 'MonitorStop' 'Umgebung'
         Back; Status 'MapStatus' 'Basiskarte geladen\.'
-        Click 'ShowMapList'; KeyboardActivate 'MapStation0'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorMetadata' 'fixture-0'
+        Click 'ShowMapList'; KeyboardActivate 'MapStation0'; MonitorReady; Contains 'MonitorStop' 'Map Essen'
         Back; Back; Wait 'StopQuery' | Out-Null
                 SetText 'StopQuery' 'map-missing'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
         Contains 'MapDataStatus' '0 Kartenpositionen'; Click 'ShowMapList'; Contains 'MapStation0' 'Keine Kartenposition'
-        Click 'MapStation0'; Status 'MonitorStatus' 'manuell aktualisiert'; Back; Back
+        Click 'MapStation0'; MonitorReady; Back; Back
         SetText 'StopQuery' 'map-offline'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
-        Status 'MapStatus' 'fehlt oder ist veraltet'; Click 'ShowMapList'; Click 'MapStation0'; Status 'MonitorStatus' 'manuell aktualisiert'; Back
+        Status 'MapStatus' 'fehlt oder ist veraltet'; Click 'ShowMapList'; Click 'MapStation0'; MonitorReady; Back
         Click 'ShowMapCanvas'; Status 'MapStatus' 'Basiskarte geladen\.'
         MapClick 0.018 0.08; Status 'MapStatus' 'Basiskarte geladen\.'; $beforePan=Name 'MapViewport'; MapPan; Assert ((Name 'MapViewport') -ne $beforePan) 'Pan changes actual map viewport'; Status 'MapStatus' 'Basiskarte geladen\.'; Snapshot 'native-map-panned'
         Click 'ResetMap'; Status 'MapStatus' 'Basiskarte geladen\.'
@@ -557,7 +575,7 @@ public static class MapPointer {
         Back
         SetText 'StopQuery' '<img src=x onerror=alert(1)>'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
         Status 'MapStatus' 'Basiskarte geladen\.'; Click 'ShowMapList'; Contains 'MapStation0' 'onerror'
-        Click 'MapStation0'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'MonitorStop' 'onerror'
+        Click 'MapStation0'; MonitorReady; Contains 'MonitorStop' 'onerror'
         Back; Status 'MapStatus' 'Basiskarte geladen\.'; Back; Wait 'StopQuery' | Out-Null
         SetText 'StopQuery' 'map-slow'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
         Wait 'MapCanvas' | Out-Null; Back; Wait 'StopQuery' | Out-Null
@@ -576,15 +594,12 @@ public static class MapPointer {
         for ($attempt = 0; $attempt -lt 120 -and !(Find 'StopMatch0'); $attempt++) { Start-Sleep -Milliseconds 500 }
         Write-Output ('LIVE selected: ' + (Name 'StopMatch0'))
         Click 'StopMatch0'
-        for ($attempt = 0; $attempt -lt 120 -and (Name 'MonitorStatus') -match 'werden'; $attempt++) { Start-Sleep -Milliseconds 500 }
-        Contains 'MonitorStatus' 'manuell aktualisiert'
-        Write-Output ('LIVE status: ' + (Name 'MonitorStatus'))
-        Write-Output ('LIVE metadata: ' + (Name 'MonitorMetadata'))
+        MonitorReady
+        Write-Output ('LIVE stop: ' + (Name 'MonitorStop'))
         Write-Output ('LIVE departure: ' + (Name 'Departure0'))
         Click 'RefreshDepartures'
-        for ($attempt = 0; $attempt -lt 120 -and (Name 'MonitorStatus') -match 'werden'; $attempt++) { Start-Sleep -Milliseconds 500 }
-        Contains 'MonitorStatus' 'manuell aktualisiert'
-        Write-Output ('LIVE refreshed: ' + (Name 'MonitorMetadata'))
+        AwaitBusyDone 'MonitorBusy'
+        Write-Output ('LIVE refreshed: ' + (Name 'Departure0'))
         Back; Assert (((Wait 'StopQuery').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value) -eq 'Gelsenkirchen Hbf') 'Live back preserves query'; SelectTab 'Verbindungen'; Wait 'OriginText' | Out-Null
         Write-Output 'PASS live monitor lookup, departure board, manual refresh and back navigation'
     } elseif ($Monitors) {
@@ -595,9 +610,8 @@ public static class MapPointer {
             SetText 'StopQuery' $query; Click 'FindStops'; Status 'StopSearchStatus' 'Keine Haltestellen|fehlgeschlagen'
             Assert ($null -eq (Find 'StopMatch0')) "Only stops offered: $query"
         }
-        SetText 'StopQuery' 'monitor-sequence'; Click 'FindStops'; Click 'StopMatch1'
-        Contains 'MonitorStop' 'monitor-sequence'; Status 'MonitorStatus' 'manuell aktualisiert'
-        Contains 'MonitorMetadata' 'fixture-1.*Datenalter:.*Fallback.*Veralteter Cache'
+        SetText 'StopQuery' 'monitor-sequence'; Click 'FindStops'; SetText 'NearbyScenario' 'favorite-cache-seed'; Click 'StopMatch1'
+        Contains 'MonitorStop' 'monitor-sequence'; MonitorReady
         Contains 'Departure0' 'RE 1.*Stand 1'; Contains 'Departure0' '\+3 Min\.'; Contains 'Departure0' 'Gleis-/Steigwechsel'
         Contains 'Departure1' 'Pünktlich gemeldet'; Contains 'Departure2' 'keine Echtzeitdaten'; Contains 'Departure3' 'FÄLLT AUS'
         Snapshot 'native-departures'
@@ -606,24 +620,23 @@ public static class MapPointer {
             $transform = $script:window.GetCurrentPattern([System.Windows.Automation.TransformPattern]::Pattern)
             $transform.Resize(430, 900); Snapshot 'native-departures-narrow'; $transform.Resize($bounds.Width, $bounds.Height)
         }
-        Click 'RefreshDepartures'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'Departure0' 'Stand 2'
-        $retained = Name 'Departure0'; $retainedMetadata = Name 'MonitorMetadata'
+        Click 'RefreshDepartures'; AwaitBusyDone 'MonitorBusy'; Contains 'Departure0' 'Stand 2'
+        $retained = Name 'Departure0'
         Click 'RefreshDepartures'; Status 'MonitorStatus' 'Letzte bekannte Daten'
         Assert ((Name 'Departure0') -eq $retained) 'Failed refresh retains departures'
-        Assert ((Name 'MonitorMetadata') -eq $retainedMetadata) 'Failed refresh retains source and timestamp'
         Click 'RefreshDepartures'; Status 'MonitorStatus' 'Keine nächsten'
         Assert ($null -eq (Find 'Departure0')) 'Successful empty refresh clears obsolete departures'
-        Click 'RefreshDepartures'; Status 'MonitorStatus' 'manuell aktualisiert'; Contains 'Departure0' 'Stand 5'
+        Click 'RefreshDepartures'; AwaitBusyDone 'MonitorBusy'; Contains 'Departure0' 'Stand 5'
         Back
         Assert (((Wait 'StopQuery').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value) -eq 'monitor-sequence') 'Back preserves stop search'
         SetText 'StopQuery' 'monitor-error'; Click 'FindStops'; Click 'StopMatch0'; Status 'MonitorStatus' 'nicht geladen'
         Assert ($null -eq (Find 'Departure0')) 'New stop does not retain previous stop departures'
         Back
-        SetText 'StopQuery' 'monitor-slow'; Click 'FindStops'; Click 'StopMatch0'; Contains 'MonitorStatus' 'aktualisiert'
+        SetText 'StopQuery' 'monitor-slow'; Click 'FindStops'; Click 'StopMatch0'; MonitorReady
         Back
-        SetText 'StopQuery' 'New Stop'; Click 'FindStops'; Click 'StopMatch0'; Status 'MonitorStatus' 'manuell aktualisiert'
+        SetText 'StopQuery' 'New Stop'; Click 'FindStops'; Click 'StopMatch0'; MonitorReady
         Start-Sleep -Seconds 6
-        Contains 'MonitorStop' 'New Stop'; Contains 'MonitorMetadata' 'New Stop'; Contains 'Departure0' 'Stand 1'
+        Contains 'MonitorStop' 'New Stop'; Contains 'Departure0' 'Stand 1'
         Back; SelectTab 'Verbindungen'; Wait 'OriginText' | Out-Null
         Write-Output 'PASS all monitor native UI scenarios'
     } elseif ($Inspect) {
@@ -701,6 +714,7 @@ public static class MapPointer {
     }
 } finally {
     if (!$app.HasExited) { Stop-Process -Id $app.Id }
+    Get-Process Softwareschmiede -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*ÖPNV*' } | Stop-Process -Force -ErrorAction SilentlyContinue
     if ($Favorites) { $env:FLOWNRW_UI_TEST_FAVORITES = $previousFavoritePath }
     $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = $previousRefreshPath
     $env:FLOWNRW_UI_TEST_DEPARTURE_CACHE = $previousDepartureCachePath

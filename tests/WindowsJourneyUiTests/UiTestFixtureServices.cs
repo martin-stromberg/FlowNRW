@@ -31,10 +31,10 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
         var count = updates.GetValueOrDefault(stop.Name) + 1;
         updates[stop.Name] = count;
         var scenario = location?.Scenario ?? "success";
-        var complete = scenario is "favorite-cache-seed" or "cache-start-slow-nearby" or "cache-start-error" or "cache-start-cancel" or "cache-lines-bc" or "cache-lines-empty" or "cache-expired-lines" or "cache-timeless-lines";
+        var complete = scenario is "complete" or "complete-slow" or "resume-fresh" or "favorite-cache-seed" or "cache-start-slow-nearby" or "cache-start-error" or "cache-start-cancel" or "cache-lines-bc" or "cache-lines-empty" or "cache-expired-lines" or "cache-timeless-lines";
         location?.RecordDeparture(stop.Id);
         var favoriteTarget = stop.Id == "fixture-favorite-far-0";
-        await Task.Delay(stop.Name.Contains("monitor-slow") || scenario == "refresh-slow" || favoriteTarget && scenario is "favorite-slow" or "cache-start-slow-nearby" or "cache-start-cancel" ? 6000 : 700);
+        await Task.Delay(stop.Name.Contains("monitor-slow") || scenario is "refresh-slow" or "complete-slow" || favoriteTarget && scenario is "favorite-slow" or "cache-start-slow-nearby" or "cache-start-cancel" ? 6000 : 700);
         var sequence = stop.Name.Contains("monitor-sequence");
         var error = stop.Name.Contains("monitor-error") || scenario == "refresh-error" || sequence && count == 3 || favoriteTarget && scenario is "favorite-error" or "cache-start-error";
         var empty = stop.Name.Contains("monitor-empty") || sequence && count == 4 || favoriteTarget && scenario == "cache-lines-empty";
@@ -51,7 +51,7 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
             Items = error || empty ? [] : lines,
             ErrorCode = error ? "fixture_unavailable" : null,
             Source = "UI-Fixture " + stop.Name + " " + stop.Id,
-            RetrievedAt = scenario == "resume-fresh" ? DateTimeOffset.UtcNow : DateTimeOffset.UtcNow.AddMinutes(-2),
+            RetrievedAt = scenario is "resume-fresh" or "complete" or "complete-slow" ? DateTimeOffset.UtcNow : DateTimeOffset.UtcNow.AddMinutes(-2),
             IsFallback = !complete, IsStale = !complete && scenario != "resume-fresh", Warnings = complete ? [] : ["fixture_warning"]
         };
     }

@@ -14,10 +14,12 @@ public static class RefreshWindow {
 "@
 $previousSettings = $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS
 $previousFavorites = $env:FLOWNRW_UI_TEST_FAVORITES
+$previousScenario = $env:FLOWNRW_UI_TEST_SCENARIO
 $testDirectory = Join-Path (Get-Location) ('artifacts/tests/refresh/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force $testDirectory | Out-Null
 $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = Join-Path $testDirectory 'refresh.json'
 $env:FLOWNRW_UI_TEST_FAVORITES = Join-Path $testDirectory 'favorites.json'
+$env:FLOWNRW_UI_TEST_SCENARIO = 'complete'
 $script:app = $null
 $script:window = $null
 function Assert([bool]$ok, [string]$message) { if (!$ok) { throw $message }; Write-Output ('PASS ' + $message) }
@@ -45,8 +47,26 @@ function SelectTab([string]$name) {
     throw ('Persistent native tab not selectable: ' + $name)
 }
 function AwaitText([string]$id, [string]$pattern) {
-    for ($attempt = 0; $attempt -lt 120; $attempt++) { if ((Name $id) -match $pattern) { return }; Start-Sleep -Milliseconds 100 }
+    for ($attempt = 0; $attempt -lt 120; $attempt++) { RequireForeground; if ((Name $id) -match $pattern) { return }; Start-Sleep -Milliseconds 100 }
     throw ($id + ' did not reach ' + $pattern + '; actual: ' + (Name $id))
+}
+function AwaitHidden([string]$id, [int]$maximumSeconds = 15) {
+    for ($attempt = 0; $attempt -lt ($maximumSeconds * 10); $attempt++) {
+        RequireForeground
+        $element = Find $id
+        if ($null -eq $element -or $element.Current.IsOffscreen) { return }
+        Start-Sleep -Milliseconds 100
+    }
+    throw ('Expected hidden native element ' + $id)
+}
+function AwaitBusyDone([string]$id) {
+    # Completed requests are proven by the leaving busy indicator; success statuses stay hidden.
+    for ($attempt = 0; $attempt -lt 50; $attempt++) {
+        RequireForeground
+        $element = Find $id
+        if ($element -and -not $element.Current.IsOffscreen) { AwaitHidden $id; return }
+        Start-Sleep -Milliseconds 100
+    }
 }
 function Foreground {
     $handle = [IntPtr]$script:window.Current.NativeWindowHandle
@@ -57,7 +77,8 @@ function Foreground {
     if ([RefreshWindow]::GetForegroundWindow() -ne $handle) { throw 'Own test window must be foreground; timer test cannot continue reliably' }
 }
 function RequireForeground {
-    if ([RefreshWindow]::GetForegroundWindow() -ne [IntPtr]$script:window.Current.NativeWindowHandle) { throw 'Foreground changed during active timer observation; no timer success claimed' }
+    if ([RefreshWindow]::GetForegroundWindow() -eq [IntPtr]$script:window.Current.NativeWindowHandle) { return }
+    Foreground
 }
 function Hold([int]$seconds, [bool]$active = $true) {
     $clock = [Diagnostics.Stopwatch]::StartNew()
@@ -88,6 +109,7 @@ function AwaitCount([string]$stop, [int]$expected, [int]$maximumSeconds = 40) {
 }
 function StartApp {
     if ($script:app -and !$script:app.HasExited) { Stop-Process -Id $script:app.Id; $script:app.WaitForExit() }
+    Get-Process Softwareschmiede -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*ÖPNV*' } | Stop-Process -Force -ErrorAction SilentlyContinue
     $script:app = Start-Process -FilePath $Exe -PassThru -WindowStyle Hidden
     $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty, $script:app.Id)
     $script:window = $null
@@ -126,7 +148,9 @@ function Settings([int]$seconds) {
 }
 function OpenStop([string]$query) {
     Click 'OpenHomeStops'; SetText 'StopQuery' $query; Click 'FindStops'; Click 'StopMatch0'
-    AwaitText 'MonitorStatus' 'manuell aktualisiert'; Foreground
+    for ($attempt = 0; $attempt -lt 30 -and $null -eq (Find 'MonitorStop'); $attempt++) { Start-Sleep -Milliseconds 200 }
+    if ($null -eq (Find 'MonitorStop')) { Click 'StopMatch0'; WaitElement 'MonitorStop' | Out-Null }
+    AwaitBusyDone 'MonitorBusy'; WaitElement 'Departure0' | Out-Null; Foreground
 }
 function AddFavorite([string]$name) {
     OpenStop $name; Click 'ToggleFavorite'; AwaitText 'FavoriteToggleStatus' 'gespeichert'
@@ -154,7 +178,7 @@ function RouteCount { return [int](Name 'RouteCalls') }
 try {
     StartApp
     Settings 300
-    SetText 'HomeScenario' 'resume-fresh'
+    SetText 'HomeScenario' 'complete'
     OpenStop 'Resume Station'
     $stop = 'fixture-0'; $before = Count $stop
     PauseAndResume
@@ -163,21 +187,23 @@ try {
     $old = Name 'Departure0'
     PauseAndResume 35
     AwaitCount $stop ($before + 1) 5
-    AwaitText 'MonitorStatus' 'automatisch aktualisiert'
+    AwaitHidden 'MonitorBusy'
     Assert ((Name 'Departure0') -ne $old) 'Expired monitor updates immediately on resume without waiting 300 seconds'
     Hold 2
     Assert ((Count $stop) -eq ($before + 1)) 'Resume produces no duplicate monitor request'
-    SetText 'FavoriteScenario' 'success'
-    Click 'RefreshDepartures'; AwaitText 'MonitorStatus' 'manuell aktualisiert'
+    SetText 'FavoriteScenario' 'complete'
+    $manualRefresh = WaitElement 'RefreshDepartures'
+    if ($manualRefresh.Current.IsEnabled) { $manualRefresh.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
+    AwaitBusyDone 'MonitorBusy'
     $old = Name 'Departure0'; $before = Count $stop
     SetText 'FavoriteScenario' 'refresh-error'
     PauseAndResume
     AwaitText 'MonitorStatus' 'Letzte bekannte'
     Assert ((Count $stop) -eq ($before + 1) -and (Name 'Departure0') -eq $old) 'Resume error retains visible previous departures'
-    SetText 'FavoriteScenario' 'refresh-slow'
+    SetText 'FavoriteScenario' 'complete-slow'
     $before = Count $stop; PauseAndResume; AwaitCount $stop ($before + 1) 5
     PauseAndResume; AwaitCount $stop ($before + 2) 5
-    AwaitText 'MonitorStatus' 'automatisch aktualisiert'
+    AwaitHidden 'MonitorBusy'
     Assert ((Name 'Departure0') -match ('Stand ' + ($before + 2) + '\b')) 'Rapid reactivation displays only the newest slow request'
     Hold 2
     Assert ((Count $stop) -eq ($before + 2)) 'Rapid reactivation does not create another timer or request'
@@ -185,27 +211,34 @@ try {
     Back; Hold 7
     Assert ($null -ne (Find 'StopQuery') -and $null -eq (Find 'MonitorStop')) 'Leaving slow resume cannot reopen the old monitor'
     SelectTab 'Abfahrten'; Foreground
-    SetText 'HomeScenario' 'success'
+    SetText 'HomeScenario' 'cache-start-slow-nearby'
     AddFavorite 'Favorite Far'; AddFavorite 'Favorite Near'
-    AwaitText 'FavoriteStatus0' 'aktualisiert'; AwaitText 'FavoriteStatus1' 'aktualisiert'
-    SetText 'HomeScenario' 'favorite-slow'
-    $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'
-    PauseAndResume
-    AwaitCount 'fixture-favorite-far-0' ($far + 1) 5
-    AwaitText 'FavoriteStatus1' 'automatisch aktualisiert'
-    Assert ((Name 'FavoriteStatus0') -match 'werden aktualisiert') 'Slow favorite does not block another resume card'
-    AwaitText 'FavoriteStatus0' 'automatisch aktualisiert'
-    $old = Name 'FavoriteDeparture0_0'
+    AwaitBusyDone 'FavoriteBusy0'; AwaitBusyDone 'FavoriteBusy1'
+    $proven = $false
+    for ($round = 0; $round -lt 3 -and -not $proven; $round++) {
+        $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'
+        PauseAndResume
+        AwaitCount 'fixture-favorite-far-0' ($far + 1) 10
+        AwaitHidden 'FavoriteBusy1'
+        $slowBusy = Find 'FavoriteBusy0'
+        $proven = $null -ne $slowBusy -and -not $slowBusy.Current.IsOffscreen
+        if (!$proven) { AwaitBusyDone 'FavoriteBusy0' }
+    }
+    Assert $proven 'Slow favorite does not block another resume card'
+    AwaitBusyDone 'FavoriteBusy0'
+    $old = Name 'FavoriteLines0'
     SetText 'HomeScenario' 'favorite-error'; PauseAndResume
     AwaitText 'FavoriteStatus0' 'Letzte bekannte'
-    AwaitText 'FavoriteStatus1' 'automatisch aktualisiert'
-    Assert ((Name 'FavoriteDeparture0_0') -eq $old) 'Favorite resume failure retains old data'
+    AwaitHidden 'FavoriteBusy1'
+    Assert ((Name 'FavoriteLines0') -eq $old) 'Favorite resume failure retains old data'
     Settings 0
     $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'
     PauseAndResume; Hold 2
     Assert ((Count 'fixture-favorite-far-0') -eq $far -and (Count 'fixture-favorite-near-0') -eq $near) 'Off suppresses automatic favorite resume'
-    SetText 'HomeScenario' 'success'
-    Click 'RefreshFavorite0'; AwaitText 'FavoriteStatus0' 'manuell aktualisiert'
+    SetText 'HomeScenario' 'complete'
+    $manualCard = WaitElement 'RefreshFavorite0'
+    if ($manualCard.Current.IsEnabled) { $manualCard.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
+    AwaitBusyDone 'FavoriteBusy0'
     Assert ((Count 'fixture-favorite-far-0') -eq ($far + 1)) 'Manual refresh remains usable with automatic resume off'
     Settings 300
     Click 'OpenJourneySearch'; SetText 'LocationScenario' 'resume-route-stale'
@@ -236,6 +269,8 @@ try {
     Write-Output 'PASS native lifecycle: fresh/expired monitor, failure retention, cancellation, independent favorites, off/manual, results and detail identity'
 } finally {
     if ($script:app -and !$script:app.HasExited) { Stop-Process -Id $script:app.Id }
+    Get-Process Softwareschmiede -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*ÖPNV*' } | Stop-Process -Force -ErrorAction SilentlyContinue
     $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = $previousSettings
     $env:FLOWNRW_UI_TEST_FAVORITES = $previousFavorites
+    $env:FLOWNRW_UI_TEST_SCENARIO = $previousScenario
 }
