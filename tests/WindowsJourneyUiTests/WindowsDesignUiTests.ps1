@@ -6,9 +6,10 @@ New-Item -ItemType Directory -Force $ScreenshotDirectory | Out-Null
 $ScreenshotDirectory = (Resolve-Path $ScreenshotDirectory).Path
 $run = Join-Path $env:TEMP ('flownrw-design-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory $run | Out-Null
-$keys = @('FLOWNRW_UI_TEST_THEME','FLOWNRW_UI_TEST_TEXT_SCALE','FLOWNRW_UI_TEST_HIDE_CONTROLS','FLOWNRW_UI_TEST_SCENARIO','FLOWNRW_UI_TEST_FAVORITES','FLOWNRW_UI_TEST_REFRESH_SETTINGS')
+$keys = @('FLOWNRW_UI_TEST_THEME','FLOWNRW_UI_TEST_TEXT_SCALE','FLOWNRW_UI_TEST_HIDE_CONTROLS','FLOWNRW_UI_TEST_SCENARIO','FLOWNRW_UI_TEST_FAVORITES','FLOWNRW_UI_TEST_REFRESH_SETTINGS','FLOWNRW_UI_TEST_PIN_ACTIVE')
 $previous=@{}; foreach($key in $keys) { $previous[$key]=[Environment]::GetEnvironmentVariable($key) }
 $env:FLOWNRW_UI_TEST_THEME=$Theme
+$env:FLOWNRW_UI_TEST_PIN_ACTIVE='1'
 $env:FLOWNRW_UI_TEST_TEXT_SCALE="$TextScale"
 $env:FLOWNRW_UI_TEST_HIDE_CONTROLS='1'
 $env:FLOWNRW_UI_TEST_SCENARIO=$Scenario

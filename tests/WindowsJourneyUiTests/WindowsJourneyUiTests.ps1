@@ -6,6 +6,8 @@ $previousFavoritePath = $env:FLOWNRW_UI_TEST_FAVORITES
 $previousRefreshPath = $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS
 $previousDepartureCachePath = $env:FLOWNRW_UI_TEST_DEPARTURE_CACHE
 $previousScenario = $env:FLOWNRW_UI_TEST_SCENARIO
+$previousPinActive = $env:FLOWNRW_UI_TEST_PIN_ACTIVE
+$env:FLOWNRW_UI_TEST_PIN_ACTIVE = '1'
 $refreshTestDirectory = Join-Path (Get-Location) ('artifacts/tests/refresh-regression/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $refreshTestDirectory -Force | Out-Null
 $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = Join-Path $refreshTestDirectory 'refresh-settings.json'
@@ -719,4 +721,5 @@ public static class MapPointer {
     $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = $previousRefreshPath
     $env:FLOWNRW_UI_TEST_DEPARTURE_CACHE = $previousDepartureCachePath
     $env:FLOWNRW_UI_TEST_SCENARIO = $previousScenario
+    $env:FLOWNRW_UI_TEST_PIN_ACTIVE = $previousPinActive
 }

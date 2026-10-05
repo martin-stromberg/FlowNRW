@@ -46,9 +46,14 @@ public partial class App : Application
     protected override Window CreateWindow(IActivationState? activationState)
     {
         var window = new Window(shell);
+#if UI_TEST_FIXTURES
+        var pinActive = Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_PIN_ACTIVE") == "1";
+#else
+        var pinActive = false;
+#endif
         window.Activated += (_, _) => lifecycle.SetActive(true);
-        window.Deactivated += (_, _) => lifecycle.SetActive(false);
-        window.Stopped += (_, _) => lifecycle.SetActive(false);
+        window.Deactivated += (_, _) => { if (!pinActive) lifecycle.SetActive(false); };
+        window.Stopped += (_, _) => { if (!pinActive) lifecycle.SetActive(false); };
         window.Resumed += (_, _) => lifecycle.SetActive(true);
         window.Destroying += (_, _) => lifecycle.SetActive(false);
         return window;

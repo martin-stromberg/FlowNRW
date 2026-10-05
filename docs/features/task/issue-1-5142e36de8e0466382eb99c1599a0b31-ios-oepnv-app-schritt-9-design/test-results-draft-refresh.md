@@ -17,9 +17,11 @@
 
 Der bestehende `-Favorites`-Fixture-Ablauf in `tests/WindowsJourneyUiTests/WindowsJourneyUiTests.ps1` enthält jetzt zusätzlich:
 
-`NearbyStop0` → `MonitorStop` mit „Umgebung Süd“ → abgeschlossenes `MonitorStatus` → `MonitorMetadata` mit `fixture-nearby-0`.
+`NearbyStop0` → `MonitorStop` mit „Umgebung Süd“ → abgeschlossener `MonitorBusy`-Zyklus → `Departure0` mit den geladenen Abfahrten.
 
 Damit ist der zuvor stille Klickpfad von einer nicht gespeicherten nahen Haltestelle zum echten Abfahrtsmonitor automatisiert abgedeckt. Die vorhandenen Such-, Favoriten-, Standort-, Karten- und Detail-IDs bleiben Teil der bisherigen Regression.
+
+Hinweis zum Sichtbarkeitsvertrag: Erfolgreiche Aktualisierungen werden seit der Textverdichtung ohne `MonitorStatus`/`FavoriteStatus`-Text und ohne `MonitorMetadata` dargestellt. Refresh- und Lifecycle-Regressionen prüfen Abschlusszustände deshalb über die Busy-Indikatoren (`MonitorBusy`, `FavoriteBusy*`) und die sichtbar bleibenden Fehler- und Datenstandstexte („Letzte bekannte“, „Datenstand“, „nicht gespeichert“). Vollständige Antworten liefert die Fixture über die Szenarien `complete`/`complete-slow`/`resume-fresh`; das Monitor-ViewModel rendert `Departure0` nur für vollständige, nicht veraltete Ergebnisse.
 
 ## Noch offene Abnahme
 
