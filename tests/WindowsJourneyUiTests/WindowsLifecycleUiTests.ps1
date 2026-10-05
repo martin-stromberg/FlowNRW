@@ -109,7 +109,7 @@ function AwaitCount([string]$stop, [int]$expected, [int]$maximumSeconds = 40) {
 }
 function StartApp {
     if ($script:app -and !$script:app.HasExited) { Stop-Process -Id $script:app.Id; $script:app.WaitForExit() }
-    Get-Process Softwareschmiede -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*ÖPNV*' } | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-Process FlowNRW -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     $script:app = Start-Process -FilePath $Exe -PassThru -WindowStyle Hidden
     $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty, $script:app.Id)
     $script:window = $null
@@ -152,6 +152,14 @@ function OpenStop([string]$query) {
     if ($null -eq (Find 'MonitorStop')) { Click 'StopMatch0'; WaitElement 'MonitorStop' | Out-Null }
     AwaitBusyDone 'MonitorBusy'; WaitElement 'Departure0' | Out-Null; Foreground
 }
+function FavoriteIndex([string]$name) {
+    for ($i = 0; $i -lt 10; $i++) {
+        $card = Find ('FavoriteName' + $i)
+        if ($null -eq $card) { return -1 }
+        if ((Name ('FavoriteName' + $i)) -match [Regex]::Escape($name)) { return $i }
+    }
+    return -1
+}
 function AddFavorite([string]$name) {
     OpenStop $name; Click 'ToggleFavorite'; AwaitText 'FavoriteToggleStatus' 'gespeichert'
     Back; SelectTab 'Abfahrten'; WaitElement 'OpenHomeStops' | Out-Null; Foreground
@@ -191,7 +199,9 @@ try {
     Assert ((Name 'Departure0') -ne $old) 'Expired monitor updates immediately on resume without waiting 300 seconds'
     Hold 2
     Assert ((Count $stop) -eq ($before + 1)) 'Resume produces no duplicate monitor request'
-    SetText 'FavoriteScenario' 'complete'
+    # A complete but already aged response stays stale under the 30-second
+    # realtime lifetime, so the resume below actually issues a request.
+    SetText 'FavoriteScenario' 'cache-start-slow-nearby'
     $manualRefresh = WaitElement 'RefreshDepartures'
     if ($manualRefresh.Current.IsEnabled) { $manualRefresh.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
     AwaitBusyDone 'MonitorBusy'
@@ -207,38 +217,54 @@ try {
     Assert ((Name 'Departure0') -match ('Stand ' + ($before + 2) + '\b')) 'Rapid reactivation displays only the newest slow request'
     Hold 2
     Assert ((Count $stop) -eq ($before + 2)) 'Rapid reactivation does not create another timer or request'
-    $before = Count $stop; PauseAndResume; AwaitCount $stop ($before + 1) 5
+    # Reload with a complete but aged response; fresh data would skip the resume
+    # request under the 30-second realtime lifetime.
+    SetText 'FavoriteScenario' 'cache-start-slow-nearby'
+    $staleRefresh = WaitElement 'RefreshDepartures'
+    if ($staleRefresh.Current.IsEnabled) { $staleRefresh.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
+    AwaitBusyDone 'MonitorBusy'
+    $before = Count $stop; SetText 'FavoriteScenario' 'complete-slow'; PauseAndResume; AwaitCount $stop ($before + 1) 5
     Back; Hold 7
     Assert ($null -ne (Find 'StopQuery') -and $null -eq (Find 'MonitorStop')) 'Leaving slow resume cannot reopen the old monitor'
     SelectTab 'Abfahrten'; Foreground
-    SetText 'HomeScenario' 'cache-start-slow-nearby'
+    # Favorite cards must start stale so the resume refresh actually fires;
+    # favorite-cache-seed returns complete but two-minute-old departures.
+    SetText 'HomeScenario' 'favorite-cache-seed'
     AddFavorite 'Favorite Far'; AddFavorite 'Favorite Near'
+    # 'favorite-slow' delays only the far card by six seconds while the near
+    # card answers quickly, so the resume overlap proof stays deterministic.
+    SetText 'HomeScenario' 'favorite-slow'
     AwaitBusyDone 'FavoriteBusy0'; AwaitBusyDone 'FavoriteBusy1'
+    # Cards are sorted by distance once the position resolved, so resolve card
+    # indices by name instead of assuming insertion order.
+    $farCard = FavoriteIndex 'Favorite Far'; $nearCard = FavoriteIndex 'Favorite Near'
+    Assert ($farCard -ge 0 -and $nearCard -ge 0) 'Both favorite cards are present for the resume overlap proof'
+    $farBusy = 'FavoriteBusy' + $farCard; $nearBusy = 'FavoriteBusy' + $nearCard
     $proven = $false
     for ($round = 0; $round -lt 3 -and -not $proven; $round++) {
         $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'
         PauseAndResume
         AwaitCount 'fixture-favorite-far-0' ($far + 1) 10
-        AwaitHidden 'FavoriteBusy1'
-        $slowBusy = Find 'FavoriteBusy0'
+        AwaitHidden $nearBusy
+        $slowBusy = Find $farBusy
         $proven = $null -ne $slowBusy -and -not $slowBusy.Current.IsOffscreen
-        if (!$proven) { AwaitBusyDone 'FavoriteBusy0' }
+        if (!$proven) { AwaitBusyDone $farBusy }
     }
     Assert $proven 'Slow favorite does not block another resume card'
-    AwaitBusyDone 'FavoriteBusy0'
-    $old = Name 'FavoriteLines0'
+    AwaitBusyDone $farBusy
+    $old = Name ('FavoriteLines' + $farCard)
     SetText 'HomeScenario' 'favorite-error'; PauseAndResume
-    AwaitText 'FavoriteStatus0' 'Letzte bekannte'
-    AwaitHidden 'FavoriteBusy1'
-    Assert ((Name 'FavoriteLines0') -eq $old) 'Favorite resume failure retains old data'
+    AwaitText ('FavoriteStatus' + $farCard) 'Letzte bekannte'
+    AwaitHidden $nearBusy
+    Assert ((Name ('FavoriteLines' + $farCard)) -eq $old) 'Favorite resume failure retains old data'
     Settings 0
     $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'
     PauseAndResume; Hold 2
     Assert ((Count 'fixture-favorite-far-0') -eq $far -and (Count 'fixture-favorite-near-0') -eq $near) 'Off suppresses automatic favorite resume'
     SetText 'HomeScenario' 'complete'
-    $manualCard = WaitElement 'RefreshFavorite0'
+    $manualCard = WaitElement ('RefreshFavorite' + $farCard)
     if ($manualCard.Current.IsEnabled) { $manualCard.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
-    AwaitBusyDone 'FavoriteBusy0'
+    AwaitBusyDone $farBusy
     Assert ((Count 'fixture-favorite-far-0') -eq ($far + 1)) 'Manual refresh remains usable with automatic resume off'
     Settings 300
     Click 'OpenJourneySearch'; SetText 'LocationScenario' 'resume-route-stale'
@@ -269,7 +295,7 @@ try {
     Write-Output 'PASS native lifecycle: fresh/expired monitor, failure retention, cancellation, independent favorites, off/manual, results and detail identity'
 } finally {
     if ($script:app -and !$script:app.HasExited) { Stop-Process -Id $script:app.Id }
-    Get-Process Softwareschmiede -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*ÖPNV*' } | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-Process FlowNRW -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = $previousSettings
     $env:FLOWNRW_UI_TEST_FAVORITES = $previousFavorites
     $env:FLOWNRW_UI_TEST_SCENARIO = $previousScenario

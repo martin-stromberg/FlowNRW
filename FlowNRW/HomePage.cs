@@ -270,6 +270,12 @@ public sealed class HomePage : ContentPage
                 _ => Title = "Monitor konnte nicht geöffnet werden");
             var remove = new AsyncRelayCommand(() => model.RemoveAsync(card), () => !model.IsSaving && model.Contains(card),
                 _ => Title = "Favorit konnte nicht entfernt werden");
+            // Cards render while a removal still runs (IsSaving true); without
+            // this re-evaluation the fresh remove button stays disabled forever.
+            PropertyChangedEventHandler savingChanged = (_, args) =>
+            { if (args.PropertyName == nameof(model.IsSaving)) remove.InvalidateExecution(); };
+            model.PropertyChanged += savingChanged;
+            unsubscribe.Add(() => model.PropertyChanged -= savingChanged);
             var openButton = new Button { Text = "▣", AutomationId = "OpenFavorite" + index, Command = open, HeightRequest = 48, WidthRequest = 48 };
             SemanticProperties.SetDescription(openButton, "Abfahrtsmonitor öffnen");
             actions.Add(openButton, 2);

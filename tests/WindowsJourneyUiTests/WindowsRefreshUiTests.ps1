@@ -109,7 +109,7 @@ function AwaitCount([string]$stop, [int]$expected, [int]$maximumSeconds = 40) {
 }
 function StartApp {
     if ($script:app -and !$script:app.HasExited) { Stop-Process -Id $script:app.Id; $script:app.WaitForExit() }
-    Get-Process Softwareschmiede -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*ÖPNV*' } | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-Process FlowNRW -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     $script:app = Start-Process -FilePath $Exe -PassThru -WindowStyle Hidden
     $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty, $script:app.Id)
     $script:window = $null
@@ -155,6 +155,14 @@ function OpenStop([string]$query) {
 function AddFavorite([string]$name) {
     OpenStop $name; Click 'ToggleFavorite'; AwaitText 'FavoriteToggleStatus' 'gespeichert'
     Back; SelectTab 'Abfahrten'; WaitElement 'OpenHomeStops' | Out-Null; Foreground
+}
+function FavoriteIndex([string]$name) {
+    for ($i = 0; $i -lt 10; $i++) {
+        $card = Find ('FavoriteName' + $i)
+        if ($null -eq $card) { return -1 }
+        if ((Name ('FavoriteName' + $i)) -match [Regex]::Escape($name)) { return $i }
+    }
+    return -1
 }
 function Snapshot([string]$name) {
     if (!$ScreenshotDirectory) { return }
@@ -234,37 +242,45 @@ try {
     } else { Settings 30 }
     AddFavorite 'Favorite Far'; AddFavorite 'Favorite Near'
     AwaitBusyDone 'FavoriteBusy0'; AwaitBusyDone 'FavoriteBusy1'
-    SetText 'HomeScenario' 'cache-start-slow-nearby'
+    # 'favorite-slow' delays only the far card by six seconds while the near
+    # card answers quickly, so the overlap proof stays deterministic.
+    SetText 'HomeScenario' 'favorite-slow'
+    # Cards are sorted by distance once the position resolved, so resolve card
+    # indices by name instead of assuming insertion order.
+    $farCard = FavoriteIndex 'Favorite Far'; $nearCard = FavoriteIndex 'Favorite Near'
+    Assert ($farCard -ge 0 -and $nearCard -ge 0) 'Both favorite cards are present for the overlap proof'
+    $farBusy = 'FavoriteBusy' + $farCard; $nearBusy = 'FavoriteBusy' + $nearCard
+    $farRefresh = 'RefreshFavorite' + $farCard; $nearRefresh = 'RefreshFavorite' + $nearCard
     $proven = $false
     for ($round = 0; $round -lt 3 -and -not $proven; $round++) {
         $far = Count 'fixture-favorite-far-0'
-        $trigger = WaitElement 'RefreshFavorite0'
+        $trigger = WaitElement $farRefresh
         if ($trigger.Current.IsEnabled) { $trigger.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
         AwaitCount 'fixture-favorite-far-0' ($far + 1)
-        WaitElement 'FavoriteBusy0' | Out-Null
-        $manual = WaitElement 'RefreshFavorite0'
+        WaitElement $farBusy | Out-Null
+        $manual = WaitElement $farRefresh
         $expected = $far + 1
         if ($manual.Current.IsEnabled) { $manual.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); $expected = $far + 2 }
         Assert ((Count 'fixture-favorite-far-0') -eq $expected) 'Favorite manual/automatic overlap is guarded'
-        $nearTrigger = WaitElement 'RefreshFavorite1'
+        $nearTrigger = WaitElement $nearRefresh
         if ($nearTrigger.Current.IsEnabled) { $nearTrigger.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
-        AwaitBusyDone 'FavoriteBusy1'
-        $slowBusy = Find 'FavoriteBusy0'
+        AwaitBusyDone $nearBusy
+        $slowBusy = Find $farBusy
         $proven = $null -ne $slowBusy -and -not $slowBusy.Current.IsOffscreen
-        if (!$proven) { AwaitBusyDone 'FavoriteBusy0' }
+        if (!$proven) { AwaitBusyDone $farBusy }
     }
     Assert $proven 'Slow favorite remains loading while another card refresh completed'
-    AwaitBusyDone 'FavoriteBusy0'
-    $retained = Name 'FavoriteLines0'
+    AwaitBusyDone $farBusy
+    $retained = Name ('FavoriteLines' + $farCard)
     SetText 'HomeScenario' 'favorite-error'; $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'
     AwaitCount 'fixture-favorite-far-0' ($far + 1)
-    AwaitText 'FavoriteStatus0' 'Letzte bekannte'
-    Assert ((Name 'FavoriteLines0') -eq $retained) 'Automatic favorite failure retains prior data'
+    AwaitText ('FavoriteStatus' + $farCard) 'Letzte bekannte'
+    Assert ((Name ('FavoriteLines' + $farCard)) -eq $retained) 'Automatic favorite failure retains prior data'
     AwaitCount 'fixture-favorite-near-0' ($near + 1)
     SetText 'HomeScenario' 'complete'
-    $farTrigger = WaitElement 'RefreshFavorite0'
+    $farTrigger = WaitElement $farRefresh
     if ($farTrigger.Current.IsEnabled) { $farTrigger.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
-    AwaitBusyDone 'FavoriteBusy0'
+    AwaitBusyDone $farBusy
     Settings 0; $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'; Hold 35
     Assert ((Count 'fixture-favorite-far-0') -eq $far -and (Count 'fixture-favorite-near-0') -eq $near) 'Off stops all favorite schedules'
     Settings 30
@@ -278,7 +294,7 @@ try {
     else { Write-Output 'PASS all native refresh scenarios: real timing, persistence, off/change, navigation/activity, independent cards, overlap, retained errors and storage retry' }
 } finally {
     if ($script:app -and !$script:app.HasExited) { Stop-Process -Id $script:app.Id }
-    Get-Process Softwareschmiede -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*ÖPNV*' } | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-Process FlowNRW -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = $previousSettings
     $env:FLOWNRW_UI_TEST_FAVORITES = $previousFavorites
     $env:FLOWNRW_UI_TEST_SCENARIO = $previousScenario
