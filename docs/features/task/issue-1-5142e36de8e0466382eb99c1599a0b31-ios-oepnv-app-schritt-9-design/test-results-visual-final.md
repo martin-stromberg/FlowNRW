@@ -166,3 +166,7 @@ Zusammen mit dem UiTest-Build (0 Warnungen/0 Fehler) und der Core-Suite (279/279
 - Unter der sichtbaren Karten-WebView liegende Elemente erreichen den UIAutomation-Baum nicht; die Karteninformationsfläche wird daher über die Listenansicht bzw. den nachweislich umgeschalteten Barrierefreiheitsnamen („Kartendaten schließen“) geprüft.
 - Bei 150 % Textskalierung bricht `UTC +02:00` in den Verbindungsdetails in eine eigene Zeile um; der Inhalt bleibt vollständig lesbar.
 - Die iOS-Geräteabnahme bleibt ausdrücklich offen und ist nicht Teil dieses Windows-Nachweises.
+
+## Endstand, 06.10.2026
+
+Nach den Gerätebefund-Korrekturen (`c23114a`, `3656f54`) wurde die komplette Queue auf dem Endstand `782b5a2` wiederholt: alle acht nativen Regressionen und alle vier Matrizen bestanden (Lifecycle in Versuch 3, Rest je Versuch 1). Sämtliche Manifestzeilen melden Commit `782b5a26`, `tracked files clean; untracked files present` und Build-SHA256 `3FFA3809FAB185D081D17F561A4AF068EDF79522C7644E02B936993BD310CE45`. Das `cache-refresh`-Bildpaar wurde ebenfalls auf dem sauberen Endcommit neu erzeugt. Die iOS-Geräteabnahme wurde vom Nutzer durchgeführt und als abgenommen bewertet; sporadische Abruffehler bleiben über das Diagnoseprotokoll beobachtbar.
