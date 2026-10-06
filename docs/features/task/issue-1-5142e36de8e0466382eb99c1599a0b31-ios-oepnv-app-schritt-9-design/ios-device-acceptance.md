@@ -34,6 +34,7 @@ Pro Gerätekonfiguration die Checkpunkte mit `Bestanden`, `Fehler` oder `Nicht a
 | Gerät / iOS | Build / Commit | Modus / Textgröße | Orientierung | Ergebnis / offene Punkte |
 |---|---|---|---|---|
 | iPhone (nutzerseitiger Test, 05.10.2026) | Commit `97b940f` | Standard | Hochformat | Teilweise bestanden; drei Produktbefunde in Arbeit — siehe Befundliste |
+| iPhone (nutzerseitige Wiederholung, 05.10.2026) | Bugfix-Build (Commits `c23114a`, `3656f54`) | Standard | Hochformat | Abgenommen mit Vorbehalt: sporadische Abruffehler akzeptiert, Analyse über Diagnoseprotokoll („Protokoll senden") |
 
 ### Befundliste der Geräteprüfung, 05.10.2026
 

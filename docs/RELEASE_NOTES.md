@@ -6,7 +6,10 @@
 
 ## What's New
 
-- Native FlowNRW design integration with persistent departures, connections and stops areas, structured departure and journey cards, accessible map/list alternatives, light/dark semantic surfaces and Windows visual regression evidence. Native iOS device acceptance remains pending.
+- Native FlowNRW design integration with persistent departures, connections and stops areas, structured departure and journey cards, accessible map/list alternatives, light/dark semantic surfaces and Windows visual regression evidence. A first real-device iOS pass is accepted by the user; sporadic departure fetch errors remain under observation via the diagnostic protocol.
+- Opt-in diagnostic protocol in settings: HTTP calls, monitor outcomes and lifecycle events are recorded locally and can be sent to the maintainer by e-mail ("Protokoll senden").
+- Journey details show plain local times with "Vortag"/"Folgetag" day markers instead of technical UTC offsets; transfers render between the affected legs.
+- Cached departure boards restore their times on restart (marked stale and refreshed immediately), and reopened stop monitors reuse session data during refresh.
 
 - Refresh stale visible departures and journeys on resume without navigation; bounded opportunistic iOS favorite refresh, disabled together with automatic refresh. Native iOS acceptance remains pending.
 - Persistent favorite stops on the home screen, independently refreshable departure boards, explicit distance sorting and validated monitor/map navigation.
@@ -34,7 +37,10 @@
 
 ## Neuerungen
 
-- Veraltete sichtbare Abfahrten und Verbindungen bei Wiederaufnahme ohne Seitensprung erneuern; begrenzte opportunistische iOS-Favoritenaktualisierung, gemeinsam mit der Automatik abschaltbar. Native iOS-Abnahme steht aus.
+- Veraltete sichtbare Abfahrten und Verbindungen bei Wiederaufnahme ohne Seitensprung erneuern; begrenzte opportunistische iOS-Favoritenaktualisierung, gemeinsam mit der Automatik abschaltbar. Erste iOS-Geräteprüfung vom Nutzer abgenommen; sporadische Abfahrtsfehler bleiben über das Diagnoseprotokoll beobachtbar.
+- Optionales Diagnoseprotokoll in den Einstellungen: HTTP-Aufrufe, Monitorergebnisse und Lifecycle-Ereignisse werden lokal aufgezeichnet und können per E-Mail an den Maintainer gesendet werden („Protokoll senden").
+- Verbindungsdetails zeigen lokale Zeiten mit „Vortag"/„Folgetag"-Markierung statt UTC-Offsets; Umstiege erscheinen zwischen den betroffenen Fahrtabschnitten.
+- Gespeicherte Abfahrtsboards zeigen beim Neustart wieder ihre Zeiten (als veraltet markiert und sofort aktualisiert); erneut geöffnete Haltestellen nutzen Sitzungsdaten während der Aktualisierung.
 - Dauerhaft gespeicherte Haltestellenfavoriten auf der Startseite, unabhängig aktualisierbare Abfahrtstafeln, explizite Entfernungssortierung und validierte Monitor-/Kartennavigation.
 - Konfigurierbare Vordergrundintervalle (aus, 30, 60, 120 oder 300 Sekunden) mit gespeicherter Einstellung, Abbruch bei Navigation/Fensterdeaktivierung und unabhängigen Favoritenschleifen.
 
