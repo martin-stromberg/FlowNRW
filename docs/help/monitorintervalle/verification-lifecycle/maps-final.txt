@@ -1,0 +1,15 @@
+PASS MapDataStatus contains 2 Haltestellen.*2 Kartenpositionen
+PASS MonitorMetadata contains fixture-1
+PASS MonitorMetadata contains fixture-0
+PASS MapDataStatus contains 0 Kartenpositionen
+PASS MapStation0 contains Keine Kartenposition
+PASS Pan changes actual map viewport
+PASS MapStation0 contains onerror
+PASS MonitorStop contains onerror
+Missing StopQuery
+In D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\tests\WindowsJourneyUiTests\WindowsJourneyUiTests.ps1:31 Zeichen:9
++         throw "Missing $id"
++         ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Missing StopQuery:String) [], RuntimeException
+    + FullyQualifiedErrorId : Missing StopQuery
+ 

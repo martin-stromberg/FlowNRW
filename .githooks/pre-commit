@@ -24,13 +24,11 @@ python "$repo_root/.githooks/no-notimplemented-check.py"
 echo "Running enum coverage check..."
 python "$repo_root/.githooks/enum-coverage-check.py"
 
-# --- dotnet format on the platform-independent projects (mirrors CI Gate 1) ---
+# --- dotnet format on the whole solution (mirrors CI static checks) ---
 if ! command -v dotnet >/dev/null 2>&1; then
   echo "dotnet not found. Install the .NET SDK." >&2
   exit 1
 fi
 
 echo "Running dotnet format check..."
-for project in FlowNRW.Core/FlowNRW.Core.csproj FlowNRW.Tests/FlowNRW.Tests.csproj; do
-  dotnet format "$repo_root/$project" --verify-no-changes --severity error
-done
+dotnet format "$repo_root/FlowNRW.sln" --verify-no-changes --no-restore --severity error

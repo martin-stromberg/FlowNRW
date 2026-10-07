@@ -1,0 +1,42 @@
+Native refresh tests use actual 30-second waits; all paths and data are isolated fixtures.
+PASS Effective saved interval 30
+WAIT next real timer request 0 seconds
+WAIT next real timer request 5 seconds
+WAIT next real timer request 10 seconds
+WAIT next real timer request 15 seconds
+WAIT next real timer request 20 seconds
+WAIT next real timer request 25 seconds
+PASS Exactly expected request count for fixture-favorite-near-0: 3
+PASS Slow favorite remains loading while another automatic favorite completed
+PASS Each active card has one independent automatic request
+PASS Favorite manual/automatic overlap is guarded
+WAIT next real timer request 0 seconds
+WAIT next real timer request 5 seconds
+WAIT next real timer request 10 seconds
+WAIT next real timer request 15 seconds
+WAIT next real timer request 20 seconds
+WAIT next real timer request 25 seconds
+PASS Exactly expected request count for fixture-favorite-far-0: 5
+PASS Automatic favorite failure retains prior data
+PASS Another favorite continues despite the failed card
+PASS Effective saved interval 0
+WAIT real time 0/35 seconds
+WAIT real time 5/35 seconds
+WAIT real time 10/35 seconds
+WAIT real time 15/35 seconds
+WAIT real time 20/35 seconds
+WAIT real time 25/35 seconds
+WAIT real time 30/35 seconds
+PASS Off stops all favorite schedules
+PASS Effective saved interval 30
+WAIT next real timer request 0 seconds
+WAIT next real timer request 5 seconds
+WAIT next real timer request 10 seconds
+WAIT next real timer request 15 seconds
+WAIT next real timer request 20 seconds
+WAIT next real timer request 25 seconds
+PASS Exactly expected request count for fixture-favorite-far-0: 7
+PASS Exactly expected request count for fixture-favorite-near-0: 5
+WAIT real time 0/3 seconds
+PASS Repeated page navigation does not multiply favorite timers
+PASS native favorite timer regression: real30s, independent cards, overlap, error retention, Off and navigation

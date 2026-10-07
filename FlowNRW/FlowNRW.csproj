@@ -1,8 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+	<PropertyGroup Condition="'$(Configuration)' == 'UiTest'">
+		<DefineConstants>$(DefineConstants);UI_TEST_FIXTURES</DefineConstants>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(Configuration)' == 'UiTest'">
+		<Compile Include="..\tests\WindowsJourneyUiTests\UiTestFixtureServices.cs" Link="Testing\UiTestFixtureServices.cs" />
+	</ItemGroup>
+
 	<PropertyGroup>
-		<!-- Windows only for now; Android and iOS will be added later (see README.md, "Roadmap"). -->
-		<TargetFrameworks>net10.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks>net10.0-ios</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx')) Or '$(EnableIos)' == 'true'">net10.0-ios</TargetFrameworks>
 
 		<OutputType>Exe</OutputType>
 		<RootNamespace>FlowNRW</RootNamespace>
@@ -25,6 +32,8 @@
 		<ApplicationVersion>1</ApplicationVersion>
 
 		<!-- Unpackaged Windows app (plain .exe in a ZIP, no MSIX signing required), see https://aka.ms/MauiTemplateUnpackaged -->
+	</PropertyGroup>
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<WindowsPackageType>None</WindowsPackageType>
 		<WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -32,13 +41,24 @@
 		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+	</PropertyGroup>
+	<PropertyGroup>
+	  <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(TargetFramework)'=='net10.0-ios'">
+	  <CodesignKey>Apple Development: Created via API (466MVK852A)</CodesignKey>
+	  <CodesignProvision>VS: WildCard Development</CodesignProvision>
+	  <ProvisioningType>automatic</ProvisioningType>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+		<MauiIcon Include="Resources\AppIcon\flownrw.png" Color="#0058BC" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+		<MauiSplashScreen Include="Resources\AppIcon\flownrw.png" Color="#0058BC" BaseSize="192,192" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />

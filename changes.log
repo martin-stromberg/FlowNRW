@@ -1,0 +1,48 @@
+## 2026-09-26 — Wiederaufnahme und begrenzte Hintergrundaktualisierung
+
+- Veraltete sichtbare Abfahrten und Verbindungsergebnisse nach Wiederaufnahme erneuern; eindeutige Fahrtauswahl beibehalten, unsichere Zuordnung verständlich zur Neuauswahl markieren. Fehler erhalten letzte Daten.
+- iOS-Hintergrundaufgabe für Favoriten registrieren: ein Lauf, höchstens vier parallele Abrufe und 20 Sekunden Zeitbudget. Vordergrundwechsel und OS-Expiration brechen ab; keine Standortabfrage oder zusätzliche Datenhistorie.
+- Aus deaktiviert automatische Wiederaufnahme- und Hintergrundabrufe. Manuelle Aktualisierung bleibt verfügbar. Native iOS-Abnahme bleibt beim Nutzer; konkrete Prüfanleitung ergänzt.
+
+## 2026-09-24 — Automatische Vordergrundaktualisierung
+
+- Einzel- und Favoritenmonitore erhalten ein gemeinsam gespeichertes Intervall: Aus, 30 oder 60 Sekunden, 2 oder 5 Minuten; Standard 60 Sekunden. Erst erfolgreiches Speichern verändert den wirksamen Wert.
+- Automatische Aktualisierung endet bei Seitenwechsel und Fensterdeaktivierung. Favoritentafeln bleiben unabhängig; manuelle und automatische Aktionen starten pro Monitor keine parallelen Doppelabrufe.
+- Bei Aktualisierungsfehlern bleiben letzte bekannte Daten mit ihrem Datenstand erhalten. Bedienung, Speicherfehler und manuelle iOS-Geräteprüfung sind dokumentiert; Hintergrundbetrieb und visuelle Gesamtabnahme bleiben getrennte Folgeschritte.
+
+## 2026-09-19 — Favoriten und Startseitenmonitore
+
+- Technische Haltestellenfavoriten dauerhaft speichern und entfernen; neue Startseite mit unabhängigen Abfahrtstafeln und expliziter Luftliniensortierung.
+- Fehler erhalten gespeicherte Favoriten beziehungsweise letzte Abfahrten; entfernte Karten und alte Kartenauswahlen werden zuverlässig verworfen.
+- 173 Coretests und alle fünf nativen Windows-Testläufe bestanden, einschließlich vier echter Prozessstarts für Persistenz. iOS-Geräteabnahme bleibt beim Nutzer.
+
+## 2026-09-18 — Standort und nahe Haltestellen
+
+- Standort als Start/Ziel sowie nahe Haltestellen in Liste und Karte ergänzt. Fehlgeschlagene Anfragen erhalten bestehende Auswahl; manuelle Änderungen und Navigation verwerfen verspätete Antworten.
+- 165 Coretests und native Windows-Standort-, Routing-, Monitor- und Karten-Fixtures bestanden. Nach ausdrücklicher Nutzerfreigabe lieferte auch die echte Windows-Standortprobe eine Position; tatsächliche Nahbereichssuche und Monitorauswahl erfolgreich.
+- iOS-WhenInUse-Beschreibung, Berechtigungszustände und Geräteprüfanleitung ergänzt.
+
+## 2026-09-17 — Interaktive Haltestellenkarte und Verbindungsverläufe
+
+- Haltestellensuche und Verbindungsdetails öffnen eine gemeinsame Windows-/iOS-Kartenansicht mit Originalkoordinaten und ausschließlich gelieferten Strecken.
+- Marker und native Liste führen zum richtigen Monitor; fehlende Positionen/Geometrie und Kartenfehler sind ausdrücklich erkennbar.
+- Lokale Leaflet-Assets, sichere JSON-Bridge und größenbegrenzter technischer HTTPS-Kachelcache ergänzt. Native iOS-Abnahme bleibt beim Nutzer.
+
+## 2026-09-16 — Haltestellensuche und manueller Abfahrtsmonitor
+
+- Native Haltestellenauswahl, nächste Abfahrten und manuelle Aktualisierung mit sichtbarer Echtzeit, Ausfall und Gleiswechsel.
+- Fehler erhalten letzte bekannte Daten; Stopwechsel und späte Antworten sind abgesichert.
+- 126 Coretests und native Monitor-/Routingprüfungen erfolgreich; iOS-Abnahme beim Nutzer.
+
+## 2026-09-16 — Manuelle Verbindungssuche und iOS-Plattformbasis
+
+- Native Suche ersetzt die Counter-Vorlage: Start und Ziel per Adresse, Haltestelle oder Koordinate wählen, Verbindungen und Teilstreckendetails öffnen und mit erhaltenem Kontext zurückkehren.
+- Quellen, Datenalter, Ersatzquellen, fehlende Echtzeit sowie Lade-, Leer- und Fehlerzustände sind sichtbar; geänderte Eingaben verwerfen alte Auswahlen und verspätete Antworten.
+- iOS-Ziel und Einstieg sowie Visual-Studio-/iOS-Prüfanleitung ergänzt. Native iOS-Abnahme bleibt beim Nutzer; bestehende Windows-CI und Releases bleiben unverändert.
+- 118 Tests, 97,01 % Core-Coverage und native Windows-Fixture-/Live-Prüfungen dokumentiert. Die zunächst geplante IIS-Bereitstellung ist auf Nutzerwunsch entfallen.
+## 2026-09-09 — Konfigurierbare bundesweite und regionale Fahrplanauskunft
+
+- Die Core-Datenversorgung löst Orte und Haltestellen auf, ruft Verbindungen und Abfahrten ab und normalisiert Providerantworten für die spätere Oberfläche.
+- NRW-EFA-Echtzeit wird bei regionalen Punkten bevorzugt und nur über eindeutige Stop-/Fahrtzuordnung mit bundesweiten Daten zusammengeführt; Providerfehler bleiben als Fallback, Warnung oder unbekannter Wert sichtbar.
+- Technische Konfiguration, HTTPS-Gateway, Cancellation, begrenzte Wiederholungen, flüchtiger Cache und datensparsame Diagnose sind dokumentiert.
+- Verifikation und echte Providerproben weisen 98 erfolgreiche Core-Tests, 98,00 % Core-Coverage, einen fehlerfreien Windows-Build sowie die Grenzen der Entwicklungsendpunkte nach.

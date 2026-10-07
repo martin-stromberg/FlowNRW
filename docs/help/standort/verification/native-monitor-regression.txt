@@ -1,0 +1,24 @@
+PASS StopSearchStatus contains Suchtext
+PASS Only stops offered: Adresse Essen
+PASS Only stops offered: empty
+PASS Only stops offered: error
+PASS MonitorStop contains monitor-sequence
+PASS MonitorMetadata contains fixture-1.*Datenalter:.*Fallback.*Veralteter Cache
+PASS Departure0 contains RE 1.*Stand 1
+PASS Departure0 contains \+3 Min\.
+PASS Departure0 contains Gleis-/Steigwechsel
+PASS Departure1 contains Pünktlich gemeldet
+PASS Departure2 contains keine Echtzeitdaten
+PASS Departure3 contains FÄLLT AUS
+PASS Departure0 contains Stand 2
+PASS Failed refresh retains departures
+PASS Failed refresh retains source and timestamp
+PASS Successful empty refresh clears obsolete departures
+PASS Departure0 contains Stand 5
+PASS Back preserves stop search
+PASS New stop does not retain previous stop departures
+PASS MonitorStatus contains aktualisiert
+PASS MonitorStop contains New Stop
+PASS MonitorMetadata contains New Stop
+PASS Departure0 contains Stand 1
+PASS all monitor native UI scenarios
