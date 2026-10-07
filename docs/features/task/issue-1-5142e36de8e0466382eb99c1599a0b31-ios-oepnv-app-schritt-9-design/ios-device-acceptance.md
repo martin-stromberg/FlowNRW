@@ -67,3 +67,9 @@ Pro Gerätekonfiguration die Checkpunkte mit `Bestanden`, `Fehler` oder `Nicht a
 Das erste Geräteprotokoll zeigte die Ursache der sporadischen Fehler: die `efa`-Abrufe (`XML_DM_REQUEST`) antworteten in ~700 ms, während `db-rest /locations` je Karte ~20 s in den Timeout lief. Die ausgelöste Meldung „konnten nicht geladen" hing an der Retention-Regel — eine degradierte, aber frische EFA-Antwort traf auf ein bestehendes Board. Beobachtung: die gespeicherten Favoriten tragen keine `db-rest`-Quelle, die Namensauflösung über `/locations` ist für sie auf diesem Netz wiederholt gescheitert; die Fremd-ID-Regel (keine fremden IDs in db.rest) bleibt bewusst erhalten.
 
 Behoben: eine degradierte neue Antwort ersetzt ein vorhandenes Board, wenn das Board selbst nicht mehr vollständig ist (`IsComplete(Result)`-Schwelle in beiden Monitor-ViewModels). Ein weiterhin komplettes Board bleibt gegen Teil-/Ersatzantworten geschützt. Damit zeigt die Karte frische EFA-Daten mit kompaktem Hinweis statt einer Fehlermeldung bei vorliegenden Abfahrten.
+
+### Zweite Protokollanalyse, 07.10.2026
+
+Das erweiterte Protokoll mit Lifecycle-Events zeigt das Muster jetzt systematisch: **jeder** Refresh-Zyklus produziert eine `db-rest /locations`-Timeout-Kette (~20 s pro Karte), während `efa` zuverlässig in <1 s antwortet. `v6.db.transport.rest` ist vom Gerätenetz aus durchgehend unerreichbar (kein einziger erfolgreicher db.rest-Aufruf im Protokoll); die Fremd-ID-Regel für db.rest bleibt unverändert bestehen.
+
+Gegenmaßnahme: Per-Host-Circuit-Breaker im `TransitHttpGateway` — nach zwei aufeinanderfolgenden Transport-/Timeout-/5xx-Fehlern wird der Host für zwei Minuten übersprungen (`circuit-open`), ein Erfolg setzt den Zähler zurück. Der tote db.rest-Ast kostet dann nur noch den ersten Zyklus 20 s; alle folgenden Zyklen liefern die EFA-Antwort ohne die Wartefrist. Der Breaker ist im Protokoll als `circuit-open` sichtbar.

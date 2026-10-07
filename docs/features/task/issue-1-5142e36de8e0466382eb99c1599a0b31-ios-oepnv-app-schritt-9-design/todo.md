@@ -51,3 +51,5 @@
 06.10.2026: Nacht-Runner auf Endcommit 782b5a2 vollständig grün — 8/8 Regressionen und 4/4 Matrizen, Manifeste auf sauberem Arbeitsbaum, einheitlicher Build 3FFA3809. iOS-Geräteabnahme vom Nutzer abgenommen (Restpunkt: sporadische Abruffehler, Diagnose via Diagnoseprotokoll). Release Notes aktualisiert.
 
 07.10.2026: Erstes Geräteprotokoll ausgewertet — efa-Abfahrtsabrufe ~700 ms erfolgreich, db-rest /locations pro Karte ~20 s Timeout. Fremd-ID-Regel bleibt erhalten (db.rest darf keine fremden IDs). Retention-Schwelle korrigiert: degradierte frische Antwort ersetzt ein Board, das selbst nicht mehr vollständig ist; komplette Boards bleiben geschützt. Core 280/280, UiTest-Build 0/0.
+
+07.10.2026 (2. Protokoll): db.rest systematisch unerreichbar auf Gerätenetz — jeder Refresh-Zyklus verlor ~20 s pro Karte im /locations-Timeout. Per-Host-Circuit-Breaker im TransitHttpGateway ergänzt (2 aufeinanderfolgende Transport-/Timeout-/5xx-Fehler → 2 min Überspringen, Erfolg resettet). Core 280/280, UiTest 0/0.
