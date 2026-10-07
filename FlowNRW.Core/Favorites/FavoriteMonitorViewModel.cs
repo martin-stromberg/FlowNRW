@@ -115,7 +115,7 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
             if (version != revision) return;
             LastAttempt = result;
             Diagnostics.AppLog.Write("favorite", $"{Stop.Name}: items={result.Items.Count} error={result.ErrorCode ?? "-"} fallback={result.IsFallback} stale={result.IsStale} warnings={result.Warnings.Count}");
-            if (result.ErrorCode is not null || (!IsComplete(result) && Result is not null)) SetFailure();
+            if (result.ErrorCode is not null || (!IsComplete(result) && Result is not null && IsComplete(Result))) SetFailure();
             else
             {
                 Result = result with

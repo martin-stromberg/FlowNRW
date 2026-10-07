@@ -61,3 +61,9 @@ Pro Gerätekonfiguration die Checkpunkte mit `Bestanden`, `Fehler` oder `Nicht a
 **Restbefund 4 (behoben):** Verbindungsdetails zeigten „Keine Verbindung gewählt" — der Fallback-Text überschrieb den eigentlichen Grund. Behoben: `JourneyDetailViewModel.Details` zeigt bei gelöschter Auswahl den konkreten Sitzungsstatus (z. B. „nicht mehr eindeutig bestätigt").
 
 **Neue Funktion (nutzerseitig angefordert):** Diagnoseprotokoll in den Einstellungen — Schalter „Protokollierung aktivieren" plus „Protokoll senden"-Button, der das Protokoll per Mail an `mstromberg84+flow@gmail.com` öffnet (Log-Datei als Anhang, Inhalt zusätzlich im Text). Protokolliert werden HTTP-Aufrufe mit Status/Dauer, Monitorergebnisse (Fehler/Fallback/Veraltung/Warnungen) und Fenster-Lifecycle. Umgesetzt in `FlowNRW.Core/Diagnostics/AppLog.cs` und `RefreshSettingsPage.cs`.
+
+### Protokollanalyse, 07.10.2026
+
+Das erste Geräteprotokoll zeigte die Ursache der sporadischen Fehler: die `efa`-Abrufe (`XML_DM_REQUEST`) antworteten in ~700 ms, während `db-rest /locations` je Karte ~20 s in den Timeout lief. Die ausgelöste Meldung „konnten nicht geladen" hing an der Retention-Regel — eine degradierte, aber frische EFA-Antwort traf auf ein bestehendes Board. Beobachtung: die gespeicherten Favoriten tragen keine `db-rest`-Quelle, die Namensauflösung über `/locations` ist für sie auf diesem Netz wiederholt gescheitert; die Fremd-ID-Regel (keine fremden IDs in db.rest) bleibt bewusst erhalten.
+
+Behoben: eine degradierte neue Antwort ersetzt ein vorhandenes Board, wenn das Board selbst nicht mehr vollständig ist (`IsComplete(Result)`-Schwelle in beiden Monitor-ViewModels). Ein weiterhin komplettes Board bleibt gegen Teil-/Ersatzantworten geschützt. Damit zeigt die Karte frische EFA-Daten mit kompaktem Hinweis statt einer Fehlermeldung bei vorliegenden Abfahrten.

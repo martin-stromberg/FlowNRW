@@ -276,7 +276,7 @@ public sealed class StopMonitorViewModel : ObservableObject
             if (version != revision) return;
             LastAttempt = result;
             Diagnostics.AppLog.Write("monitor", $"{SelectedStop.Name}: items={result.Items.Count} error={result.ErrorCode ?? "-"} fallback={result.IsFallback} stale={result.IsStale} warnings={result.Warnings.Count}");
-            if (result.ErrorCode is not null || (!IsComplete(result) && Result is not null))
+            if (result.ErrorCode is not null || (!IsComplete(result) && Result is not null && IsComplete(Result)))
                 SetFailure();
             else
             {
