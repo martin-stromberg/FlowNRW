@@ -50,8 +50,8 @@ public sealed class DepartureService : IDepartureService
         return Latest(async token =>
         {
             var result = await provider.DeparturesAsync(stop, departure, token).ConfigureAwait(false);
-            return result with { Items = result.Items.OrderBy(item => item.PlannedTime ?? DateTimeOffset.MaxValue).Take(options.MaxResults).ToArray() };
+            var ordered = result.Items.OrderBy(item => item.PlannedTime ?? DateTimeOffset.MaxValue).Take(options.MaxResults + 1).ToArray();
+            return result with { Items = ordered.Take(options.MaxResults).ToArray(), Warnings = ordered.Length > options.MaxResults ? result.Warnings.Append("truncated-response").Distinct().ToArray() : result.Warnings };
         }, cancellationToken);
     }
 }
-

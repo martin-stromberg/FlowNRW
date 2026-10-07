@@ -15,28 +15,28 @@ public sealed class EfaResponseMapper
     /// <returns>Addresses and stops.</returns>
     public ProviderResult<Address> Search(string json)
     {
-        return Map(json, "efa", options.MaxResults, r => Array(Get(r, "locations")).Where(e => Text(e, "name") is not null).Select(e => new Address { Name = Text(e, "name")!, Coordinate = Pair(Get(e, "coord")), Stop = Text(e, "type") is "stop" or "platform" && Text(e, "id") is not null ? Stop(e) : null }));
+        return Map(json, "efa", options.MaxResults, r => Get(r, "locations").ValueKind == JsonValueKind.Array, r => Array(Get(r, "locations")).Where(e => Text(e, "name") is not null).Select(e => new Address { Name = Text(e, "name")!, Coordinate = Pair(Get(e, "coord")), Stop = Text(e, "type") is "stop" or "platform" && Text(e, "id") is not null ? Stop(e) : null }));
     }
     /// <summary>Maps stops near a coordinate.</summary>
     /// <param name="json">RapidJSON response.</param>
     /// <returns>Nearby stops with supplied distances.</returns>
     public ProviderResult<NearbyStopResult> Nearby(string json)
     {
-        return Map(json, "efa", options.MaxResults, r => Array(Get(r, "locations")).Where(e => Text(e, "id") is not null && Text(e, "type") is "stop" or "platform").Select(e => new NearbyStopResult { Stop = Stop(e), DistanceMeters = Number(Get(Get(e, "properties"), "distance")) }));
+        return Map(json, "efa", options.MaxResults, r => Get(r, "locations").ValueKind == JsonValueKind.Array, r => Array(Get(r, "locations")).Where(e => Text(e, "id") is not null && Text(e, "type") is "stop" or "platform").Select(e => new NearbyStopResult { Stop = Stop(e), DistanceMeters = Number(Get(Get(e, "properties"), "distance")) }));
     }
     /// <summary>Maps departure monitor events.</summary>
     /// <param name="json">RapidJSON response.</param>
     /// <returns>Normalized departures.</returns>
     public ProviderResult<StopEvent> Departures(string json)
     {
-        return Map(json, "efa", options.MaxResults, r => Array(Get(r, "stopEvents")).Where(e => Text(Get(e, "location"), "id") is not null).Select(e => Event(e, Get(e, "location"), Get(e, "transportation"), "departure")));
+        return Map(json, "efa", options.MaxResults, r => Get(r, "stopEvents").ValueKind == JsonValueKind.Array, r => Array(Get(r, "stopEvents")).Where(e => Text(Get(e, "location"), "id") is not null).Select(e => Event(e, Get(e, "location"), Get(e, "transportation"), "departure")));
     }
     /// <summary>Maps journey legs, walking, transfers and geometry.</summary>
     /// <param name="json">RapidJSON response.</param>
     /// <returns>Normalized connections.</returns>
     public ProviderResult<Journey> Journeys(string json)
     {
-        return Map(json, "efa", options.MaxResults, r => Array(Get(r, "journeys")).Select(e => { var legs = Array(Get(e, "legs")).Select(Leg).ToArray(); return new Journey { Id = Text(e, "id"), Legs = legs, Transfers = Transfers(legs) }; }).Where(j => j.Legs.Count > 0));
+        return Map(json, "efa", options.MaxResults, r => Get(r, "journeys").ValueKind == JsonValueKind.Array, r => Array(Get(r, "journeys")).Select(e => { var legs = Array(Get(e, "legs")).Select(Leg).ToArray(); return new Journey { Id = Text(e, "id"), Legs = legs, Transfers = Transfers(legs) }; }).Where(j => j.Legs.Count > 0));
     }
     private static Stop Stop(JsonElement e)
     {
@@ -63,4 +63,3 @@ public sealed class EfaResponseMapper
         return new() { Departure = Event(origin, origin, transport, "departure"), Arrival = Event(destination, destination, transport, "arrival"), Line = walking ? null : Line(transport), Geometry = geometry, Walking = walking ? new() { Duration = seconds is not null ? TimeSpan.FromSeconds(seconds.Value) : null, DistanceMeters = Number(Get(e, "distance")), Geometry = geometry } : null };
     }
 }
-

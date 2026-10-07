@@ -1,16 +1,22 @@
 using System.Diagnostics;
 using System.Net;
 using System.Text;
+using FlowNRW.Core.Diagnostics;
 
 namespace FlowNRW.Core.Transit;
 
 /// <summary>HTTPS gateway with bounded response size, retries and per-attempt timeout.</summary>
 public sealed class TransitHttpGateway : ITransitHttpGateway
 {
+    private const int CircuitOpenFailures = 2;
+    private static readonly TimeSpan CircuitCooldown = TimeSpan.FromMinutes(2);
     private readonly HttpClient client;
     private readonly TransitProviderOptions options;
     private readonly ITransitDiagnostics diagnostics;
     private readonly RetryPolicy retry;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Circuit> circuits = new();
+
+    private sealed class Circuit { public int Failures; public DateTimeOffset OpenUntil; }
 
     /// <summary>Constructs a gateway. Inject clients with automatic redirects disabled.</summary>
     /// <param name="client">Client owned by the composition root.</param>
@@ -32,6 +38,13 @@ public sealed class TransitHttpGateway : ITransitHttpGateway
         cancellationToken.ThrowIfCancellationRequested();
         if (!uri.IsAbsoluteUri || uri.Scheme != "https" || !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Fragment))
             return Failure(provider, "invalid-endpoint");
+        var host = uri.Host;
+        var circuit = circuits.GetOrAdd(host, _ => new Circuit());
+        if (circuit.OpenUntil > DateTimeOffset.UtcNow)
+        {
+            AppLog.Write("http", $"{provider} {uri.AbsolutePath} -> circuit-open (skipped)");
+            return Failure(provider, "circuit-open");
+        }
         var watch = Stopwatch.StartNew();
         for (int attempt = 0; ; attempt++)
         {
@@ -60,6 +73,8 @@ public sealed class TransitHttpGateway : ITransitHttpGateway
                     }
                     cancellationToken.ThrowIfCancellationRequested();
                     diagnostics.Record(provider, watch.Elapsed, "ok", 1);
+                    circuit.Failures = 0;
+                    AppLog.Write("http", $"{provider} {uri.AbsolutePath} -> {(int)status} in {watch.ElapsedMilliseconds} ms");
                     return new() { Source = provider, Items = new[] { Encoding.UTF8.GetString(buffer.ToArray()) } };
                 }
                 code = "http";
@@ -74,7 +89,16 @@ public sealed class TransitHttpGateway : ITransitHttpGateway
             catch (IOException) { status = null; code = "transport"; }
             diagnostics.Record(provider, watch.Elapsed, code, 0);
             if (!retry.ShouldRetry(status, attempt, options.MaxRetries))
-                return Failure(provider, status is null ? code : $"http-{(int)status}");
+            {
+                var failure = status is null ? code : $"http-{(int)status}";
+                if (status is null || (int)status >= 500)
+                {
+                    circuit.Failures++;
+                    if (circuit.Failures >= CircuitOpenFailures) { circuit.OpenUntil = DateTimeOffset.UtcNow.Add(CircuitCooldown); circuit.Failures = 0; }
+                }
+                AppLog.Write("http", $"{provider} {uri.AbsolutePath} -> {failure} after {watch.ElapsedMilliseconds} ms");
+                return Failure(provider, failure);
+            }
             await Task.Delay(TimeSpan.FromMilliseconds(100 * (attempt + 1)), cancellationToken).ConfigureAwait(false);
         }
     }

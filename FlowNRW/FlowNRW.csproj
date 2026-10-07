@@ -8,7 +8,7 @@
 	</ItemGroup>
 
 	<PropertyGroup>
-		<TargetFrameworks>net10.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks>net10.0-ios</TargetFrameworks>
 		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx')) Or '$(EnableIos)' == 'true'">net10.0-ios</TargetFrameworks>
 
 		<OutputType>Exe</OutputType>
@@ -44,13 +44,21 @@
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
 		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
+	<PropertyGroup>
+	  <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(TargetFramework)'=='net10.0-ios'">
+	  <CodesignKey>Apple Development: Created via API (466MVK852A)</CodesignKey>
+	  <CodesignProvision>VS: WildCard Development</CodesignProvision>
+	  <ProvisioningType>automatic</ProvisioningType>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+		<MauiIcon Include="Resources\AppIcon\flownrw.png" Color="#0058BC" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+		<MauiSplashScreen Include="Resources\AppIcon\flownrw.png" Color="#0058BC" BaseSize="192,192" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />

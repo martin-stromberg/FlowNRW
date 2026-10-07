@@ -42,14 +42,14 @@ public sealed class RoutingService : IRoutingService
         }
     }
     /// <inheritdoc />
-    public Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default)
+    public Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default, bool arriveBy = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!Valid(origin) || !Valid(destination))
             return Latest(_ => Task.FromResult(new ProviderResult<Journey> { Source = "validation", ErrorCode = "invalid-location" }), cancellationToken);
         return Latest(async token =>
         {
-            var result = await provider.RouteAsync(origin, destination, departure, token).ConfigureAwait(false);
+            var result = await provider.RouteAsync(origin, destination, departure, token, arriveBy).ConfigureAwait(false);
             return result with
             {
                 Items = result.Items.Where(journey =>
@@ -64,4 +64,3 @@ public sealed class RoutingService : IRoutingService
         (address.Coordinate is not null || address.Stop?.Coordinate is not null ||
         !string.IsNullOrWhiteSpace(address.Stop?.Id) || !string.IsNullOrWhiteSpace(address.Name));
 }
-

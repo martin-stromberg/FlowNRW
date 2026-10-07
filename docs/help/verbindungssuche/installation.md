@@ -38,6 +38,8 @@ dotnet build FlowNRW/FlowNRW.csproj -c Debug -f net10.0-ios -p:EnableIos=true -p
 
 Den installierten Simulator über die lokale Entwicklungsumgebung auswählen und starten. Intel-Macs benötigen den passenden Simulator-Runtime-Identifier. Für Geräte das Ziel `ios-arm64` und lokale Signierungsdaten verwenden. Diese Befehle sind Einrichtungshinweise, kein bestandener iOS-Nachweis.
 
+Für den wiederholbaren Geräte-Deploy steht zusätzlich [`scripts/iOS-Deployment.ps1`](../../../scripts/iOS-Deployment.ps1) mit der zugehörigen [Anleitung](../../../scripts/iOS-Deployment.md) bereit. Das Skript baut auf dem Mac und kann die signierte App mit `xcrun devicectl` auf ein angegebenes Gerät installieren und starten. Von Windows aus kann derselbe Ablauf über SSH auf einem vorbereiteten Mac angestoßen werden.
+
 ## iOS-Prüfliste für den Nutzer
 
 Datum, Commit, SDK-/Xcode-Version, iOS-Version und Gerät/Simulator sowie Ergebnis und Auffälligkeiten protokollieren:
@@ -57,4 +59,4 @@ Nicht durch Live-Daten erzwingbare Ausfall-/Tageswechsel-/Cachefälle als nicht 
 
 ## Lieferstand und Nachweise
 
-[118 Tests, 97,01 % Core-Coverage und native Windows-Prüfung](verification/checks-2026-09-16.md) sind dokumentiert. iOS-Ausführung bleibt offen. Die lokale IIS-Präsentation samt gesonderter Zwischenpaket-Bereitstellung wurde am 16.09.2026 auf Nutzerwunsch aus dem Umfang genommen. Bestehende Windows-GitHub-Actions-Tests und Releases bleiben unverändert; es gibt keine neue iOS-CI oder Deploymentautomatisierung.
+[118 Tests, 97,01 % Core-Coverage und native Windows-Prüfung](verification/checks-2026-09-16.md) sind dokumentiert. iOS-Ausführung bleibt offen. Die lokale IIS-Präsentation samt gesonderter Zwischenpaket-Bereitstellung wurde am 16.09.2026 auf Nutzerwunsch aus dem Umfang genommen. Bestehende Windows-GitHub-Actions-Tests und Releases bleiben unverändert; es gibt keine neue iOS-CI. Das manuelle Deployment-Skript ist eine lokale Entwicklerhilfe und keine GitHub-Actions-Pipeline.

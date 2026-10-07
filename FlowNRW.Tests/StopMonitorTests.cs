@@ -32,6 +32,32 @@ public sealed class StopMonitorTests
         Assert.Same(candidate, model.Lookup.SelectedAddress);
     }
 
+    /// <summary>Home nearby candidates use their verified identity without weakening lookup membership checks.</summary>
+    [Fact]
+    public async Task OpensVerifiedHomeNearbyAndRejectsIncompleteIdentity()
+    {
+        var search = new ControlledSearchService();
+        var departures = new ControlledDepartureService();
+        var navigation = new DepartureTestNavigation();
+        var model = new StopMonitorViewModel(search, departures, navigation, 200);
+        var nearby = Candidate("Home nearby");
+
+        var opening = model.OpenNearbyFromHomeAsync(nearby);
+        Assert.Same(nearby.Stop, Assert.Single(departures.Stops));
+        departures.Pending[0].SetResult(new());
+        await opening;
+
+        await model.OpenNearbyFromHomeAsync(new Address
+        {
+            Name = "Unvollständig",
+            Stop = new() { Name = "Unvollständig", Id = "missing-source" }
+        });
+
+        Assert.Equal(1, navigation.Opens);
+        Assert.Single(departures.Stops);
+        Assert.Same(nearby.Stop, model.SelectedStop);
+    }
+
     /// <summary>Failed refresh retains data and metadata; an authoritative empty result replaces it.</summary>
     [Fact]
     public async Task RetainsDataOnErrorAndRecoversWithEmptyResult()

@@ -11,12 +11,18 @@ public sealed class StopMonitorViewModel : ObservableObject
     private readonly IDepartureNavigation navigation;
     private readonly IStopSearchService nearby;
     private readonly ICurrentLocationService? location;
+    private readonly IFavoriteStore? favoriteStore;
+    private readonly IDepartureCacheStore? departureCache;
+    private readonly RefreshFreshness freshness;
     private CancellationTokenSource? request;
     private long revision;
     private bool opening;
     private CancellationTokenSource? nearbyRequest;
     private long nearbyRevision;
     private bool nearbyActive;
+    private readonly Dictionary<(string Source, string Id), SessionBoard> sessionBoards = [];
+    private long sessionOrder;
+    private const int MaximumSessionBoards = 100;
 
     /// <summary>Creates an independent stop monitor session.</summary>
     /// <param name="search">Independent lookup service.</param>
@@ -25,12 +31,19 @@ public sealed class StopMonitorViewModel : ObservableObject
     /// <param name="maxSearchLength">Configured search length.</param>
     /// <param name="location">Optional current-location provider.</param>
     /// <param name="nearbySearch">Independent nearby lookup scope.</param>
-    public StopMonitorViewModel(IStopSearchService search, IDepartureService departures, IDepartureNavigation navigation, int maxSearchLength, ICurrentLocationService? location = null, IStopSearchService? nearbySearch = null)
+    /// <param name="favoriteStore">Saved favorites used to authorize persistent cache reads.</param>
+    /// <param name="departureCache">Persistent cache containing saved favorite boards.</param>
+    /// <param name="freshness">Freshness policy applied before a persistent cache board is displayed.</param>
+    public StopMonitorViewModel(IStopSearchService search, IDepartureService departures, IDepartureNavigation navigation, int maxSearchLength, ICurrentLocationService? location = null, IStopSearchService? nearbySearch = null,
+        IFavoriteStore? favoriteStore = null, IDepartureCacheStore? departureCache = null, RefreshFreshness? freshness = null)
     {
         Lookup = new EndpointViewModel(search, maxSearchLength);
         this.departures = departures;
         this.navigation = navigation;
         this.location = location;
+        this.favoriteStore = favoriteStore;
+        this.departureCache = departureCache;
+        this.freshness = freshness ?? new RefreshFreshness(new TransitCacheOptions());
         nearby = nearbySearch ?? search;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => SelectedStop is not null && !IsBusy,
             _ => SetStatus("Aktualisierung fehlgeschlagen. Bitte erneut versuchen."));
@@ -59,6 +72,8 @@ public sealed class StopMonitorViewModel : ObservableObject
     }
     /// <summary>Whether the location-to-nearby request chain is running.</summary>
     public bool IsNearbyBusy { get; private set; }
+    /// <summary>Whether the latest explicitly requested nearby lookup needs user attention.</summary>
+    public bool IsNearbyFailure { get; private set; }
     /// <summary>Complete selected stop identity.</summary>
     public Stop? SelectedStop { get; private set; }
     /// <summary>Selected stop title.</summary>
@@ -100,7 +115,7 @@ public sealed class StopMonitorViewModel : ObservableObject
         Lookup.CancelPending();
         var version = nearbyRevision;
         using var source = new CancellationTokenSource(); nearbyRequest = source;
-        IsNearbyBusy = true; NearbyStatus = "Standort wird ermittelt …"; RefreshSearchBindings();
+        IsNearbyBusy = true; IsNearbyFailure = false; NearbyStatus = "Standort wird ermittelt …"; RefreshSearchBindings();
         try
         {
             var position = await location.GetCurrentAsync(source.Token);
@@ -113,6 +128,7 @@ public sealed class StopMonitorViewModel : ObservableObject
             NearbyResult = result;
             NearbyStops = result.Items.Where(x => !string.IsNullOrWhiteSpace(x.Stop?.Id)).Select(x => new Address { Name = x.Stop!.Name, Stop = x.Stop, Coordinate = x.Stop.Coordinate }).ToArray();
             nearbyActive = true;
+            IsNearbyFailure = false;
             NearbyStatus = NearbyStops.Count == 0 ? "Keine Haltestellen in der Nähe gefunden." : $"{NearbyStops.Count} nahe Haltestellen gefunden.";
             NearbyStatus += position.AccuracyDescription;
         }
@@ -147,12 +163,13 @@ public sealed class StopMonitorViewModel : ObservableObject
     {
         CancelNearbyPending();
         nearbyActive = false; NearbyStops = []; NearbyResult = null;
-        NearbyStatus = "Standort nur nach Aktion verwenden.";
+        IsNearbyFailure = false; NearbyStatus = "Standort nur nach Aktion verwenden.";
         RefreshSearchBindings();
     }
 
     private void SetNearbyFailure(string description)
     {
+        IsNearbyFailure = true;
         NearbyStatus = description + (Stops.Count > 0 ? " Vorherige Ergebnisse werden angezeigt; keine neue Umgebung ermittelt." : "");
         RefreshSearchBindings();
     }
@@ -160,7 +177,7 @@ public sealed class StopMonitorViewModel : ObservableObject
     private void RefreshSearchBindings()
     {
         Notify(nameof(Stops)); Notify(nameof(SearchStatus)); Notify(nameof(SearchMetadata));
-        Notify(nameof(NearbyStatus)); Notify(nameof(NearbyResult)); Notify(nameof(NearbyStops)); Notify(nameof(IsNearbyBusy));
+        Notify(nameof(NearbyStatus)); Notify(nameof(NearbyResult)); Notify(nameof(NearbyStops)); Notify(nameof(IsNearbyBusy)); Notify(nameof(IsNearbyFailure));
         NearbyCommand?.Refresh();
     }
 
@@ -170,8 +187,19 @@ public sealed class StopMonitorViewModel : ObservableObject
     public async Task OpenAsync(Address candidate)
     {
         if (opening || !Stops.Any(item => ReferenceEquals(item, candidate)) || candidate.Stop is null) return;
-        if (!nearbyActive) Lookup.SelectAddress(candidate);
+        if (!nearbyActive) Lookup.SelectAddressKeepingMatches(candidate);
         await OpenStopAsync(candidate.Stop);
+    }
+
+    /// <summary>Opens a complete stop identity supplied by the retained home nearby list.</summary>
+    /// <param name="candidate">Nearby stop independently verified by the home projection.</param>
+    /// <returns>Navigation and initial update completion, or immediate completion for an incomplete identity.</returns>
+    public Task OpenNearbyFromHomeAsync(Address candidate)
+    {
+        if (candidate.Stop is not { } stop
+            || string.IsNullOrWhiteSpace(stop.Id)
+            || string.IsNullOrWhiteSpace(stop.Source)) return Task.CompletedTask;
+        return OpenStopAsync(stop);
     }
 
     /// <summary>Opens an exact currently saved favorite without weakening search membership.</summary>
@@ -179,20 +207,28 @@ public sealed class StopMonitorViewModel : ObservableObject
     /// <param name="card">Current saved card instance.</param>
     /// <returns>Navigation and first departure refresh completion.</returns>
     public Task OpenFavoriteAsync(FavoriteHomeViewModel home, FavoriteMonitorViewModel card) => home.Contains(card)
-        ? OpenStopAsync(card.Stop) : Task.CompletedTask;
+        ? OpenStopAsync(card.Stop, card.Result) : Task.CompletedTask;
 
-    private async Task OpenStopAsync(Stop stop)
+    private async Task OpenStopAsync(Stop stop, ProviderResult<StopEvent>? retained = null)
     {
         if (opening) return;
         opening = true;
         CancelNearbyPending();
         CancelPending();
         SelectedStop = stop;
-        Result = null;
+        var key = (stop.Source, stop.Id);
+        var cached = retained ?? ReadSession(key);
+        var version = revision;
+        if (cached is null) cached = await ReadPersistentFavoriteCacheAsync(stop, version);
+        if (version != revision || SelectedStop != stop) { opening = false; return; }
+        Result = cached is null ? null : cached with
+        {
+            Items = cached.Items.Where(item => EffectiveTime(item) is { } time && time >= DateTimeOffset.Now)
+                .OrderBy(item => EffectiveTime(item)!.Value).ToArray()
+        };
         LastAttempt = null;
         SetStatus("Abfahrten werden geladen …");
         RefreshBindings();
-        var version = revision;
         try
         {
             await navigation.ShowMonitorAsync();
@@ -239,7 +275,8 @@ public sealed class StopMonitorViewModel : ObservableObject
             source.Token.ThrowIfCancellationRequested();
             if (version != revision) return;
             LastAttempt = result;
-            if (result.ErrorCode is not null)
+            Diagnostics.AppLog.Write("monitor", $"{SelectedStop.Name}: items={result.Items.Count} error={result.ErrorCode ?? "-"} fallback={result.IsFallback} stale={result.IsStale} warnings={result.Warnings.Count}");
+            if (result.ErrorCode is not null || (!IsComplete(result) && Result is not null && IsComplete(Result)))
                 SetFailure();
             else
             {
@@ -248,7 +285,10 @@ public sealed class StopMonitorViewModel : ObservableObject
                     Items = result.Items.Where(item => EffectiveTime(item) is not { } time || time >= started)
                         .OrderBy(item => EffectiveTime(item) ?? DateTimeOffset.MaxValue).ToArray()
                 };
-                SetStatus(Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · {(automatic ? "automatisch" : "manuell")} aktualisiert.");
+                StoreSession(SelectedStop, Result);
+                SetStatus(result.Warnings.Count > 0 || result.IsFallback || result.IsStale
+                    ? "Daten möglicherweise unvollständig oder veraltet."
+                    : Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · {(automatic ? "automatisch" : "manuell")} aktualisiert.");
             }
         }
         catch (OperationCanceledException)
@@ -284,6 +324,45 @@ public sealed class StopMonitorViewModel : ObservableObject
 
     private static DateTimeOffset? EffectiveTime(StopEvent item) => item.Realtime.ActualTime
         ?? (item.PlannedTime is { } planned ? planned + (item.Realtime.Delay ?? TimeSpan.Zero) : null);
+
+    private ProviderResult<StopEvent>? ReadSession((string Source, string Id) key)
+    {
+        if (!sessionBoards.TryGetValue(key, out var cached)) return null;
+        sessionBoards[key] = cached with { Order = ++sessionOrder };
+        return cached.Result;
+    }
+
+    private void StoreSession(Stop stop, ProviderResult<StopEvent> result)
+    {
+        if (string.IsNullOrWhiteSpace(stop.Source) || string.IsNullOrWhiteSpace(stop.Id)
+            || result.Items.Count > 100 || result.ErrorCode is not null) return;
+        var key = (stop.Source, stop.Id);
+        sessionBoards[key] = new SessionBoard(result, ++sessionOrder);
+        while (sessionBoards.Count > MaximumSessionBoards)
+        {
+            var oldest = sessionBoards.Where(entry => entry.Key != key).OrderBy(entry => entry.Value.Order).FirstOrDefault();
+            if (oldest.Key == default) break;
+            sessionBoards.Remove(oldest.Key);
+        }
+    }
+
+    private sealed record SessionBoard(ProviderResult<StopEvent> Result, long Order);
+
+    private async Task<ProviderResult<StopEvent>?> ReadPersistentFavoriteCacheAsync(Stop stop, long version)
+    {
+        if (favoriteStore is null || departureCache is null) return null;
+        try
+        {
+            var favorites = await favoriteStore.LoadAsync();
+            if (version != revision || !favorites.Any(item => item.Source == stop.Source && item.Id == stop.Id)) return null;
+            var entry = (await departureCache.LoadAsync()).FirstOrDefault(item => item.Source == stop.Source && item.StopId == stop.Id);
+            return version == revision && entry is not null && !freshness.IsStale(entry.Result) ? entry.Result : null;
+        }
+        catch (OperationCanceledException) { return null; }
+        catch (Exception) { return null; }
+    }
+
+    private static bool IsComplete(ProviderResult<StopEvent> result) => result.ErrorCode is null && result.Warnings.Count == 0 && !result.IsFallback && !result.IsStale;
 
     private void SetFailure() => SetStatus(Result is null ? "Abfahrten konnten nicht geladen werden. Bitte erneut versuchen."
         : "Aktualisierung fehlgeschlagen. Letzte bekannte Daten werden angezeigt; bitte Datenstand beachten.");

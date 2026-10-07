@@ -214,9 +214,11 @@ public sealed class LocationTests
         var first = model.NearbyCommand.ExecuteAsync(); location.Pending[0].SetResult(new(status) { Message = "sensitive provider detail" }); await first;
         Assert.Empty(nearby.Pending);
         Assert.DoesNotContain("sensitive", model.NearbyStatus);
+        Assert.True(model.IsNearbyFailure);
         Assert.True(model.NearbyCommand.CanExecute(null));
         var second = model.NearbyCommand.ExecuteAsync(); location.Pending[1].SetResult(new(LocationStatus.Success, new(51, 7)));
         nearby.Pending[0].SetResult(new()); await second;
+        Assert.False(model.IsNearbyFailure);
         Assert.Contains("Keine Haltestellen", model.SearchStatus);
     }
 

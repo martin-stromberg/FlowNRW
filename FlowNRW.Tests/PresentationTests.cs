@@ -43,7 +43,8 @@ public sealed class EndpointViewModelTests
         var service = new ControlledSearchService(); var model = new EndpointViewModel(service, 100) { Text = "Essen" };
         var task = model.SearchAsync(); var address = new Address { Name = "Essen", Stop = new Stop { Id = "1", Source = "efa", Dhid = "de:1" } };
         service.Pending[0].SetResult(new() { Items = [address] }); await task; model.SelectAddress(address);
-        Assert.Same(address, model.SelectedAddress); model.Text = "Berlin"; Assert.Null(model.SelectedAddress); Assert.Empty(model.Matches);
+        Assert.Same(address, model.SelectedAddress); Assert.Equal("Essen", model.Text); Assert.Empty(model.Matches);
+        model.Text = "Berlin"; Assert.Null(model.SelectedAddress); Assert.Empty(model.Matches);
     }
     /// <summary>Late responses cannot overwrite newer state and commands unlock immediately.</summary>
     [Fact]
@@ -104,6 +105,16 @@ public sealed class JourneySearchViewModelTests
         service.Pending[0].SetResult(new() { Items = [new Journey { Id = "old" }], Source = "old" }); await old;
         Assert.Same(journey, Assert.Single(model.Journeys)); Assert.Equal("new", model.Result?.Source); Assert.Equal(1, nav.Results);
     }
+    /// <summary>Alternative arrival time and mode reach the routing contract.</summary>
+    [Fact]
+    public async Task SendsSelectedArrivalTime()
+    {
+        var service = new ControlledRoutingService(); var model = Create(service, new RecordingNavigation()); await Select(model);
+        var selected = new DateTime(2026, 10, 3).AddHours(18).AddMinutes(30);
+        model.UseCurrentTime = false; model.SelectedDate = selected.Date; model.SelectedTime = selected.TimeOfDay; model.ArriveBy = true;
+        var task = model.SearchAsync(); service.Pending[0].SetResult(new() { Items = [] }); await task;
+        Assert.True(service.ArriveBy[0]); Assert.Equal(model.PlannedTime, service.Departures[0]);
+    }
     /// <summary>Completed contexts survive page departure and selected detail navigation.</summary>
     [Fact]
     public async Task PreservesContextThroughNavigation()
@@ -126,14 +137,36 @@ public sealed class JourneySearchViewModelTests
 /// <summary>Display semantics around midnight and unknown realtime.</summary>
 public sealed class JourneyPresentationTests
 {
-    /// <summary>German local dates, offset, walking and cancellations remain explicit.</summary>
+    /// <summary>Only non-current or incomplete provider data receives a compact list warning.</summary>
     [Fact]
-    public void DisplaysMidnightOffsetAndUnknownRealtime()
+    public void CompactsStaleFallbackAndIncompleteWarnings()
+    {
+        Assert.Equal("", JourneyPresentation.CompactWarning<StopEvent>(new()));
+        var warning = JourneyPresentation.CompactWarning(new ProviderResult<StopEvent> { IsStale = true, IsFallback = true, Warnings = ["partial"] });
+        Assert.Equal("Daten möglicherweise unvollständig", warning);
+    }
+
+    /// <summary>Local clock readings mark cross-day events instead of technical offsets.</summary>
+    [Fact]
+    public void DisplaysDayLabelsAndUnknownRealtime()
     {
         var time = DateTimeOffset.Parse("2026-09-15T22:05:00Z");
         var journey = new Journey { Legs = [new() { Walking = new() { DistanceMeters = 200 }, Departure = new() { PlannedTime = time, Realtime = new() { Cancelled = true } } }] };
         var detail = JourneyPresentation.Detail(journey);
-        Assert.Contains("16.09.2026 00:05 UTC+02:00", detail); Assert.Contains("Fußweg", detail); Assert.Contains("keine Echtzeitdaten", detail); Assert.Contains("Ausfall", detail); Assert.Contains("unbekannt", detail);
+        Assert.DoesNotContain("UTC", detail);
+        Assert.Contains("00:05", detail); Assert.Contains("Fußweg", detail); Assert.Contains("keine Echtzeitdaten", detail); Assert.Contains("Ausfall", detail); Assert.Contains("unbekannt", detail);
+    }
+
+    /// <summary>Overnight arrivals are labeled as following day relative to the journey departure.</summary>
+    [Fact]
+    public void LabelsOvernightArrivalAsFollowingDay()
+    {
+        var departure = DateTimeOffset.Parse("2026-09-16T21:55:00Z");
+        var arrival = departure.AddMinutes(45);
+        var journey = new Journey { Legs = [new() { Departure = new() { PlannedTime = departure }, Arrival = new() { PlannedTime = arrival } }] };
+        var detail = JourneyPresentation.Detail(journey);
+        Assert.Contains("23:55", detail);
+        Assert.Contains("Folgetag 00:40", detail);
     }
 }
 
@@ -147,7 +180,9 @@ internal sealed class ControlledSearchService : IStopSearchService
 internal sealed class ControlledRoutingService : IRoutingService
 {
     internal List<TaskCompletionSource<ProviderResult<Journey>>> Pending { get; } = [];
-    public Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default) { var source = new TaskCompletionSource<ProviderResult<Journey>>(); Pending.Add(source); return source.Task; }
+    internal List<DateTimeOffset> Departures { get; } = [];
+    internal List<bool> ArriveBy { get; } = [];
+    public Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default, bool arriveBy = false) { var source = new TaskCompletionSource<ProviderResult<Journey>>(); Pending.Add(source); Departures.Add(departure); ArriveBy.Add(arriveBy); return source.Task; }
 }
 internal sealed class RecordingNavigation : IJourneyNavigation
 {

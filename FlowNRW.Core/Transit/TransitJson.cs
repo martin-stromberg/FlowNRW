@@ -22,17 +22,19 @@ internal static class TransitJson
         var a = Array(e).Take(2).ToArray();
         return a.Length == 2 ? Coord(Number(a[reverse ? 1 : 0]), Number(a[reverse ? 0 : 1])) : null;
     }
-    internal static ProviderResult<T> Map<T>(string json, string source, int limit, Func<JsonElement, IEnumerable<T>> map)
+    internal static ProviderResult<T> Map<T>(string json, string source, int limit, Func<JsonElement, bool> hasPayload, Func<JsonElement, IEnumerable<T>> map)
     {
         try
         {
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
+            if (!hasPayload(root)) return new() { Source = source, ErrorCode = "invalid_response", Warnings = ["invalid_response"] };
             var warnings = Array(Get(root, "systemMessages")).Select(_ => "provider_message").Distinct().ToList();
-            var items = map(root).Take(limit).ToArray();
+            var mapped = map(root).Take(limit + 1).ToArray();
+            var items = mapped.Take(limit).ToArray();
+            if (mapped.Length > limit) warnings.Add("truncated-response");
             if (HasInvalidTime(root)) warnings.Add("invalid_time");
             if (ContainsInformation(root)) warnings.Add("provider_information");
-            if (items.Length == 0) warnings.Add("empty_response");
             return new() { Items = items, Source = source, Warnings = warnings, ErrorCode = items.Length == 0 && Array(Get(root, "systemMessages")).Any(m => Text(m, "type") == "error") ? "provider_error" : null };
         }
         catch (Exception e) when (e is JsonException or InvalidOperationException or FormatException or OverflowException)
@@ -61,4 +63,3 @@ internal static class TransitJson
     internal static string Decimal(double value) => value.ToString(CultureInfo.InvariantCulture);
     internal static ProviderResult<T> Propagate<T>(ProviderResult<string> raw, ProviderResult<T>? mapped = null) => (mapped ?? new ProviderResult<T>()) with { Source = raw.Source, RetrievedAt = raw.RetrievedAt, ErrorCode = raw.ErrorCode ?? mapped?.ErrorCode, Warnings = raw.Warnings.Concat(mapped?.Warnings ?? []).Distinct().ToArray(), IsFallback = raw.IsFallback, IsStale = raw.IsStale };
 }
-

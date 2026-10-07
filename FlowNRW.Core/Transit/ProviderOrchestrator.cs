@@ -53,14 +53,14 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
             (provider, token) => provider.NearbyAsync(coordinate, token), null, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default)
+    public async Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default, bool arriveBy = false)
     {
         var resolvedOrigin = await ResolveRegion(origin, cancellationToken).ConfigureAwait(false);
         var resolvedDestination = await ResolveRegion(destination, cancellationToken).ConfigureAwait(false);
         origin = resolvedOrigin.Location;
         destination = resolvedDestination.Location;
-        var result = await Run("route", new { origin, destination, departure }, IsRegional(origin) || IsRegional(destination), options.RealtimeTimeToLive,
-            (provider, token) => provider.RouteAsync(origin, destination, departure, token), MergeJourneys, cancellationToken).ConfigureAwait(false);
+            var result = await Run("route", new { origin, destination, departure, arriveBy }, IsRegional(origin) || IsRegional(destination), options.RealtimeTimeToLive,
+                (provider, token) => provider.RouteAsync(origin, destination, departure, token, arriveBy), MergeJourneys, cancellationToken).ConfigureAwait(false);
         return result with { Warnings = result.Warnings.Concat(resolvedOrigin.Warnings).Concat(resolvedDestination.Warnings).Distinct().ToArray() };
     }
 
@@ -146,13 +146,17 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
             if (!primary.HasData && secondary.HasData)
                 result = secondary with { IsFallback = true, Warnings = Codes(primary, secondary, "primary-unavailable") };
             else if (primary.HasData && secondary.HasData)
+            {
+                var merged = merge is null ? (needsFallback ? secondary.Items : primary.Items) : merge(primary.Items, secondary.Items);
+                var truncated = merged.Count > maxResults;
                 result = primary with
                 {
-                    Items = merge is null ? (needsFallback ? secondary.Items : primary.Items) : merge(primary.Items, secondary.Items),
+                    Items = truncated ? merged.Take(maxResults).ToArray() : merged,
                     Source = merge is null && needsFallback ? secondary.Source : primary.Source + "+" + secondary.Source,
                     IsFallback = needsFallback,
-                    Warnings = Codes(primary, secondary, needsFallback ? "partial-primary" : null)
+                    Warnings = Codes(primary, secondary, needsFallback ? "partial-primary" : truncated ? "truncated-response" : null)
                 };
+            }
             else
                 result = primary with { Warnings = Codes(primary, secondary, "secondary-unavailable") };
         }
@@ -170,13 +174,13 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
     {
         var enriched = consolidator.Consolidate(consolidator.Consolidate(primary, secondary), primary);
         return enriched.Concat(Unmatched(primary, secondary, (left, right) => RealtimeConsolidator.Matches(left.Identity, right.Identity)))
-            .OrderBy(item => item.Realtime.ActualTime ?? item.PlannedTime ?? DateTimeOffset.MaxValue).Take(maxResults).ToArray();
+            .OrderBy(item => item.Realtime.ActualTime ?? item.PlannedTime ?? DateTimeOffset.MaxValue).Take(maxResults + 1).ToArray();
     }
 
     private IReadOnlyList<Journey> MergeJourneys(IReadOnlyList<Journey> primary, IReadOnlyList<Journey> secondary) =>
         primary.Select(journey => EnrichJourney(journey, primary, secondary)).Concat(Unmatched(primary, secondary, SameJourney))
             .OrderBy(item => item.Legs.FirstOrDefault()?.Departure.Realtime.ActualTime ?? item.Legs.FirstOrDefault()?.Departure.PlannedTime ?? DateTimeOffset.MaxValue)
-            .Take(maxResults).ToArray();
+            .Take(maxResults + 1).ToArray();
 
     private Journey EnrichJourney(Journey journey, IReadOnlyList<Journey> primary, IReadOnlyList<Journey> secondary)
     {
@@ -230,4 +234,3 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
         internal int Waiters { get; set; }
     }
 }
-

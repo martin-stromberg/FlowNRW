@@ -10,6 +10,9 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     private readonly IFavoriteStore store;
     private readonly Func<IDepartureService> departureFactory;
     private readonly ICurrentLocationService location;
+    private readonly IStopSearchService? nearby;
+    private readonly IDepartureCacheStore? cache;
+    private readonly RefreshFreshness freshness;
     private readonly SemaphoreSlim persistence = new(1, 1);
     private readonly List<FavoriteMonitorViewModel> savedOrder = [];
     private bool loaded;
@@ -21,14 +24,23 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     /// <param name="store">Bounded technical stop persistence.</param>
     /// <param name="departureFactory">Creates an independent service for each card.</param>
     /// <param name="location">Explicit current-position provider.</param>
-    public FavoriteHomeViewModel(IFavoriteStore store, Func<IDepartureService> departureFactory, ICurrentLocationService location)
+    /// <param name="nearby">Nearby-stop service.</param>
+    /// <param name="cache">Optional durable cache for last-known departure boards.</param>
+    /// <param name="freshness">Policy deciding whether a durable board is fresh enough to display.</param>
+    public FavoriteHomeViewModel(IFavoriteStore store, Func<IDepartureService> departureFactory, ICurrentLocationService location,
+        IStopSearchService? nearby = null, IDepartureCacheStore? cache = null, RefreshFreshness? freshness = null)
     {
-        this.store = store; this.departureFactory = departureFactory; this.location = location;
+        this.store = store; this.departureFactory = departureFactory; this.location = location; this.nearby = nearby; this.cache = cache;
+        this.freshness = freshness ?? new RefreshFreshness(new TransitCacheOptions());
         LocationCommand = new AsyncRelayCommand(UpdateDistancesAsync, () => !IsLocating, _ => SetLocationFailure("Standort konnte nicht ermittelt werden."));
     }
 
     /// <summary>Current cards sorted by known distance, with stable saved order for ties.</summary>
     public IReadOnlyList<FavoriteMonitorViewModel> Cards { get; private set; } = [];
+    /// <summary>Nearby stops discovered for the current foreground position.</summary>
+    public IReadOnlyList<Address> NearbyStops { get; private set; } = [];
+    /// <summary>Nearby lookup state.</summary>
+    public string NearbyStatus { get; private set; } = "Nahe Haltestellen werden beim Laden ermittelt …";
     /// <summary>Load, persistence or empty-list status.</summary>
     public string Status { get; private set; } = "Favoriten werden geladen …";
     /// <summary>Whether an atomic persistence operation is pending.</summary>
@@ -54,18 +66,67 @@ public sealed class FavoriteHomeViewModel : ObservableObject
             var unique = stops.DistinctBy(stop => (stop.Source, stop.Id)).ToArray();
             if (unique.Length > 100 || unique.Any(stop => string.IsNullOrWhiteSpace(stop.Id) || string.IsNullOrWhiteSpace(stop.Source)))
                 throw new InvalidDataException("Invalid favorite identity.");
-            savedOrder.AddRange(unique.Select(stop => new FavoriteMonitorViewModel(stop, departureFactory())));
+            savedOrder.AddRange(unique.Select(CreateCard));
+            if (cache is not null)
+            {
+                try
+                {
+                    var keys = savedOrder.Select(card => new DepartureCacheKey(card.Stop.Source, card.Stop.Id)).ToArray();
+                    var cached = await cache.LoadAsync(cancellationToken).WaitAsync(cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await cache.RemoveOrphansAsync(keys, cancellationToken).WaitAsync(cancellationToken);
+                    var byKey = cached.Where(entry => keys.Contains(entry.Key)).ToDictionary(entry => entry.Key);
+                    var now = DateTimeOffset.Now;
+                    foreach (var card in savedOrder)
+                    {
+                        if (byKey.TryGetValue(new DepartureCacheKey(card.Stop.Source, card.Stop.Id), out var entry))
+                            card.Restore(entry, now, freshness);
+                    }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+                catch (Exception) { }
+            }
             loaded = true;
-            SortCards(); SetStatus(EmptyOrCount());
+            SortCards(); SetStatus(savedOrder.Count == 0 ? "Noch keine Favoriten gespeichert." : $"{savedOrder.Count} Favoriten gespeichert.");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception) { SetStatus("Favoriten konnten nicht geladen werden. Gespeicherte Daten bleiben unverändert; bitte erneut versuchen."); }
         finally { persistence.Release(); }
     }
 
-    /// <summary>Starts independent initial loads without repeating completed successful card requests.</summary>
+    /// <summary>Starts independent initial loads for empty or expired boards without repeating completed requests.</summary>
     /// <returns>All initial requests finishing or being cancelled.</returns>
-    public Task RefreshMissingAsync() => Task.WhenAll(Cards.Where(card => card.Result is null && !card.IsBusy).Select(card => card.RefreshAsync()));
+    public Task RefreshMissingAsync() => Task.WhenAll(Cards.Where(card => freshness.IsStale(card.Result) && !card.IsBusy).Select(card => card.RefreshAsync()));
+
+    /// <summary>Starts a regular non-blocking provider refresh for every current card, including restored local boards.</summary>
+    /// <returns>All started refreshes finishing or being cancelled.</returns>
+    public Task RefreshAtStartupAsync() => Task.WhenAll(Cards.Where(card => !card.IsBusy).Select(card => card.RefreshAutomaticallyAsync()));
+
+    /// <summary>Loads nearby stops for the same explicit position used for favorite distances.</summary>
+    /// <param name="cancellationToken">Cancels the current location or nearby-stop lookup.</param>
+    public async Task RefreshNearbyAsync(CancellationToken cancellationToken = default)
+    {
+        if (nearby is null) { NearbyStops = []; NearbyStatus = "Nahe Haltestellen sind nicht verfügbar."; Notify(nameof(NearbyStops)); Notify(nameof(NearbyStatus)); return; }
+        try
+        {
+            var current = await location.GetCurrentAsync(cancellationToken);
+            if (!current.HasCurrentPosition) { NearbyStops = []; NearbyStatus = current.FailureDescription; Notify(nameof(NearbyStops)); Notify(nameof(NearbyStatus)); return; }
+            position = current.Coordinate;
+            SortCards();
+            SetSuccessfulLocationStatus(current.AccuracyDescription);
+            var result = await nearby.NearbyAsync(current.Coordinate!, cancellationToken);
+            if (result.ErrorCode is not null) { NearbyStops = []; NearbyStatus = "Nahe Haltestellen konnten nicht geladen werden."; Notify(nameof(NearbyStops)); Notify(nameof(NearbyStatus)); return; }
+            var favorites = savedOrder.Select(card => card.Stop).ToArray();
+            NearbyStops = result.Items
+                .Where(item => item.Stop is not null && !favorites.Any(favorite => SameIdentity(favorite, item.Stop!)))
+                .Select(item => new Address { Name = item.Stop!.Name, Stop = item.Stop, Coordinate = item.Stop.Coordinate })
+                .ToArray();
+            NearbyStatus = NearbyStops.Count == 0 ? "Keine weiteren Haltestellen in der Nähe." : $"{NearbyStops.Count} weitere Haltestellen in der Nähe";
+        }
+        catch (OperationCanceledException) { return; }
+        catch (Exception) { NearbyStops = []; NearbyStatus = "Nahe Haltestellen konnten nicht geladen werden."; }
+        Notify(nameof(NearbyStops)); Notify(nameof(NearbyStatus));
+    }
 
     /// <summary>Renews current stale cards in bounded batches without accessing position or writing favorites.</summary>
     /// <param name="freshness">Shared realtime freshness policy.</param>
@@ -141,10 +202,19 @@ public sealed class FavoriteHomeViewModel : ObservableObject
                 desired.Add(stop);
             }
             await store.SaveAsync(desired);
-            if (existing is not null) { existing.CancelPending(); savedOrder.Remove(existing); }
-            else savedOrder.Add(new FavoriteMonitorViewModel(stop, departureFactory()));
+            if (existing is not null)
+            {
+                existing.CancelPending();
+                savedOrder.Remove(existing);
+                if (cache is not null)
+                {
+                    try { await cache.RemoveAsync(new DepartureCacheKey(existing.Stop.Source, existing.Stop.Id)); }
+                    catch (Exception) { }
+                }
+            }
+            else savedOrder.Add(CreateCard(stop));
             SortCards();
-            SetStatus((existing is null ? "Favorit gespeichert. " : "Favorit entfernt. ") + EmptyOrCount());
+            SetStatus(existing is null ? "Favorit gespeichert." : "Favorit entfernt.");
         }
         catch (Exception) { SetStatus("Favoriten konnten nicht gespeichert werden. Bisherige Favoriten bleiben unverändert; bitte erneut versuchen."); }
         finally { persistence.Release(); IsSaving = false; Notify(nameof(IsSaving)); }
@@ -164,7 +234,7 @@ public sealed class FavoriteHomeViewModel : ObservableObject
             if (!result.HasCurrentPosition) { SetLocationFailure(result.FailureDescription); return; }
             position = result.Coordinate;
             SortCards();
-            LocationStatus = "Nach Luftlinie sortiert. Unbekannte Entfernungen stehen am Ende." + result.AccuracyDescription;
+            SetSuccessfulLocationStatus(result.AccuracyDescription);
         }
         catch (OperationCanceledException) { if (version == locationRevision) SetLocationFailure("Standortabfrage abgebrochen."); }
         catch (Exception) { if (version == locationRevision) SetLocationFailure("Standort konnte nicht ermittelt werden. Bitte erneut versuchen."); }
@@ -185,6 +255,15 @@ public sealed class FavoriteHomeViewModel : ObservableObject
         Notify(nameof(LocationStatus));
     }
 
+    private void SetSuccessfulLocationStatus(string accuracy)
+    {
+        var missingCoordinates = savedOrder.Count(card => card.Stop.Coordinate is null);
+        LocationStatus = missingCoordinates == 0
+            ? "Nach Luftlinie sortiert. Unbekannte Entfernungen stehen am Ende." + accuracy
+            : $"Standort ermittelt. Für {missingCoordinates} Favoriten fehlen Koordinaten; Entfernung unbekannt.";
+        Notify(nameof(LocationStatus));
+    }
+
     private void SortCards()
     {
         foreach (var card in savedOrder) card.SetDistance(position is not null && card.Stop.Coordinate is { } target ? Distance(position, target) : null);
@@ -202,6 +281,24 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     }
 
     private static bool SameIdentity(Stop first, Stop second) => first.Source == second.Source && first.Id == second.Id;
-    private string EmptyOrCount() => savedOrder.Count == 0 ? "Noch keine Favoriten. Über Haltestellen suchen eine Station auswählen und als Favorit speichern." : $"{savedOrder.Count} Favoriten.";
+
+    private FavoriteMonitorViewModel CreateCard(Stop stop)
+    {
+        FavoriteMonitorViewModel? card = null;
+        card = new FavoriteMonitorViewModel(stop, departureFactory(), entry => PersistAsync(card, entry));
+        return card;
+    }
+
+    private async Task PersistAsync(FavoriteMonitorViewModel? card, DepartureCacheEntry entry)
+    {
+        if (cache is null || card is null) return;
+        await persistence.WaitAsync();
+        try
+        {
+            if (Contains(card)) await cache.UpsertAsync(entry);
+        }
+        finally { persistence.Release(); }
+    }
+
     private void SetStatus(string value) { Status = value; Notify(nameof(Status)); }
 }

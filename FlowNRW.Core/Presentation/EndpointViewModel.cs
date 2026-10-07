@@ -108,6 +108,17 @@ public sealed class EndpointViewModel : ObservableObject
     public AsyncRelayCommand SearchCommand { get; }
     /// <summary>Candidate selection action.</summary>
     public RelayCommand SelectCommand { get; }
+    /// <summary>Accepts a saved favorite without exposing its technical identity in the field.</summary>
+    /// <param name="stop">Favorite stop including the routing identity and coordinate.</param>
+    public void SelectFavorite(Stop stop)
+    {
+        SelectAddress(new Address
+        {
+            Name = stop.Name,
+            Stop = stop,
+            Coordinate = stop.Coordinate
+        });
+    }
     /// <summary>Explicitly requests the current position.</summary>
     public AsyncRelayCommand LocationCommand { get; }
     /// <summary>Readable location request state.</summary>
@@ -144,9 +155,43 @@ public sealed class EndpointViewModel : ObservableObject
     /// <param name="address">Selected candidate.</param>
     public void SelectAddress(Address address)
     {
-        if (!IsCoordinateMode && !Matches.Contains(address)) return;
+        if (!IsCoordinateMode && !Matches.Contains(address) && address.Stop is null) return;
+        SetSelectedAddress(address, true);
+    }
+
+    /// <summary>Accepts an address while retaining the current candidate list for return navigation.</summary>
+    /// <param name="address">Resolved stop or coordinate.</param>
+    public void SelectAddressKeepingMatches(Address address)
+    {
+        if (!IsCoordinateMode && !Matches.Contains(address) && address.Stop is null) return;
+        SetSelectedAddress(address, false);
+    }
+
+    /// <summary>Sets an already resolved endpoint without starting a provider lookup.</summary>
+    /// <param name="address">Resolved endpoint or <see langword="null"/> to clear it.</param>
+    public void SetSelectedAddress(Address? address)
+    {
         CancelPending();
+        SelectedAddress = address;
+        text = address?.Name ?? "";
+        Notify(nameof(Text)); Notify(nameof(SelectedAddress)); Notify(nameof(Selection));
+        Matches = []; Result = null;
+        Notify(nameof(Matches)); Notify(nameof(Result)); Notify(nameof(Metadata));
+        SetStatus(address is null ? "Adresse oder Haltestelle suchen und einen Treffer auswählen." : "Endpunkt übernommen.");
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void SetSelectedAddress(Address address, bool clearMatches)
+    {
+        CancelPending();
+        text = address.Name;
+        Notify(nameof(Text));
         SelectedAddress = address; Notify(nameof(SelectedAddress)); Notify(nameof(Selection));
+        if (clearMatches)
+        {
+            Matches = []; Result = null;
+            Notify(nameof(Matches)); Notify(nameof(Result)); Notify(nameof(Metadata));
+        }
         SetStatus("Endpunkt übernommen."); Changed?.Invoke(this, EventArgs.Empty);
     }
 

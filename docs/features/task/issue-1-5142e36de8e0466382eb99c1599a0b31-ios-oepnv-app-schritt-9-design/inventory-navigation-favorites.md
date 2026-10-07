@@ -1,0 +1,56 @@
+# Technische Bestandsaufnahme – Favoriten, Haltestellensuche und Verbindungen
+
+**Stand:** 04.10.2026  
+**Grundlage:** `requirement-navigation-favorites.md`, vorhandener Anwendungscode und Windows-UI-Testskripte  
+**Änderungen am Anwendungscode:** keine
+
+## Favoritenkarten und Linienübersicht
+
+- `HomePage` rendert die gespeicherten `FavoriteMonitorViewModel`-Karten. Die Abfahrtsliste befindet sich in einem separat ein-/ausblendbaren Bereich. `IsExpanded` startet in `false`, wird nur im Arbeitsspeicher umgeschaltet und übersteht weder Navigation noch Neustart.
+- Die eingeklappte Übersicht (`FavoriteLines{index}`) erzeugt aktuell Chips aus `card.Lines`; wenn für eine Linie eine künftige Abfahrt existiert, wird die Uhrzeit direkt in denselben Chiptext aufgenommen. Die nächste Uhrzeit je Linie ist eingeklappt ausdrücklich gewünscht. Die noch offene Abweichung von R1 betrifft den gleichen farbigen Linienchipstil wie in den Abfahrtskarten und das Ausblenden dieser kompakten Zeitübersicht im geöffneten Zustand. Im geöffneten Bereich werden die einzelnen `DepartureCardView`s gerendert.
+- `FavoriteMonitorViewModel.Lines` enthält die Linien des letzten vollständigen, erfolgreichen Providerabrufs. Die Liste wird mit der Abfahrtscachedatei gespeichert und wiederhergestellt. Erfolgreiche, aber unvollständige Antworten überschreiben die Linienliste nicht. `Restore` erhält gespeicherte Linien auch dann, wenn keine gültige Abfahrt mehr für die sofortige Anzeige übrig ist; ein späterer vollständiger Erfolg ersetzt die Menge.
+- Auf-/Zuklappen nutzt derzeit Textzeichen `⌃` und `⌄`. Die Buttons erhalten beschreibende Semantic Properties und Touch-Zielgröße 48×48, aber es gibt noch keinen Nachweis, dass die Zeichen auf iOS/Windows plattformübergreifend als eindeutige, barrierefreie Symbole erscheinen.
+- Die Karten selbst und ihr Expand-Zustand sind nicht persistent. Persistiert werden nur die Haltestellenidentität und die erfolgreiche Abfahrts-/Linienprojektion.
+
+## Haltestellensuche, Monitor und Navigation
+
+- `StopSearchPage`, `StopMonitorViewModel` und dessen `EndpointViewModel Lookup` sind in `MauiProgram` Singleton-registriert. Die Tab-Seite bleibt daher beim Wechsel zum Monitor grundsätzlich dieselbe Instanz; bereits ausgeführte Suchzustände könnten im Modell verbleiben.
+- Die aktuelle Auswahl löscht die Trefferliste allerdings praktisch: `StopMonitorViewModel.OpenAsync` ruft für normale Suchtreffer `Lookup.SelectAddress(candidate)` auf. Das löst `Lookup.Changed` aus; `OnLookupChanged` setzt `nearbyActive` zurück und `RefreshSearchBindings` projiziert `Stops` anschließend aus `Lookup.Matches`. `EndpointViewModel.SelectAddress` leert seine Treffer bei der Auswahl. Beim Zurücknavigieren fehlt damit die zuvor gezeigte Liste, obwohl der ViewModel-Scope singleton ist. Die navigationsbedingte Abbruchlogik in `StopSearchPage.OnDisappearing` cancelt lediglich laufende Abfragen und leert abgeschlossene Treffer nicht selbst.
+- Für die geforderte Wiederherstellung muss zwischen Suchtreffern und Monitor-Auswahl unterschieden werden oder die Trefferliste separat im Suchzustand behalten werden. Suchtext, Index/Identität des gewählten Treffers und ggf. Nearby-Modus sollten nicht versehentlich gegenseitig invalidiert werden.
+- `DeparturePage` ist transient, während `StopMonitorViewModel` singleton ist. Beim Öffnen setzt `OpenStopAsync` den gewählten Stop und navigiert zum Monitor; nach Navigation ruft es `RefreshAsync` auf. Das Modell hält `Result` im Arbeitsspeicher nur für die aktuelle ausgewählte Haltestelle.
+- Der persistente `IDepartureCacheStore` ist aktuell eine Favoritenablage: `DepartureCacheEntry` wird nach `(Source, StopId)` gespeichert, `FavoriteHomeViewModel` lädt/aktualisiert sie und `FavoriteMonitorViewModel` stellt sie wieder her. `StopMonitorViewModel` erhält keinen Cache-Store und eine nicht als Favorit gespeicherte Suchhaltestelle schreibt/liest daher keinen persistenten Abfahrtscache. `OpenFavoriteAsync` übergibt dagegen explizit `card.Result` und zeigt damit den momentanen Favoritenstand im Einzelmonitor vor dem nächsten Abruf.
+- Das wiederholte Öffnen derselben Suchhaltestelle kann derzeit nur auf das noch im Singleton-Monitor befindliche `Result` zurückgreifen; `OpenStopAsync` setzt bei normaler Auswahl `Result = null`. Es wird kein Cachehit für eine Suchhaltestelle versucht. R2 benötigt deshalb eine klar abgegrenzte Cache-Strategie auch für Sucheinstiege (Persistenzumfang, Frische-/Ablaufregeln und Begrenzung) oder eine explizite Beschränkung auf die bereits in Favoriten vorhandene Cachepersistenz. Die aktuelle Anforderungen formulieren die Wiederverwendung für beliebige erneut geöffnete Suchhaltestellen.
+- Die UI zeigt Status/Quelle der Monitorabfrage; diese Anzeige ist von der Cache-/Navigationserhaltung zu unterscheiden. Abbruch beim Verlassen cancelt Requests, erhält im Monitormodell bereits erfolgreiche Resultate aber grundsätzlich.
+
+## Verbindungssuche, Ergebnisse und Favoriten
+
+- `SearchPage` und `JourneySearchViewModel` sind Singleton. Start, Ziel, Eingabetext, Treffer sowie `Result`/`SelectedJourney` bleiben beim Wechsel zwischen Such-, Ergebnis- und Detailroute im Prozess erhalten. Änderungen eines Endpunkts löschen dagegen absichtlich das bisherige Ergebnis und die ausgewählte Fahrt.
+- Die Ergebnisroute zeigt `ResultsPage` mit Karten aus `Session.Journeys`; die Detailroute zeigt die aktuell ausgewählte Fahrt aus demselben Sessionmodell. Zurück zur Ergebnisliste bleiben die Resultate erhalten, solange kein Endpunkt geändert oder eine neue Suche gestartet wurde.
+- Die Ergebniskarten haben aktuell keine Kopfzeile mit Start-/Zielverbindung und kein Favoritensymbol. Es gibt im Modell/Store keine Entität für eine gespeicherte Verbindung, keine Sammlung solcher Verbindungen und keinen Auswahlfluss, der beide Endpunkte aus einer gespeicherten Verbindung wiederherstellt.
+- `IFavoriteStore`/`JsonFavoriteStore` persistieren ausschließlich einzelne `Stop`-Identitäten. Das vorhandene Favoritenmenü in den beiden Sucheingabefeldern bezieht seine Auswahl ebenso aus Haltestellenfavoriten. Ein Verbindungsfavorit braucht einen separaten, validierten Persistenzvertrag (beide stabilen Identitäten und Anzeigenamen) und eine UI-Auswahl im Suchformular; die bestehenden Stopfavoriten dürfen dabei unverändert bleiben.
+- Es gibt gegenwärtig keine Swap-Aktion und kein `JourneySearchViewModel`-Kommando zum atomaren Vertauschen der kompletten ausgewählten Endpunkte. Die Felder besitzen je Text/Koordinatenmodus, ausgewählte `Address`, Suchtreffer und Status. Ein Swap muss diese ausgewählten Adressen als Ganzes austauschen und darf `SearchAsync` nicht implizit auslösen. Zu beachten ist, dass `EndpointChanged` aktuell bei jeder geänderten Endpunktidentität die vorherigen Ergebnisse löscht; der Swap sollte als eine koordinierte Sessionänderung erfolgen, damit nicht ein Zwischenzustand Status/Ergebnis mehrfach invalidiert.
+- Die derzeitige Zeit- und Ankunftsauswahl ist ebenfalls Teil des Suchsessionszustands. Gespeicherte Verbindungen benötigen laut R3 nur Start und Ziel; Datum/Zeit/Ankunftsmodus bleiben daher unverändert, sofern keine spätere Anforderung sie ausdrücklich in einen Verbindungsfavoriten aufnimmt.
+
+## Verbindungsdetails
+
+- `JourneyDetailPage` rendert bei vorhandener `SelectedJourney` die strukturierte `JourneyTimelineView`. Der ältere Textfallback (`JourneyDetailViewModel.Details` / `JourneyPresentation.Detail`) enthält zusätzlich eine zusammenfassende Soll-/Ist-Zeile, Abschnitte je Fahrtbein, Betreiber, Soll-/Ist-Zeit, Ausfall- und Bahnsteigdaten sowie Umstiege. Der Fallback ist daher redundant gegenüber dem nativen Timeline-Pfad und kann bei fehlender Projektion trotzdem technische/unklare Felder ausgeben.
+- Die Timeline und `JourneyCardView` sind die maßgebliche aktuelle Detail-/Ergebnisdarstellung; die Anforderung R5 braucht eine konkrete Prüfung dieser Views, der benutzten Projektionen und der Accessibilitytexte. Bestehende Testabdeckung bestätigt relevante Gehwege, Betreiber, Umstiege und fehlende Geometrie, aber sie ist keine visuelle Beurteilung, welche Texte im tatsächlichen iOS-Bildschirm entbehrlich sind.
+- R5 verlangt ausdrücklich, Fahrtfolge, Umstiege, relevante Gehwege und notwendige Hinweise zu fehlenden Daten zu erhalten. Sicherheits-/Barrierehinweise und Ausfallstatus dürfen nicht pauschal im Zuge einer Textkürzung entfernt werden.
+
+## Vorhandene Prüfung und offene E2E-Nacharbeit
+
+- Core-Tests decken bereits Sessionerhalt der Verbindungssuche, Öffnen einer Fahrt, das Invalidieren alter Resultate bei Endpunktänderung und mehrere Routen-/Detaildaten ab (`FlowNRW.Tests/PresentationTests.cs` und Routing-/Mappertests).
+- `tests/WindowsJourneyUiTests/WindowsJourneyUiTests.ps1` prüft bereits Rückkehr aus Detail zu Ergebnissen, dass das Ergebnis stabil bleibt, und die wesentlichen Detailfelder; die bestehenden Abläufe prüfen aber weder Verbindungsfavoriten/Persistenz noch Swap oder unnötige Texte im Timeline-Bild.
+- Die neueste Aufgabenliste (`todo.md`) hat weiterhin Schritt 10d (aktuelle native Windows-Designmatrix), 10e (iOS-Geräteabnahme) und 10f (Abfahrtcache in nativem Windowslauf mit verzögerter Antwort) offen. Der Verlauf meldet diese als ausdrücklich noch nicht abgenommen. Die neue Anforderung R2 erweitert den offenen Cache-E2E-Nachweis von Favoriten auf Haltestellen, die aus der Suche geöffnet werden.
+- Der aktuelle Arbeitsbaum enthält umfangreiche nicht committete Änderungen an Abfahrtcache, Linienbestand, Abfahrtskarten und Windows-Fixtures. Sie gehören zur vorherigen Rückmeldung (Cacheanzeige, eingeklappte Favoriten und Abweichungsdarstellung) und sind noch nicht als abgeschlossene/native abgenommene Implementierung zu behandeln. Die Änderungen wurden bei dieser Bestandsaufnahme nicht verändert.
+
+## Technische Reihenfolge und Abhängigkeiten
+
+1. E2E-Nacharbeit für aktuellen Favoriten-/Abfahrtcacheabschluss aus `todo.md` klären und die offenen Datenintegritätsbefunde dazu abschließen, bevor der Cachevertrag erweitert wird.
+2. Favoritenkarten auf R1 ausrichten: bestehende persistierte `Lines` weiterverwenden, Darstellungszustände klar trennen und Expand-/Collapse-Semantik plattformübergreifend verifizieren.
+3. R2 mit getrenntem Suchtrefferzustand plus cachefähigem Monitorzugriff umsetzen. Die Cacheidentität ist `(Source, StopId)`; nur valide nicht veraltete Ergebnisse sind sofort sichtbar. Fehler oder Abbruch dürfen sie nicht löschen.
+4. Für R3 einen separaten Verbindungsfavoritenspeicher und eine Wiederherstellung in `JourneySearchViewModel`/`SearchPage` ergänzen; technische Kennungen bleiben intern.
+5. R4 als atomare Endpunktoperation im Sessionmodell ergänzen, damit Eingabetext und ausgewählte Identität zusammen wechseln und keine Suche startet.
+6. R5 gegen die native Timeline und den Textfallback prüfen; vorhandene UI-/Accessibilitytests für jede entfernte beziehungsweise beibehaltene Information aktualisieren.
+
+**Bestandsaufnahme:** R1 ist teilweise vorhanden, R2 ist für aus der Suche geöffnete Haltestellen nicht umgesetzt, R3 und R4 fehlen im Modell/Store/UI, R5 hat eine native Timeline, benötigt aber eine gezielte inhaltliche und visuelle Bereinigung. Die offenen E2E-Abnahmen der vorigen Aufgaben bleiben eigenständige Voraussetzung für eine belastbare Gesamtabnahme.

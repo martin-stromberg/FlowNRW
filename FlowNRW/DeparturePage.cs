@@ -15,6 +15,8 @@ public sealed class DeparturePage : ContentPage
     private readonly RefreshSettingsViewModel settings;
     private readonly ForegroundState foreground;
     private readonly RefreshLoop refreshLoop;
+    private readonly Label monitorStatus;
+    private readonly Label favoriteStatus;
     private bool active;
     private long appearance;
     private readonly RefreshFreshness freshness;
@@ -38,22 +40,38 @@ public sealed class DeparturePage : ContentPage
         BindingContext = model;
         SetBinding(TitleProperty, new Binding(nameof(model.Title)));
         var layout = new VerticalStackLayout { Padding = 16, Spacing = 16 };
-        var stop = new Label { FontSize = 24, FontAttributes = FontAttributes.Bold, AutomationId = "MonitorStop" };
+        var station = new VerticalStackLayout { Spacing = 6, Padding = 16 };
+        var stop = new Label { FontSize = 28, FontAttributes = FontAttributes.Bold, AutomationId = "MonitorStop" };
         stop.SetBinding(Label.TextProperty, nameof(model.Title));
-        layout.Children.Add(stop);
+        var stationHeader = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto)] };
+        stationHeader.Add(stop, 0);
+        var busy = new ActivityIndicator { AutomationId = "MonitorBusy", VerticalOptions = LayoutOptions.Center };
+        busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(model.IsBusy));
+        busy.SetBinding(IsVisibleProperty, nameof(model.IsBusy));
+        SemanticProperties.SetDescription(busy, "Abfahrten werden aktualisiert");
+        stationHeader.Add(busy, 1);
+        station.Children.Add(stationHeader);
+        layout.Children.Add(new Border { Content = station });
         toggleFavorite = new AsyncRelayCommand(async () =>
         {
             var selected = model.SelectedStop;
             if (selected is not null) await favorites.ToggleAsync(selected);
         }, () => model.SelectedStop is not null && !favorites.IsSaving,
             _ => Title = "Favorit konnte nicht gespeichert werden");
-        favoriteButton = new Button { AutomationId = "ToggleFavorite", Command = toggleFavorite, LineBreakMode = LineBreakMode.WordWrap };
-        layout.Children.Add(favoriteButton);
-        var favoriteStatus = new Label { AutomationId = "FavoriteToggleStatus", BindingContext = favorites };
-        favoriteStatus.SetBinding(Label.TextProperty, nameof(favorites.Status)); layout.Children.Add(favoriteStatus);
+        favoriteButton = new Button { AutomationId = "ToggleFavorite", Command = toggleFavorite, LineBreakMode = LineBreakMode.TailTruncation };
+        var refresh = TransitVisuals.SecondaryAction("↻", "Abfahrten aktualisieren", "RefreshDepartures", model.RefreshCommand);
+        var settingsButton = TransitVisuals.SecondaryAction("⚙", "Aktualisierung einstellen", "OpenRefreshSettings",
+            new AsyncRelayCommand(() => Shell.Current.GoToAsync("refresh-settings"), () => true,
+                _ => Title = "Einstellungen konnten nicht geöffnet werden"));
+        var actions = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
+        actions.Add(refresh, 0); actions.Add(favoriteButton, 1); actions.Add(settingsButton, 2);
+        layout.Children.Add(actions);
+        favoriteStatus = new Label { AutomationId = "FavoriteToggleStatus", BindingContext = favorites };
+        favoriteStatus.SetBinding(Label.TextProperty, nameof(favorites.Status));
 #if UI_TEST_FIXTURES
         Loaded += (_, _) =>
         {
+            if (Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_HIDE_CONTROLS") == "1") return;
             if (layout.Children.Any(child => child.AutomationId == "FavoriteScenario")) return;
             var fixture = Handler!.MauiContext!.Services.GetRequiredService<UiTestLocationServices>();
             var scenario = new Entry { AutomationId = "FavoriteScenario", BindingContext = fixture };
@@ -64,27 +82,13 @@ public sealed class DeparturePage : ContentPage
             activity.SetBinding(Label.TextProperty, nameof(foreground.IsActive)); layout.Children.Insert(2, activity);
         };
 #endif
-        layout.Children.Add(new Button { Text = "Aktualisieren", AutomationId = "RefreshDepartures", Command = model.RefreshCommand });
-        layout.Children.Add(new Button
-        {
-            Text = "Aktualisierung einstellen",
-            AutomationId = "OpenRefreshSettings",
-            Command = new AsyncRelayCommand(() => Shell.Current.GoToAsync("refresh-settings"), () => true,
-                _ => Title = "Einstellungen konnten nicht geöffnet werden")
-        });
-        var interval = new Label { AutomationId = "RefreshIntervalStatus", BindingContext = settings };
-        interval.SetBinding(Label.TextProperty, nameof(settings.Description)); layout.Children.Add(interval);
-        var busy = new ActivityIndicator { AutomationId = "MonitorBusy" };
-        busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(model.IsBusy));
-        layout.Children.Add(busy);
-        var status = new Label { AutomationId = "MonitorStatus" };
-        status.SetBinding(Label.TextProperty, nameof(model.Status));
-        layout.Children.Add(status);
-        var metadata = new Label { AutomationId = "MonitorMetadata" };
-        metadata.SetBinding(Label.TextProperty, nameof(model.Metadata));
-        layout.Children.Add(metadata);
+        monitorStatus = new Label { AutomationId = "MonitorStatus" };
+        monitorStatus.SetBinding(Label.TextProperty, nameof(model.Status));
+        var monitorState = new VerticalStackLayout { Spacing = 4, Padding = new Thickness(4, 0) };
+        monitorState.Children.Add(monitorStatus); monitorState.Children.Add(favoriteStatus);
+        layout.Children.Add(monitorState);
         layout.Children.Add(items);
-        Content = new ScrollView { Content = layout };
+        Content = TransitVisuals.Page(layout);
     }
 
     /// <inheritdoc />
@@ -98,6 +102,8 @@ public sealed class DeparturePage : ContentPage
         model.PropertyChanged += ModelChanged;
         favorites.PropertyChanged += FavoritesChanged;
         RefreshFavorite();
+        UpdateMonitorStatus();
+        UpdateFavoriteStatus();
         RenderItems();
         await settings.LoadAsync();
         if (version == appearance) ReconcileRefreshLoop();
@@ -123,9 +129,38 @@ public sealed class DeparturePage : ContentPage
     {
         if (args.PropertyName == nameof(model.Items)) RenderItems();
         if (args.PropertyName == nameof(model.SelectedStop)) RefreshFavorite();
+        if (args.PropertyName is nameof(model.Status) or nameof(model.IsBusy)) UpdateMonitorStatus();
     }
 
-    private void FavoritesChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args) => RefreshFavorite();
+    private void UpdateMonitorStatus()
+    {
+        var status = model.Status;
+        monitorStatus.IsVisible = !model.IsBusy
+            && (status.Contains("Keine nächsten", StringComparison.OrdinalIgnoreCase)
+                || status.Contains("unvollständig", StringComparison.OrdinalIgnoreCase)
+                || status.Contains("fehlgeschlagen", StringComparison.OrdinalIgnoreCase)
+                || status.Contains("nicht geladen", StringComparison.OrdinalIgnoreCase)
+                || status.Contains("abgebrochen", StringComparison.OrdinalIgnoreCase)
+                || status.Contains("Letzte bekannte", StringComparison.OrdinalIgnoreCase)
+                || status.Contains("Datenstand", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void UpdateFavoriteStatus()
+    {
+        var status = favorites.Status;
+        favoriteStatus.IsVisible = favorites.IsSaving
+            || status.Contains("fehlgeschlagen", StringComparison.OrdinalIgnoreCase)
+            || status.Contains("nicht gespeichert", StringComparison.OrdinalIgnoreCase)
+            || status.Contains("maximal", StringComparison.OrdinalIgnoreCase)
+            || status.Contains("vollständige", StringComparison.OrdinalIgnoreCase)
+            || status is "Favorit gespeichert." or "Favorit entfernt.";
+    }
+
+    private void FavoritesChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+    {
+        RefreshFavorite();
+        if (args.PropertyName is nameof(favorites.Status) or nameof(favorites.IsSaving)) UpdateFavoriteStatus();
+    }
 
     private void SettingsChanged(object? sender, EventArgs args) => ReconcileRefreshLoop();
 
@@ -163,7 +198,9 @@ public sealed class DeparturePage : ContentPage
 
     private void RefreshFavorite()
     {
-        favoriteButton.Text = model.SelectedStop is { } stop && favorites.IsFavorite(stop) ? "Favorit entfernen" : "Als Favorit speichern";
+        var saved = model.SelectedStop is { } stop && favorites.IsFavorite(stop);
+        favoriteButton.Text = saved ? "★ Entfernen" : "☆ Speichern";
+        SemanticProperties.SetDescription(favoriteButton, saved ? "Favorit entfernen" : "Als Favorit speichern");
         toggleFavorite.Refresh();
     }
 
@@ -172,12 +209,7 @@ public sealed class DeparturePage : ContentPage
         items.Children.Clear();
         for (var index = 0; index < model.Items.Count; index++)
         {
-            items.Children.Add(new Border
-            {
-                Padding = 16,
-                Stroke = Color.FromArgb("#C7D7EC"),
-                Content = new Label { Text = DeparturePresentation.Describe(model.Items[index]), FontSize = 18, AutomationId = "Departure" + index }
-            });
+            items.Children.Add(new DepartureCardView(model.Items[index], "Departure" + index));
         }
     }
 }

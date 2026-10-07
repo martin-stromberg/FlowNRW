@@ -1,3 +1,4 @@
+using FlowNRW.Core.Diagnostics;
 using FlowNRW.Core.Presentation;
 using FlowNRW.Core.Refresh;
 using System.ComponentModel;
@@ -12,6 +13,7 @@ public sealed class RefreshSettingsPage : ContentPage
     private readonly RefreshSettingsViewModel model;
     private readonly Picker interval;
     private readonly AsyncRelayCommand save;
+    private readonly Label status;
 
     /// <summary>Creates the interval settings page.</summary>
     /// <param name="model">Persisted shared refresh preference.</param>
@@ -32,10 +34,32 @@ public sealed class RefreshSettingsPage : ContentPage
         };
         save = new AsyncRelayCommand(model.SaveAsync, () => !model.IsSaving,
             _ => Title = "Einstellung konnte nicht gespeichert werden");
-        var status = new Label { AutomationId = "RefreshSettingsStatus" };
+        status = new Label { AutomationId = "RefreshSettingsStatus" };
         status.SetBinding(Label.TextProperty, nameof(model.Status));
+        status.IsVisible = ShowsStatus();
         var current = new Label { AutomationId = "RefreshIntervalStatus" };
         current.SetBinding(Label.TextProperty, nameof(model.Description));
+        var logging = new Switch { AutomationId = "LoggingEnabled", IsToggled = AppLog.Enabled };
+        SemanticProperties.SetDescription(logging, "Protokollierung aktivieren");
+        var logStatus = new Label { AutomationId = "LogStatus" };
+        var sendLog = new Button
+        {
+            Text = "Protokoll senden",
+            AutomationId = "SendLog",
+            Command = new AsyncRelayCommand(async () =>
+            {
+                logStatus.Text = "";
+                try
+                {
+                    var message = new EmailMessage("FlowNRW Diagnoseprotokoll", AppLog.ReadAll(), "mstromberg84+flow@gmail.com");
+                    if (File.Exists(AppLog.FilePath)) message.Attachments = [new EmailAttachment(AppLog.FilePath)];
+                    await Email.ComposeAsync(message);
+                    logStatus.Text = "Protokoll-E-Mail geöffnet.";
+                }
+                catch (Exception) { logStatus.Text = "E-Mail konnte nicht geöffnet werden. Bitte erneut versuchen."; }
+            }, () => true, _ => logStatus.Text = "E-Mail konnte nicht geöffnet werden. Bitte erneut versuchen.")
+        };
+        logging.Toggled += (_, args) => AppLog.SetEnabled(args.Value);
         Content = new ScrollView
         {
             Content = new VerticalStackLayout
@@ -44,19 +68,18 @@ public sealed class RefreshSettingsPage : ContentPage
                 Spacing = 16,
                 Children =
                 {
-                    new Label { Text = "Abfahrten automatisch laden", FontSize = 24, FontAttributes = FontAttributes.Bold },
-                    new Label { Text = "Gilt für geöffnete Abfahrtsmonitore und Favoriten, solange die App aktiv ist. Manuell aktualisieren bleibt jederzeit möglich." },
-                    interval,
+                    new Border { Padding = 16, Content = new VerticalStackLayout { Spacing = 12, Children = { TransitVisuals.Text("Abfahrten automatisch laden", 22, true), interval } } },
                     new Button { Text = "Speichern", AutomationId = "SaveRefreshSettings", Command = save },
                     status, current,
-                    new Label { Text = "Standard: 60 Sekunden. Mindestens 30 Sekunden begrenzen die Datenabrufe. Während eines laufenden Abrufs wird keine zweite Anfrage gestartet." },
-                    new Label { AutomationId = "RefreshLifecycleHelp", Text = "Beim Zurückkehren werden veraltete Daten erneuert. Aus deaktiviert auch diese automatische Aktualisierung. Auf iOS kann das System gespeicherte Favoriten gelegentlich im Hintergrund aktualisieren; Zeitpunkt und Ausführung sind nicht garantiert. Bitte immer Quelle und Datenstand beachten." }
+                    new Border { Padding = 16, Content = new VerticalStackLayout { Spacing = 12, Children = { TransitVisuals.Text("Diagnose", 22, true), new HorizontalStackLayout { Spacing = 12, Children = { TransitVisuals.Text("Protokollierung"), logging } }, sendLog, logStatus } } }
                 }
             }
         };
+        Content = TransitVisuals.Page((VerticalStackLayout)((ScrollView)Content).Content);
 #if UI_TEST_FIXTURES
         Loaded += (_, _) =>
         {
+            if (Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_HIDE_CONTROLS") == "1") return;
             var layout = (VerticalStackLayout)((ScrollView)Content).Content;
             if (layout.Children.Any(child => child.AutomationId == "RefreshSettingsScenario")) return;
             var fixture = Handler!.MauiContext!.Services.GetRequiredService<UiTestLocationServices>();
@@ -86,6 +109,13 @@ public sealed class RefreshSettingsPage : ContentPage
     private void ModelChanged(object? sender, PropertyChangedEventArgs args)
     {
         interval.IsEnabled = !model.IsSaving;
+        if (args.PropertyName is nameof(model.Status) or nameof(model.IsSaving) or nameof(model.IsLoaded))
+            status.IsVisible = ShowsStatus();
         save.Refresh();
     }
+
+    private bool ShowsStatus() => !model.IsLoaded || model.IsSaving
+        || model.Status.Contains("konnte nicht", StringComparison.OrdinalIgnoreCase)
+        || model.Status.StartsWith("Bitte ", StringComparison.Ordinal)
+        || model.Status.Contains("gespeichert", StringComparison.OrdinalIgnoreCase);
 }

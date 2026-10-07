@@ -10,6 +10,10 @@ public sealed class JourneySearchViewModel : ObservableObject
     private readonly IJourneyNavigation navigation;
     private CancellationTokenSource? request;
     private long revision;
+    private bool useCurrentTime = true;
+    private DateTime selectedDate = DateTime.Now.Date;
+    private TimeSpan selectedTime = DateTime.Now.TimeOfDay;
+    private bool arriveBy;
     /// <summary>Creates a search session.</summary>
     /// <param name="origin">Independent origin.</param>
     /// <param name="destination">Independent destination.</param>
@@ -45,8 +49,66 @@ public sealed class JourneySearchViewModel : ObservableObject
             return Result is null ? "" : JourneyPresentation.Metadata(Result);
         }
     }
+    /// <summary>Gets a compact result-data warning suitable for primary journey views.</summary>
+    /// <returns>A concise warning, or an empty string for current complete data.</returns>
+    public string CompactWarning
+    {
+        get { return JourneyPresentation.CompactWarning(Result); }
+    }
     /// <summary>Route action.</summary>
     public AsyncRelayCommand SearchCommand { get; }
+    /// <summary>Whether routing uses the current time.</summary>
+    public bool UseCurrentTime
+    {
+        get => useCurrentTime;
+        set
+        {
+            if (useCurrentTime == value) return;
+            useCurrentTime = value;
+            Notify();
+            Notify(nameof(PlannedTime));
+        }
+    }
+    /// <summary>Alternative local search date.</summary>
+    public DateTime SelectedDate
+    {
+        get => selectedDate;
+        set
+        {
+            if (selectedDate == value) return;
+            selectedDate = value.Date;
+            Notify();
+            Notify(nameof(PlannedTime));
+        }
+    }
+    /// <summary>Alternative local search time.</summary>
+    public TimeSpan SelectedTime
+    {
+        get => selectedTime;
+        set
+        {
+            if (selectedTime == value) return;
+            selectedTime = value;
+            Notify();
+            Notify(nameof(PlannedTime));
+        }
+    }
+    /// <summary>Whether the requested time is an arrival deadline.</summary>
+    public bool ArriveBy
+    {
+        get => arriveBy;
+        set
+        {
+            if (arriveBy == value) return;
+            arriveBy = value;
+            Notify();
+        }
+    }
+    /// <summary>Effective request time.</summary>
+    public DateTimeOffset PlannedTime
+        => UseCurrentTime
+            ? DateTimeOffset.Now
+            : new DateTimeOffset(SelectedDate.Date + SelectedTime, TimeZoneInfo.Local.GetUtcOffset(SelectedDate.Date + SelectedTime));
     /// <summary>Routes the selected identities.</summary>
     /// <returns>Routing and navigation completion.</returns>
     public async Task SearchAsync()
@@ -57,7 +119,7 @@ public sealed class JourneySearchViewModel : ObservableObject
         IsBusy = true; Refresh(); SetStatus("Verbindungen werden geladen …");
         try
         {
-            var result = await routing.RouteAsync(Origin.SelectedAddress!, Destination.SelectedAddress!, DateTimeOffset.Now, source.Token);
+            var result = await routing.RouteAsync(Origin.SelectedAddress!, Destination.SelectedAddress!, PlannedTime, source.Token, ArriveBy);
             if (version != revision) return;
             Result = result; SelectedJourney = null; Refresh();
             SetStatus(result.ErrorCode is not null ? "Verbindungssuche fehlgeschlagen. Bitte erneut versuchen." : result.Items.Count == 0 ? "Keine Verbindungen gefunden. Bitte erneut suchen." : $"{result.Items.Count} Verbindungen gefunden.");
@@ -74,6 +136,26 @@ public sealed class JourneySearchViewModel : ObservableObject
     {
         if (!Journeys.Contains(journey)) return;
         SelectedJourney = journey; Notify(nameof(SelectedJourney)); await navigation.ShowDetailAsync();
+    }
+
+    /// <summary>Swaps the resolved start and destination without performing a provider request.</summary>
+    public void SwapEndpoints()
+    {
+        var origin = Origin.SelectedAddress;
+        var destination = Destination.SelectedAddress;
+        Origin.SetSelectedAddress(destination);
+        Destination.SetSelectedAddress(origin);
+    }
+
+    /// <summary>Applies a saved connection without searching for either endpoint.</summary>
+    /// <param name="origin">Saved origin.</param>
+    /// <param name="destination">Saved destination.</param>
+    public void SelectConnection(Address origin, Address destination)
+    {
+        ArgumentNullException.ThrowIfNull(origin);
+        ArgumentNullException.ThrowIfNull(destination);
+        Origin.SetSelectedAddress(origin);
+        Destination.SetSelectedAddress(destination);
     }
 
     /// <summary>Renews expired visible results without navigating or guessing the previously selected trip.</summary>
@@ -95,7 +177,7 @@ public sealed class JourneySearchViewModel : ObservableObject
         Refresh();
         try
         {
-            var result = await routing.RouteAsync(Origin.SelectedAddress!, Destination.SelectedAddress!, DateTimeOffset.Now, source.Token).WaitAsync(source.Token);
+            var result = await routing.RouteAsync(Origin.SelectedAddress!, Destination.SelectedAddress!, PlannedTime, source.Token, ArriveBy).WaitAsync(source.Token);
             source.Token.ThrowIfCancellationRequested();
             if (version != revision) return;
             if (result.ErrorCode is not null)
@@ -146,5 +228,5 @@ public sealed class JourneySearchViewModel : ObservableObject
     }
     private void EndpointChanged(object? sender, EventArgs e) { CancelPending(); Result = null; SelectedJourney = null; SetStatus("Bitte Start und Ziel auswählen oder Verbindung suchen."); Refresh(); }
     private void SetStatus(string value) { Status = value; Notify(nameof(Status)); }
-    private void Refresh() { Notify(nameof(Result)); Notify(nameof(Journeys)); Notify(nameof(Metadata)); Notify(nameof(SelectedJourney)); Notify(nameof(IsBusy)); Notify(nameof(CanSearch)); SearchCommand.Refresh(); }
+    private void Refresh() { Notify(nameof(Result)); Notify(nameof(Journeys)); Notify(nameof(Metadata)); Notify(nameof(CompactWarning)); Notify(nameof(SelectedJourney)); Notify(nameof(IsBusy)); Notify(nameof(CanSearch)); SearchCommand.Refresh(); }
 }

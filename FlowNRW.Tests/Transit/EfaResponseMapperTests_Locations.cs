@@ -31,6 +31,14 @@ public sealed class EfaResponseMapperTests_Locations
         Assert.Equal("invalid_response", result.ErrorCode);
         Assert.Contains("invalid_response", result.Warnings);
     }
+    /// <summary>Parseable JSON without the documented locations array is rejected rather than treated as empty.</summary>
+    [Fact]
+    public void Search_MissingPayload_ReturnsSafeError()
+    {
+        var result = new EfaResponseMapper(new()).Search("{}");
+        Assert.Equal("invalid_response", result.ErrorCode);
+        Assert.Contains("invalid_response", result.Warnings);
+    }
     /// <summary>Limits apply to normalized results.</summary>
     [Fact]
     public void Search_ResultLimit_TruncatesLocations()
