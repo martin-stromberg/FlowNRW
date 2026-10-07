@@ -30,8 +30,10 @@ internal static class IosBackgroundRefresh
         {
             EarliestBeginDate = NSDate.FromTimeIntervalSinceNow(15 * 60)
         };
+#pragma warning disable CA1422 // out-NSError overload is obsolete since iOS 27; the completion-handler overload is unavailable on older bindings
         BGTaskScheduler.Shared.Submit(request, out var error);
         error?.Dispose();
+#pragma warning restore CA1422
     }
 
     private static async void Run(BGTask task)
