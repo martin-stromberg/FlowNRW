@@ -144,3 +144,7 @@ Weitere Verkehrsverbünde sowie spätere Sharing-/Push-Funktionen bleiben Erweit
 ## Changelog
 
 Änderungen stehen in [`changes.log`](changes.log) und in der [technischen Dokumentation](docs/help/fahrplanauskunft/index.md).
+
+## Lizenz
+
+FlowNRW steht unter der [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) — siehe [LICENSE](LICENSE). Private, nichtkommerzielle Nutzung ist frei. Für kommerzielle Nutzung ist eine gesonderte Lizenzvereinbarung mit Martin Stromberg erforderlich.
