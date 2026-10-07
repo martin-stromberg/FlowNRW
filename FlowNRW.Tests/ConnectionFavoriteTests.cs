@@ -72,7 +72,9 @@ public sealed class ConnectionFavoriteTests
         var model = new StopMonitorViewModel(new ControlledSearchService(), departures, new DepartureTestNavigation(), 100,
             favoriteStore: new MemoryFavorites(stop), departureCache: new MemoryDepartureCache(new DepartureCacheEntry
             {
-                Source = stop.Source, StopId = stop.Id, Result = new() { Source = "cached", Items = [new StopEvent { PlannedTime = DateTimeOffset.Now.AddMinutes(8) }] }
+                Source = stop.Source,
+                StopId = stop.Id,
+                Result = new() { Source = "cached", Items = [new StopEvent { PlannedTime = DateTimeOffset.Now.AddMinutes(8) }] }
             }));
         var opening = model.OpenNearbyFromHomeAsync(new Address { Name = stop.Name, Stop = stop });
         Assert.Equal("cached", model.Result?.Source);
@@ -92,7 +94,9 @@ public sealed class ConnectionFavoriteTests
         var model = new StopMonitorViewModel(new ControlledSearchService(), departures, new DepartureTestNavigation(), 100,
             favoriteStore: new MemoryFavorites(stop), departureCache: new MemoryDepartureCache(new DepartureCacheEntry
             {
-                Source = stop.Source, StopId = stop.Id, Result = new() { Source = "stale", RetrievedAt = clock.Now.AddMinutes(-1), Items = [new StopEvent { PlannedTime = DateTimeOffset.Now.AddMinutes(8) }] }
+                Source = stop.Source,
+                StopId = stop.Id,
+                Result = new() { Source = "stale", RetrievedAt = clock.Now.AddMinutes(-1), Items = [new StopEvent { PlannedTime = DateTimeOffset.Now.AddMinutes(8) }] }
             }), freshness: freshness);
         var opening = model.OpenNearbyFromHomeAsync(new Address { Name = stop.Name, Stop = stop });
         Assert.Null(model.Result);

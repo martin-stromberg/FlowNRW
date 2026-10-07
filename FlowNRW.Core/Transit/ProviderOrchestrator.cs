@@ -59,8 +59,8 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
         var resolvedDestination = await ResolveRegion(destination, cancellationToken).ConfigureAwait(false);
         origin = resolvedOrigin.Location;
         destination = resolvedDestination.Location;
-            var result = await Run("route", new { origin, destination, departure, arriveBy }, IsRegional(origin) || IsRegional(destination), options.RealtimeTimeToLive,
-                (provider, token) => provider.RouteAsync(origin, destination, departure, token, arriveBy), MergeJourneys, cancellationToken).ConfigureAwait(false);
+        var result = await Run("route", new { origin, destination, departure, arriveBy }, IsRegional(origin) || IsRegional(destination), options.RealtimeTimeToLive,
+            (provider, token) => provider.RouteAsync(origin, destination, departure, token, arriveBy), MergeJourneys, cancellationToken).ConfigureAwait(false);
         return result with { Warnings = result.Warnings.Concat(resolvedOrigin.Warnings).Concat(resolvedDestination.Warnings).Distinct().ToArray() };
     }
 

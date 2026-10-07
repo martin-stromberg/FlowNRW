@@ -36,7 +36,9 @@ public sealed class FavoriteDepartureCacheIntegrationTests
     public async Task LoadAsync_DiscardsExpiredEventsAndRetainsFutureCacheOnFailure()
     {
         var stop = Stop("one");
-        var cache = new MemoryDepartureCache { Entries = [new DepartureCacheEntry
+        var cache = new MemoryDepartureCache
+        {
+            Entries = [new DepartureCacheEntry
         {
             Source = stop.Source,
             StopId = stop.Id,
@@ -45,7 +47,8 @@ public sealed class FavoriteDepartureCacheIntegrationTests
                 Source = "cached",
                 Items = [Event(DateTimeOffset.Now.AddMinutes(-1)), Event(DateTimeOffset.Now.AddMinutes(3))]
             }
-        }] };
+        }]
+        };
         var services = new List<ControlledDepartureService>();
         var home = new FavoriteHomeViewModel(new MemoryFavoriteStore(stop), () => AddService(services), new ControlledLocation(), cache: cache);
         await home.LoadAsync();

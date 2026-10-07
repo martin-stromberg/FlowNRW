@@ -39,10 +39,13 @@ public sealed class TransitServiceTests_Validation
     [Fact]
     public async Task DeparturesAsync_ExactlyAtLimit_IsNotMarkedTruncated()
     {
-        var provider = new TransitTestProvider { Departures = new()
+        var provider = new TransitTestProvider
         {
-            Items = [new StopEvent { PlannedTime = DateTimeOffset.UtcNow.AddMinutes(1) }, new StopEvent { PlannedTime = DateTimeOffset.UtcNow.AddMinutes(2) }]
-        } };
+            Departures = new()
+            {
+                Items = [new StopEvent { PlannedTime = DateTimeOffset.UtcNow.AddMinutes(1) }, new StopEvent { PlannedTime = DateTimeOffset.UtcNow.AddMinutes(2) }]
+            }
+        };
         var result = await new DepartureService(provider, new TransitProviderOptions { MaxResults = 2 })
             .DeparturesAsync(new Stop { Id = "stop", Source = "fixture" }, DateTimeOffset.UtcNow);
         Assert.Equal(2, result.Items.Count);
