@@ -24,7 +24,7 @@
 		<ApplicationTitle>FlowNRW</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>de.martinstromberg.flownrw</ApplicationId>
+		<ApplicationId>de.martinstromberg.flow</ApplicationId>
 
 		<!-- Versions: $(Version) is defined in Directory.Build.props and overridden by CI via -p:Version.
 		     The Windows app manifest only accepts numeric X.Y.Z, so any pre-release suffix (e.g. "-rc.1") is stripped here. -->
