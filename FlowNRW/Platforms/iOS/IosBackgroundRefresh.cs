@@ -10,7 +10,7 @@ namespace FlowNRW;
 /// <summary>Registers one opportunistic iOS refresh without promising a periodic background interval.</summary>
 internal static class IosBackgroundRefresh
 {
-    private const string Identifier = "de.martinstromberg.flownrw.refresh";
+    private const string Identifier = "de.martinstromberg.flow.refresh";
     private static bool registered;
 
     /// <summary>Registers the handler before application launch finishes.</summary>

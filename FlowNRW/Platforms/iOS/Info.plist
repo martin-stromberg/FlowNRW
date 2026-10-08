@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>UIBackgroundModes</key><array><string>fetch</string></array>
-  <key>BGTaskSchedulerPermittedIdentifiers</key><array><string>de.martinstromberg.flownrw.refresh</string></array>
+  <key>BGTaskSchedulerPermittedIdentifiers</key><array><string>de.martinstromberg.flow.refresh</string></array>
   <key>NSLocationWhenInUseUsageDescription</key><string>FlowNRW verwendet den Standort auf ausdrückliche Aktion für Start, Ziel und nahe Haltestellen.</string>
   <key>LSRequiresIPhoneOS</key><true/>
   <key>UIDeviceFamily</key><array><integer>1</integer><integer>2</integer></array>

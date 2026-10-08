@@ -251,15 +251,56 @@ jobs:
           # the RC suffix.
           "rc_version=$version-rc.$rcNumber" | Add-Content -Path $env:GITHUB_OUTPUT
 
+  # iOS packaging stays disabled until the signing secrets are provided externally.
+  # Activate by setting the repository variable IOS_SIGNING_ENABLED=true - no code change needed.
+  package-ios:
+    name: package-ios
+    needs: [detect-backmerge, version]
+    if: needs.detect-backmerge.outputs.is_backmerge != 'true' && needs.version.outputs.changed == 'true' && vars.IOS_SIGNING_ENABLED == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Build and package release candidate (ios)
+        uses: ./.github/actions/package-ios
+        with:
+          release-version: ${{ needs.version.outputs.rc_version }}
+          release-tag: ${{ needs.version.outputs.rc_tag }}
+          codesign-key: ${{ secrets.IOS_CODESIGN_KEY }}
+          provisioning-profile: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+          api-key-id: ${{ secrets.IOS_API_KEY_ID }}
+          api-issuer-id: ${{ secrets.IOS_API_ISSUER_ID }}
+          api-key-p8: ${{ secrets.IOS_API_KEY_P8 }}
+          certificate-p12-base64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          certificate-p12-password: ${{ secrets.IOS_CERTIFICATE_P12_PASSWORD }}
+          provisioning-profile-base64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-ios
+          path: release-ios.ipa
+          retention-days: 14
+
   prerelease:
     name: prerelease
-    needs: [detect-backmerge, version]
+    needs: [detect-backmerge, version, package-ios]
     if: needs.detect-backmerge.outputs.is_backmerge != 'true' && needs.version.outputs.changed == 'true'
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Download iOS package
+        if: needs.package-ios.result == 'success'
+        uses: actions/download-artifact@v7
+        with:
+          name: release-ios
 
       - name: Generate release notes for update manifest
         id: notes
@@ -294,6 +335,7 @@ jobs:
         run: |
           $tag = "${{ needs.version.outputs.rc_tag }}"
           $assets = @($env:RELEASE_ASSET_PATHS -split ';') + @($env:RELEASE_MANIFEST_PATH)
+          if (Test-Path release-ios.ipa) { $assets += "release-ios.ipa" }
           gh release create $tag @assets `
             --target $env:GITHUB_SHA `
             --title $tag `
