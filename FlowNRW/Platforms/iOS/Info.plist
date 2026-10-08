@@ -5,6 +5,7 @@
   <key>BGTaskSchedulerPermittedIdentifiers</key><array><string>de.martinstromberg.flow.refresh</string></array>
   <key>NSLocationWhenInUseUsageDescription</key><string>FlowNRW verwendet den Standort auf ausdrückliche Aktion für Start, Ziel und nahe Haltestellen.</string>
   <key>LSRequiresIPhoneOS</key><true/>
+  <key>ITSAppUsesNonExemptEncryption</key><false/>
   <key>UIDeviceFamily</key><array><integer>1</integer></array>
   <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
   <key>XSAppIconAssets</key><string>Assets.xcassets/flownrw.appiconset</string>
