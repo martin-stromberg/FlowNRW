@@ -10,11 +10,11 @@ Keine.
 
 ## Zusammenfassung
 
-- **Gesamt:** 293
-- **Bestanden:** 293
+- **Gesamt:** 294
+- **Bestanden:** 294
 - **Fehlgeschlagen:** 0
 - **Übersprungen:** 0
-- **Gesamtzeit:** 0,78 s
+- **Gesamtzeit:** 0,83 s
 
 Befehl: `dotnet test FlowNRW.Tests/FlowNRW.Tests.csproj --collect:"XPlat Code Coverage" --logger "console;verbosity=normal"` (xUnit, Projekt `FlowNRW.Tests`)
 

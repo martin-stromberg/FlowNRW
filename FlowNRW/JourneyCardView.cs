@@ -26,7 +26,7 @@ public sealed class JourneyCardView : Border
         var badges = new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap, AlignItems = Microsoft.Maui.Layouts.FlexAlignItems.Start };
         foreach (var leg in journey.Legs)
         {
-            var badge = TransitVisuals.Badge(leg.Walking is not null ? "Fußweg" : leg.Line?.Name ?? leg.Departure.Line?.Name ?? leg.Departure.Identity.Line ?? "Linie unbekannt", leg.Walking is null ? (leg.Line ?? leg.Departure.Line)?.Mode : null);
+            var badge = TransitVisuals.Badge(leg.Walking is not null ? "Fußweg" : JourneyPresentation.LegLineName(leg), leg.Walking is null ? JourneyPresentation.LegLineMode(leg) : null);
             badge.Margin = new Thickness(0, 0, 8, 8); badges.Children.Add(badge);
         }
         layout.Children.Add(badges);

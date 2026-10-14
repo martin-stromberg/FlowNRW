@@ -31,8 +31,8 @@ public static class MauiProgram
                 fonts.AddFont("Inter-SemiBold.ttf", Fonts.InterSemiBold);
                 fonts.AddFont("Inter-Bold.ttf", Fonts.InterBold);
                 fonts.AddFont("JetBrainsMono-Bold.ttf", Fonts.JetBrainsMono);
-                fonts.AddFont("MaterialSymbolsRounded.ttf", "MaterialSymbols");
-                fonts.AddFont("MaterialSymbolsRoundedFill.ttf", "MaterialSymbolsFilled");
+                fonts.AddFont("MaterialSymbolsRounded.ttf", TransitIcons.FontFamily);
+                fonts.AddFont("MaterialSymbolsRoundedFill.ttf", TransitIcons.FilledFontFamily);
             });
 
 #if DEBUG

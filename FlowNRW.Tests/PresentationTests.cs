@@ -188,6 +188,23 @@ public sealed class JourneyPresentationTests
         Assert.Equal(14, summer.Hour);
         Assert.Equal(TimeSpan.FromHours(2), summer.Offset);
     }
+
+    /// <summary>The shared leg fallback resolves line name and mode from leg, event and identity.</summary>
+    [Fact]
+    public void ResolvesLegLineThroughSharedFallback()
+    {
+        var leg = new JourneyLeg { Line = new() { Name = "Leg", Mode = "bus" }, Departure = new() { Line = new() { Name = "Event", Mode = "tram" }, Identity = new() { Line = "Identität" } } };
+        Assert.Equal("Leg", JourneyPresentation.LegLineName(leg));
+        Assert.Equal("bus", JourneyPresentation.LegLineMode(leg));
+        var unnamedLegLine = new JourneyLeg { Line = new(), Departure = new() { Line = new() { Name = "Event" } } };
+        Assert.Equal("Event", JourneyPresentation.LegLineName(unnamedLegLine));
+        Assert.Null(JourneyPresentation.LegLineMode(unnamedLegLine));
+        var identityOnly = new JourneyLeg { Departure = new() { Identity = new() { Line = "Identität" } } };
+        Assert.Equal("Identität", JourneyPresentation.LegLineName(identityOnly));
+        Assert.Null(JourneyPresentation.LegLineMode(identityOnly));
+        Assert.Equal("Linie unbekannt", JourneyPresentation.LegLineName(new()));
+        Assert.Equal("Linie unbekannt", JourneyPresentation.LegLineName(new() { Walking = new() }));
+    }
 }
 
 internal sealed class ControlledSearchService : IStopSearchService

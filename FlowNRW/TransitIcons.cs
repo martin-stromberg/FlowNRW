@@ -117,13 +117,6 @@ internal static class TransitIcons
     /// <returns>A themed font icon usable as the <see cref="Tab"/> icon.</returns>
     internal static FontImageSource TabIcon(string glyph)
     {
-        var icon = new FontImageSource
-        {
-            Glyph = glyph,
-            FontFamily = FontFamily,
-            Size = 24
-        };
-        icon.SetAppThemeColor(FontImageSource.ColorProperty, TransitVisuals.Action, TransitVisuals.ActionDark);
-        return icon;
+        return IconImage(glyph, size: 24);
     }
 }

@@ -57,6 +57,20 @@ public static class JourneyPresentation
         if (result.IsStale) return "Zwischengespeicherte Daten";
         return result.IsFallback ? "Ersatzquelle" : "";
     }
+    /// <summary>Formats the effective line name of a leg through the shared fallback chain.</summary>
+    /// <param name="leg">Journey leg.</param>
+    /// <returns>The leg, departure or identity line name, or „Linie unbekannt" when none was supplied.</returns>
+    public static string LegLineName(JourneyLeg leg)
+    {
+        return leg.Line?.Name ?? leg.Departure.Line?.Name ?? leg.Departure.Identity.Line ?? "Linie unbekannt";
+    }
+    /// <summary>Resolves the effective transport mode of a leg through the shared line fallback.</summary>
+    /// <param name="leg">Journey leg.</param>
+    /// <returns>The mode of the leg or departure line, or <see langword="null"/> for walking and unknown legs.</returns>
+    public static string? LegLineMode(JourneyLeg leg)
+    {
+        return (leg.Line ?? leg.Departure.Line)?.Mode;
+    }
     /// <summary>Formats a compact result.</summary>
     /// <param name="journey">Journey.</param>
     /// <returns>Journey label.</returns>
@@ -73,6 +87,6 @@ public static class JourneyPresentation
         var reference = journey.Legs.FirstOrDefault()?.Departure.PlannedTime;
         return Summary(journey) + "\n\n" + string.Join("\n\n", journey.Legs.Select(leg => LegName(leg) + "\nAbfahrt " + Event(leg.Departure, reference) + "\nAnkunft " + Event(leg.Arrival, reference))) + "\n\n" + string.Join("\n", journey.Transfers.Select(t => $"Umstieg: {t.Stop?.Name ?? "Haltestelle unbekannt"} · {t.Duration?.TotalMinutes.ToString("0", CultureInfo.InvariantCulture) ?? "unbekannt"} Min."));
     }
-    private static string LegName(JourneyLeg leg) => leg.Walking is { } walk ? $"Fußweg · {walk.DistanceMeters?.ToString("0", CultureInfo.InvariantCulture) ?? "unbekannt"} m · {walk.Duration?.TotalMinutes.ToString("0", CultureInfo.InvariantCulture) ?? "unbekannt"} Min." : $"{leg.Line?.Name ?? leg.Departure.Line?.Name ?? leg.Departure.Identity.Line ?? "Linie unbekannt"} · Betreiber: {leg.Line?.Operator?.Name ?? leg.Departure.Line?.Operator?.Name ?? leg.Departure.Identity.Operator ?? "unbekannt"}";
+    private static string LegName(JourneyLeg leg) => leg.Walking is { } walk ? $"Fußweg · {walk.DistanceMeters?.ToString("0", CultureInfo.InvariantCulture) ?? "unbekannt"} m · {walk.Duration?.TotalMinutes.ToString("0", CultureInfo.InvariantCulture) ?? "unbekannt"} Min." : $"{LegLineName(leg)} · Betreiber: {leg.Line?.Operator?.Name ?? leg.Departure.Line?.Operator?.Name ?? leg.Departure.Identity.Operator ?? "unbekannt"}";
     private static string Event(StopEvent item, DateTimeOffset? reference) => $"{item.Identity.Stop.Name}\nSoll: {EventTime(item.PlannedTime, reference)} · Ist: {(item.Realtime.ActualTime is null ? "keine Echtzeitdaten" : EventTime(item.Realtime.ActualTime, reference))}\n" + (item.Realtime.Cancelled switch { true => "Ausfall", false => "Kein Ausfall gemeldet", null => "Ausfallstatus unbekannt" }) + $" · Bahnsteig Soll: {item.Realtime.PlannedPlatform ?? "unbekannt"}, Ist: {item.Realtime.Platform ?? "unbekannt"}" + (string.IsNullOrEmpty(item.Realtime.Source) ? "" : $" · Echtzeitquelle: {item.Realtime.Source}, Stand: {Time(item.Realtime.RetrievedAt)}");
 }

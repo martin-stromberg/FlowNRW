@@ -291,8 +291,12 @@ public sealed class HomePage : ContentPage
     {
         var actionGrid = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
         var expand = new Button { AutomationId = "ToggleFavorite" + index, HeightRequest = 48, WidthRequest = 48 };
-        TransitIcons.SetIcon(expand, card.IsExpanded ? TransitIcons.ExpandLess : TransitIcons.ExpandMore, card.IsExpanded ? "Abfahrten einklappen" : "Abfahrten aufklappen");
-        expand.Command = new AsyncRelayCommand(() => { card.ToggleExpanded(); TransitIcons.SetIcon(expand, card.IsExpanded ? TransitIcons.ExpandLess : TransitIcons.ExpandMore, card.IsExpanded ? "Abfahrten einklappen" : "Abfahrten aufklappen"); return Task.CompletedTask; }, () => true, _ => Title = "Abfahrten konnten nicht ein- oder ausgeklappt werden");
+        void SetExpandIcon()
+        {
+            TransitIcons.SetIcon(expand, card.IsExpanded ? TransitIcons.ExpandLess : TransitIcons.ExpandMore, card.IsExpanded ? "Abfahrten einklappen" : "Abfahrten aufklappen");
+        }
+        SetExpandIcon();
+        expand.Command = new AsyncRelayCommand(() => { card.ToggleExpanded(); SetExpandIcon(); return Task.CompletedTask; }, () => true, _ => Title = "Abfahrten konnten nicht ein- oder ausgeklappt werden");
         actionGrid.Add(expand, 0);
         unsubscribe.Add(() => expand.Command = null);
         var refreshButton = new Button { AutomationId = "RefreshFavorite" + index, Command = card.RefreshCommand, HeightRequest = 48, WidthRequest = 48 };

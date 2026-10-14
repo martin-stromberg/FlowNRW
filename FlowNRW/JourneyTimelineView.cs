@@ -28,11 +28,11 @@ public sealed class JourneyTimelineView : VerticalStackLayout
         foreach (var leg in journey.Legs)
         {
             legIndex++;
-            var title = leg.Walking is not null ? "Fußweg" : leg.Line?.Name ?? leg.Departure.Line?.Name ?? leg.Departure.Identity.Line ?? "Linie unbekannt";
+            var title = leg.Walking is not null ? "Fußweg" : JourneyPresentation.LegLineName(leg);
             var origin = string.IsNullOrWhiteSpace(leg.Departure.Identity.Stop.Name) ? "Start unbekannt" : leg.Departure.Identity.Stop.Name;
             var destination = string.IsNullOrWhiteSpace(leg.Arrival.Identity.Stop.Name) ? "Ziel unbekannt" : leg.Arrival.Identity.Stop.Name;
             var heading = new Grid { ColumnDefinitions = [new(GridLength.Auto), new(GridLength.Star)], ColumnSpacing = 12 };
-            var badge = TransitVisuals.Badge(title, leg.Walking is null ? (leg.Line ?? leg.Departure.Line)?.Mode : null);
+            var badge = TransitVisuals.Badge(title, leg.Walking is null ? JourneyPresentation.LegLineMode(leg) : null);
             if (badge.Content is Label lineLabel) lineLabel.AutomationId = "JourneyLine" + index;
             heading.Add(badge, 0);
             var names = TransitVisuals.Text(origin + " → " + destination, 17, true, "JourneyDetailSection" + index);

@@ -13,11 +13,11 @@ und müssen manuell oder in einem erneuten Lauf bearbeitet werden.
 
 ## Code-Review-Befunde
 
-- [ ] `MauiProgram.cs` (`CreateMauiApp`) — Kopplung: `"MaterialSymbols"`/`"MaterialSymbolsFilled"` als Literale registriert statt `TransitIcons.FontFamily`/`FilledFontFamily` (Z. 34–35) — inkonsistent zu den `Fonts.*`-Registrierungen. Empfehlung: `TransitIcons.FontFamily`/`FilledFontFamily` verwenden.
-- [ ] `JourneyCardView.cs` / `JourneyTimelineView.cs` / `JourneyPresentation.cs` — Doppelter Code: Fallback-Kette `leg.Line?.Name ?? leg.Departure.Line?.Name ?? leg.Departure.Identity.Line ?? "Linie unbekannt"` an 3 Stellen; Mode-Auflösung `(leg.Line ?? leg.Departure.Line)?.Mode` an 2 Stellen. Empfehlung: In `JourneyPresentation` zentralisieren.
-- [ ] `Colors.xaml` — Toter Code: `Tertiary`, `GroupLight`, `GroupDark` unreferenziert. Empfehlung: Entfernen.
-- [ ] `TransitIcons.cs` — Doppelter Code: `TabIcon` repliziert `IconImage` bis auf `Size=24`. Empfehlung: `TabIcon` auf `IconImage(glyph, size: 24)` delegieren.
-- [ ] `HomePage.cs` (`BuildCardActions`) — Doppelter Code: identischer `SetIcon`-Aufruf für Expand-Button in Z. 289 und im Command-Lambda Z. 290. Empfehlung: lokale `SetExpandIcon()`-Funktion.
+- [x] `MauiProgram.cs` (`CreateMauiApp`) — Kopplung: `"MaterialSymbols"`/`"MaterialSymbolsFilled"` als Literale registriert statt `TransitIcons.FontFamily`/`FilledFontFamily` (Z. 34–35) — inkonsistent zu den `Fonts.*`-Registrierungen. Empfehlung: `TransitIcons.FontFamily`/`FilledFontFamily` verwenden.
+- [x] `JourneyCardView.cs` / `JourneyTimelineView.cs` / `JourneyPresentation.cs` — Doppelter Code: Fallback-Kette `leg.Line?.Name ?? leg.Departure.Line?.Name ?? leg.Departure.Identity.Line ?? "Linie unbekannt"` an 3 Stellen; Mode-Auflösung `(leg.Line ?? leg.Departure.Line)?.Mode` an 2 Stellen. Empfehlung: In `JourneyPresentation` zentralisieren. *(Behoben: `JourneyPresentation.LegLineName`/`LegLineMode`; Test `ResolvesLegLineThroughSharedFallback` in `FlowNRW.Tests/PresentationTests.cs`.)*
+- [x] `Colors.xaml` — Toter Code: `Tertiary`, `GroupLight`, `GroupDark` unreferenziert. Empfehlung: Entfernen.
+- [x] `TransitIcons.cs` — Doppelter Code: `TabIcon` repliziert `IconImage` bis auf `Size=24`. Empfehlung: `TabIcon` auf `IconImage(glyph, size: 24)` delegieren.
+- [x] `HomePage.cs` (`BuildCardActions`) — Doppelter Code: identischer `SetIcon`-Aufruf für Expand-Button in Z. 289 und im Command-Lambda Z. 290. Empfehlung: lokale `SetExpandIcon()`-Funktion.
 
 ## Fehlgeschlagene Tests
 
