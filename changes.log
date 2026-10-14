@@ -1,3 +1,12 @@
+## 2026-10-14 — Modernes Design auf AAA-Niveau
+
+- Echte Iconografie statt Unicode-Textglyphen: Aktionsbuttons, Statuszeilen und die drei Shell-Tabs nutzen die Icon-Font Material Symbols Rounded (FILL0- und FILL1-Instanz, opsz 24), zentral über `TransitIcons` gesteuert und gegen das Codepoint-Manifest der eingebetteten TTF verifiziert. Tab-Symbole laufen über `FontImageSource`; Titel und Routen bleiben unverändert.
+- Lizenzfreie Typografie: Inter (SIL OFL, Regular/SemiBold/Bold) ist die UI-Schrift in allen impliziten Styles und `TransitVisuals`-Fabriken; JetBrains Mono (OFL, Bold) ersetzt `Consolas`/`Menlo` für die Hauptzeiten der Abfahrtskarten. OpenSans wurde entfernt; Aliase stehen zentral in `Fonts` und `MauiProgram.ConfigureFonts`.
+- Status-Chips (Icon plus Text, Farbe nie alleiniger Informationsträger) für „Fahrt fällt aus", „+n Min."-Verspätung und „Keine Echtzeitdaten" in `DepartureCardView`, `JourneyCardView` und `JourneyTimelineView`. Die Statussemantik (`Scheduled`/`OnTime`/`Delayed`/`Cancelled`) liegt neu in `DeparturePresentation.Status`/`DelayText` und `DepartureStatus` in FlowNRW.Core und nutzt ausschließlich gelieferte Echtzeitfelder.
+- Design-Tokens nachgeschärft ohne Ersatz der Schritt-9-Abnahme: `GroupStrong` sowie `Success`/`Warning`/`Error` samt kontrastgeprüften Dunkelvarianten in `Colors.xaml`; implizite Styles auf Inter und Referenzskala (Headline 28, SubHeadline 22); vereinheitlichtes Spacing und Anwenderschriftgrößen.
+- Windows-Tab-Leiste: kompaktere NavigationView-Abstände und eine `TabBarNavigationViewMenuItem`-Template-Überschreibung halten alle drei Tabs bei 430 px Fensterbreite sichtbar (`Platforms/Windows/App.xaml`).
+- Nachweise: 293 Core-Tests bestanden (`DepartureStatusTests` neu); die komplette Icon-/Font-Screenshot-Matrix (hell/dunkel, 430×900 und 1024×768, 100 %/150 % Textskalierung) liegt unter `docs/help/design/verification/icon-matrix/`; Font-Lizenzen und das Codepoint-Manifest unter `docs/design/licenses/`. Die subjektive AAA-Bewertung bleibt ein separater manueller Abnahmeschritt.
+
 ## 2026-09-26 — Wiederaufnahme und begrenzte Hintergrundaktualisierung
 
 - Veraltete sichtbare Abfahrten und Verbindungsergebnisse nach Wiederaufnahme erneuern; eindeutige Fahrtauswahl beibehalten, unsichere Zuordnung verständlich zur Neuauswahl markieren. Fehler erhalten letzte Daten.

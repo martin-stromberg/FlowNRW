@@ -4,6 +4,7 @@
 
 [![PR CI für Staging](https://img.shields.io/github/actions/workflow/status/martin-stromberg/FlowNRW/pr-staging-ci.yml?label=PR%20CI%20f%C3%BCr%20Staging)](https://github.com/martin-stromberg/FlowNRW/actions/workflows/pr-staging-ci.yml)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![Lizenz](https://img.shields.io/badge/Lizenz-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 
 FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahrten mit bevorzugten NRW-Echtzeitdaten. Die manuelle Verbindungssuche führt von Start-/Zielwahl über Ergebnisse zu Verbindungsdetails. Native iOS-Abnahme steht beim Nutzer aus.
 
@@ -22,13 +23,14 @@ FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahr
 - Native Haltestellensuche und manueller Abfahrtsmonitor mit Echtzeitstatus, Gleiswechseln und erhaltenen Daten bei Aktualisierungsfehlern. [Bedienung](docs/help/abfahrten/beschreibung.md).
 - Interaktive Haltestellenkarte mit nativer Listenalternative und gelieferten Verbindungsverläufen. [Bedienung und Kartenkonfiguration](docs/help/karte/beschreibung.md).
 - Expliziter aktueller Standort als Start/Ziel und nahe Haltestellen in Liste/Karte; Fehler erhalten die manuelle Nutzung. [Bedienung und iOS-Prüfung](docs/help/standort/index.md). Native Windows-Fixtures und echter Windows-Standortversuch erfolgreich.
+- Modernes Design: Aktionsbuttons, Statuszeilen und die drei Tab-Symbole nutzen die Icon-Font Material Symbols Rounded (FILL0/FILL1, opsz 24) statt Unicode-Textglyphen; UI-Schrift ist Inter (SIL OFL), prominente Abfahrtszeiten JetBrains Mono (OFL). Status wie Ausfall, Verspätung und „Keine Echtzeitdaten" erscheinen als Chips aus Symbol plus Text. [Design-Dokumentation](docs/help/design/index.md).
 - iOS-Einstieg und Zielplattform vorhanden; [Visual-Studio-/iOS-Einrichtung und manuelle Prüfliste](docs/help/verbindungssuche/installation.md).
 
 ## Projektstruktur
 
 | Projekt | Inhalt |
 | --- | --- |
-| `FlowNRW/` | MAUI-App: Windows (win-x64, unpackaged), iOS auf macOS oder mit `EnableIos=true` |
+| `FlowNRW/` | MAUI-App: Windows (win-x64, unpackaged), iOS auf macOS oder mit `EnableIos=true`; prozedurale Views mit den zentralen Design-Fabriken `TransitVisuals`, `TransitIcons` und `Fonts` |
 | `FlowNRW.Core/` | Plattformunabhängige Logik (`net10.0`), von der App referenziert |
 | `FlowNRW.Tests/` | xUnit-Tests für `FlowNRW.Core` (`net10.0`, laufen auch unter Linux) |
 | `.github/` | CI/CD-Workflows und Composite Actions, siehe [docs/CI-CD.md](docs/CI-CD.md) |
@@ -127,6 +129,8 @@ dotnet build FlowNRW.sln -c Release -p:TreatWarningsAsErrors=true
 dotnet test FlowNRW.Tests/FlowNRW.Tests.csproj -c Release --no-build --collect:"XPlat Code Coverage"
 ```
 
+293 Core-Tests bestehen, darunter `DepartureStatusTests` für die neue Statussemantik. Die Icon-/Font-Darstellung ist durch eine Windows-Screenshot-Matrix (hell/dunkel, 430×900 und 1024×768, 100 %/150 % Textskalierung) unter [docs/help/design/verification/icon-matrix/](docs/help/design/verification/icon-matrix/) belegt.
+
 Die historische [Verifikation der Verbindungssuche vom 16.09.2026](docs/help/verbindungssuche/verification/checks-2026-09-16.md) dokumentiert den damaligen Build-/Teststand und separate echte Bedienproben. Nachweise gelten jeweils für den dort genannten Stand; sie sind keine Abnahme späterer Funktionen. [UI-Harness ausführen](tests/WindowsJourneyUiTests/README.md). `UiTest` ist ein isolierter Fixture-Build; nur reguläre Releaseartefakte ausliefern. Die native iOS-Geräteprüfung bleibt beim Nutzer. Die bestehenden Release-Skripttests laufen mit `npm run test:release-version`.
 
 ## CI/CD
@@ -137,7 +141,7 @@ Die vorhandene GitHub-Actions-Konfiguration behält Windows-Build/Release sowie 
 
 - Native iOS-Ausführung anhand der Prüfliste durch den Nutzer; die Plattformbasis ist implementiert.
 - Hintergrundaktualisierung und Wiederaufnahme sind implementiert und lokal abgenommen; native iOS-Geräteprüfung steht noch aus.
-- Die abschließende Gestaltung und visuelle Abnahme anhand des gelieferten Entwurfs folgen verbindlich in Schritt 9. [Design-Abnahmekriterien](docs/design/acceptance.md).
+- Das moderne Design (Material-Symbols-Rounded-Icons, Inter/JetBrains Mono, Status-Chips) ist implementiert und per Screenshot-Matrix belegt; die subjektive AAA-Gesamtabnahme gegen die [Design-Abnahmekriterien](docs/design/acceptance.md) bleibt ein separater manueller Schritt.
 
 Weitere Verkehrsverbünde sowie spätere Sharing-/Push-Funktionen bleiben Erweiterungspunkte. Sie sind in der technischen Dokumentation beschrieben, aber nicht als aktuelle Produktfunktion implementiert.
 
@@ -148,3 +152,5 @@ Weitere Verkehrsverbünde sowie spätere Sharing-/Push-Funktionen bleiben Erweit
 ## Lizenz
 
 FlowNRW steht unter der [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) — siehe [LICENSE](LICENSE). Private, nichtkommerzielle Nutzung ist frei. Für kommerzielle Nutzung ist eine gesonderte Lizenzvereinbarung mit Martin Stromberg erforderlich.
+
+Die gebündelten Schrift-Assets stehen unter eigenen freien Lizenzen: Inter und JetBrains Mono unter der SIL Open Font License 1.1, Material Symbols Rounded unter der Apache License 2.0. Lizenztexte und das Codepoint-Manifest der Icon-Font liegen unter [docs/design/licenses/](docs/design/licenses/).

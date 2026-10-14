@@ -35,14 +35,53 @@ public static class DeparturePresentation
         return "#414755";
     }
 
+    /// <summary>Derives the display status of a departure from supplied realtime fields.</summary>
+    /// <param name="item">Provider departure.</param>
+    /// <returns>
+    /// <see cref="DepartureStatus.Cancelled"/> for reported cancellations, <see cref="DepartureStatus.Scheduled"/>
+    /// when no realtime time exists, <see cref="DepartureStatus.Delayed"/> when the actual time deviates
+    /// from the plan or a positive delay is reported, otherwise <see cref="DepartureStatus.OnTime"/>.
+    /// </returns>
+    public static DepartureStatus Status(StopEvent item)
+    {
+        var realtime = item.Realtime;
+        if (realtime.Cancelled == true) return DepartureStatus.Cancelled;
+        if (realtime.ActualTime is not { } actual) return DepartureStatus.Scheduled;
+        if (item.PlannedTime is { } planned && actual != planned) return DepartureStatus.Delayed;
+        if (realtime.Delay is { } delay && delay > TimeSpan.Zero) return DepartureStatus.Delayed;
+        return DepartureStatus.OnTime;
+    }
+
+    /// <summary>Derives the effective deviation: the actual/planned difference when both exist, else the reported delay.</summary>
+    /// <param name="item">Provider departure.</param>
+    /// <returns>The effective delay or <see langword="null"/> when realtime supplies neither.</returns>
+    private static TimeSpan? EffectiveDelay(StopEvent item)
+    {
+        var realtime = item.Realtime;
+        return realtime.ActualTime is { } actual && item.PlannedTime is { } planned
+            ? actual - planned : realtime.Delay;
+    }
+
+    /// <summary>Formats a positive delay as compact text; nothing is invented for other states.</summary>
+    /// <param name="item">Provider departure.</param>
+    /// <returns>„+n Min." when realtime reports a real positive delay, otherwise <see langword="null"/>.</returns>
+    public static string? DelayText(StopEvent item)
+    {
+        var realtime = item.Realtime;
+        if (realtime.Cancelled == true) return null;
+        var delay = EffectiveDelay(item);
+        return delay is { } value && value > TimeSpan.Zero
+            ? value.TotalMinutes.ToString("+0", CultureInfo.InvariantCulture) + " Min."
+            : null;
+    }
+
     /// <summary>Formats a departure including delay, cancellation and platform changes.</summary>
     /// <param name="item">Provider departure.</param>
     /// <returns>Multiline accessible departure text.</returns>
     public static string Describe(StopEvent item)
     {
         var realtime = item.Realtime;
-        var delay = realtime.ActualTime is { } actual && item.PlannedTime is { } planned
-            ? actual - planned : realtime.Delay;
+        var delay = EffectiveDelay(item);
         var delayText = delay is null ? "Verspätung unbekannt" : delay.Value == TimeSpan.Zero
             ? "Pünktlich gemeldet" : "Abweichung: " + delay.Value.TotalMinutes.ToString("+0;-0;0", CultureInfo.InvariantCulture) + " Min.";
         var cancellation = realtime.Cancelled switch

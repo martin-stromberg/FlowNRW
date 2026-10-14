@@ -168,6 +168,26 @@ public sealed class JourneyPresentationTests
         Assert.Contains("23:55", detail);
         Assert.Contains("Folgetag 00:40", detail);
     }
+
+    /// <summary>Clock readings use the Europe/Berlin wall time and a single fallback wording.</summary>
+    [Fact]
+    public void FormatsBerlinClockAndUnifiedFallback()
+    {
+        Assert.Equal("unbekannt", JourneyPresentation.Clock(null));
+        Assert.Equal("00:05", JourneyPresentation.Clock(DateTimeOffset.Parse("2026-09-15T22:05:00Z")));
+    }
+
+    /// <summary>Local instants convert into the Europe/Berlin zone for every offset.</summary>
+    [Fact]
+    public void ConvertsInstantsToBerlinLocalTime()
+    {
+        var winter = JourneyPresentation.LocalTime(DateTimeOffset.Parse("2026-01-15T12:00:00Z"));
+        Assert.Equal(13, winter.Hour);
+        Assert.Equal(TimeSpan.FromHours(1), winter.Offset);
+        var summer = JourneyPresentation.LocalTime(DateTimeOffset.Parse("2026-07-15T12:00:00Z"));
+        Assert.Equal(14, summer.Hour);
+        Assert.Equal(TimeSpan.FromHours(2), summer.Offset);
+    }
 }
 
 internal sealed class ControlledSearchService : IStopSearchService

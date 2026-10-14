@@ -59,8 +59,8 @@ public sealed class DeparturePage : ContentPage
         }, () => model.SelectedStop is not null && !favorites.IsSaving,
             _ => Title = "Favorit konnte nicht gespeichert werden");
         favoriteButton = new Button { AutomationId = "ToggleFavorite", Command = toggleFavorite, LineBreakMode = LineBreakMode.TailTruncation };
-        var refresh = TransitVisuals.SecondaryAction("↻", "Abfahrten aktualisieren", "RefreshDepartures", model.RefreshCommand);
-        var settingsButton = TransitVisuals.SecondaryAction("⚙", "Aktualisierung einstellen", "OpenRefreshSettings",
+        var refresh = TransitVisuals.SecondaryAction(TransitIcons.Refresh, "Abfahrten aktualisieren", "RefreshDepartures", model.RefreshCommand);
+        var settingsButton = TransitVisuals.SecondaryAction(TransitIcons.Settings, "Aktualisierung einstellen", "OpenRefreshSettings",
             new AsyncRelayCommand(() => Shell.Current.GoToAsync("refresh-settings"), () => true,
                 _ => Title = "Einstellungen konnten nicht geöffnet werden"));
         var actions = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
@@ -199,7 +199,8 @@ public sealed class DeparturePage : ContentPage
     private void RefreshFavorite()
     {
         var saved = model.SelectedStop is { } stop && favorites.IsFavorite(stop);
-        favoriteButton.Text = saved ? "★ Entfernen" : "☆ Speichern";
+        favoriteButton.ImageSource = TransitIcons.IconImage(saved ? TransitIcons.Star : TransitIcons.StarOutline, filled: saved);
+        favoriteButton.Text = saved ? "Entfernen" : "Speichern";
         SemanticProperties.SetDescription(favoriteButton, saved ? "Favorit entfernen" : "Als Favorit speichern");
         toggleFavorite.Refresh();
     }

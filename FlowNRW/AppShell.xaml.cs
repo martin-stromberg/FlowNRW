@@ -15,9 +15,9 @@ public partial class AppShell : Shell
     {
         InitializeComponent();
         var tabs = new TabBar { Route = "main" };
-        tabs.Items.Add(new Tab { Title = "Abfahrten", Route = "departures-tab", Items = { new ShellContent { Title = "Abfahrten", Route = "home", Content = home } } });
-        tabs.Items.Add(new Tab { Title = "Verbindungen", Route = "connections-tab", Items = { new ShellContent { Title = "Verbindungen", Route = "search", Content = search } } });
-        tabs.Items.Add(new Tab { Title = "Haltestellen", Route = "stations-tab", Items = { new ShellContent { Title = "Haltestellen", Route = "stops", Content = stops } } });
+        tabs.Items.Add(new Tab { Title = "Abfahrten", Route = "departures-tab", Icon = TransitIcons.TabIcon(TransitIcons.DepartureBoard), Items = { new ShellContent { Title = "Abfahrten", Route = "home", Content = home } } });
+        tabs.Items.Add(new Tab { Title = "Verbindungen", Route = "connections-tab", Icon = TransitIcons.TabIcon(TransitIcons.Route), Items = { new ShellContent { Title = "Verbindungen", Route = "search", Content = search } } });
+        tabs.Items.Add(new Tab { Title = "Haltestellen", Route = "stations-tab", Icon = TransitIcons.TabIcon(TransitIcons.LocationOn), Items = { new ShellContent { Title = "Haltestellen", Route = "stops", Content = stops } } });
         Items.Add(tabs);
         Routing.RegisterRoute("results", typeof(ResultsPage));
         Routing.RegisterRoute("detail", typeof(JourneyDetailPage));

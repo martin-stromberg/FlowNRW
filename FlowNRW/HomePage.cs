@@ -10,8 +10,8 @@ namespace FlowNRW;
 public sealed class HomePage : ContentPage
 {
     private readonly FavoriteHomeViewModel model;
-    private readonly VerticalStackLayout cards = new() { Spacing = 16 };
-    private readonly VerticalStackLayout nearbyCards = new() { Spacing = 8 };
+    private readonly VerticalStackLayout cards = new() { Spacing = 12 };
+    private readonly VerticalStackLayout nearbyCards = new() { Spacing = 12 };
     private readonly List<Action> unsubscribe = [];
     private readonly List<AsyncRelayCommand> actions = [];
     private readonly StopMonitorViewModel monitor;
@@ -47,10 +47,10 @@ public sealed class HomePage : ContentPage
         var showMap = new AsyncRelayCommand(async () => { map.ShowFavorites(model); await Shell.Current.GoToAsync("map"); },
             () => model.Cards.Count > 0, _ => Title = "Karte konnte nicht geöffnet werden");
         var shortcuts = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
-        shortcuts.Add(TransitVisuals.SecondaryAction("＋", "Haltestelle hinzufügen", "OpenHomeStops", Navigate("//main/stations-tab/stops")), 0);
-        shortcuts.Add(TransitVisuals.SecondaryAction("⌖", "Favoriten auf Karte zeigen", "HomeMap", showMap), 1);
-        shortcuts.Add(TransitVisuals.SecondaryAction("↻", "Entfernungen aktualisieren", "SortFavorites", model.LocationCommand), 2);
-        shortcuts.Add(TransitVisuals.SecondaryAction("⚙", "Aktualisierung einstellen", "OpenRefreshSettings", Navigate("refresh-settings")), 3);
+        shortcuts.Add(TransitVisuals.SecondaryAction(TransitIcons.Add, "Haltestelle hinzufügen", "OpenHomeStops", Navigate("//main/stations-tab/stops")), 0);
+        shortcuts.Add(TransitVisuals.SecondaryAction(TransitIcons.Map, "Favoriten auf Karte zeigen", "HomeMap", showMap), 1);
+        shortcuts.Add(TransitVisuals.SecondaryAction(TransitIcons.Refresh, "Entfernungen aktualisieren", "SortFavorites", model.LocationCommand), 2);
+        shortcuts.Add(TransitVisuals.SecondaryAction(TransitIcons.Settings, "Aktualisierung einstellen", "OpenRefreshSettings", Navigate("refresh-settings")), 3);
         layout.Children.Add(shortcuts);
         var status = new Label { AutomationId = "HomeStatus" };
         status.SetBinding(Label.TextProperty, nameof(model.Status));
@@ -199,95 +199,125 @@ public sealed class HomePage : ContentPage
         foreach (var detach in unsubscribe) detach();
         unsubscribe.Clear(); actions.Clear(); cards.Children.Clear();
         for (var index = 0; index < model.Cards.Count; index++)
+            cards.Children.Add(BuildFavoriteCard(model.Cards[index], index));
+    }
+
+    private Border BuildFavoriteCard(FavoriteMonitorViewModel card, int index)
+    {
+        var layout = new VerticalStackLayout { Spacing = 8, BindingContext = card };
+        layout.Children.Add(BuildCardHeader(card, index));
+        AddLabel(layout, "FavoriteDistance" + index, nameof(card.DistanceLabel));
+        var status = new Label { AutomationId = "FavoriteStatus" + index };
+        status.SetBinding(Label.TextProperty, nameof(card.Status));
+        status.IsVisible = ShowsFavoriteStatus(card) && !card.IsBusy;
+        layout.Children.Add(status);
+        var summary = new HorizontalStackLayout { Spacing = 8, AutomationId = "FavoriteLines" + index };
+        var summaryContainer = new ScrollView { Orientation = ScrollOrientation.Horizontal, Content = summary };
+        layout.Children.Add(summaryContainer);
+        var departures = new VerticalStackLayout { Spacing = 8 };
+        layout.Children.Add(departures);
+        RenderFavoriteSummary(card, summary);
+        RenderFavoriteDepartures(card, index, departures);
+        departures.IsVisible = card.IsExpanded;
+        summaryContainer.IsVisible = !card.IsExpanded;
+        SubscribeCardChanges(card, index, new(status, summary, summaryContainer, departures));
+        layout.Children.Add(BuildCardActions(card, index));
+        TransitVisuals.ApplyRoles(layout);
+        return new Border { Padding = 16, Content = layout };
+    }
+
+    private static Grid BuildCardHeader(FavoriteMonitorViewModel card, int index)
+    {
+        var header = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 8 };
+        header.Add(TransitVisuals.Text(card.Title, 22, true, "FavoriteName" + index), 0);
+        var busy = new ActivityIndicator { AutomationId = "FavoriteBusy" + index, VerticalOptions = LayoutOptions.Center };
+        busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(card.IsBusy));
+        busy.SetBinding(IsVisibleProperty, nameof(card.IsBusy));
+        SemanticProperties.SetDescription(busy, "Abfahrten werden aktualisiert");
+        header.Add(busy, 1);
+        return header;
+    }
+
+    private static void RenderFavoriteSummary(FavoriteMonitorViewModel card, HorizontalStackLayout summary)
+    {
+        summary.Children.Clear();
+        var descriptions = new List<string>();
+        foreach (var line in card.Lines)
         {
-            var card = model.Cards[index];
-            var cardIndex = index;
-            var layout = new VerticalStackLayout { Spacing = 8, BindingContext = card };
-            var header = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 8 };
-            var title = TransitVisuals.Text(card.Title, 22, true, "FavoriteName" + index);
-            header.Add(title, 0);
-            var busy = new ActivityIndicator { AutomationId = "FavoriteBusy" + index, VerticalOptions = LayoutOptions.Center };
-            busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(card.IsBusy));
-            busy.SetBinding(IsVisibleProperty, nameof(card.IsBusy));
-            SemanticProperties.SetDescription(busy, "Abfahrten werden aktualisiert");
-            header.Add(busy, 1);
-            layout.Children.Add(header);
-            AddLabel(layout, "FavoriteDistance" + index, nameof(card.DistanceLabel));
-            var status = new Label { AutomationId = "FavoriteStatus" + index };
-            status.SetBinding(Label.TextProperty, nameof(card.Status));
-            status.IsVisible = ShowsFavoriteStatus(card) && !card.IsBusy;
-            layout.Children.Add(status);
-            var summary = new HorizontalStackLayout { Spacing = 8, AutomationId = "FavoriteLines" + index };
-            var summaryContainer = new ScrollView { Orientation = ScrollOrientation.Horizontal, Content = summary };
-            void RenderSummary()
-            {
-                summary.Children.Clear();
-                var descriptions = new List<string>();
-                foreach (var line in card.Lines)
-                {
-                    var matching = card.Items.Where(item => (item.Line?.Name ?? item.Identity.Line) == line).ToArray();
-                    var next = matching
-                        .Select(item => item.Realtime.ActualTime ?? item.PlannedTime)
-                        .Where(time => time is not null && time >= DateTimeOffset.Now).OrderBy(time => time).FirstOrDefault();
-                    var text = next is { } time ? line + "  " + TimeZoneInfo.ConvertTime(time, TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin")).ToString("HH:mm") : line;
-                    summary.Children.Add(TransitVisuals.Badge(text, matching.FirstOrDefault()?.Line?.Mode));
-                    descriptions.Add(text);
-                }
-                SemanticProperties.SetDescription(summary, string.Join(" · ", descriptions));
-            }
-            layout.Children.Add(summaryContainer);
-            var departures = new VerticalStackLayout { Spacing = 8 };
-            void RenderDepartures()
-            {
-                departures.Children.Clear();
-                for (var item = 0; item < Math.Min(card.Items.Count, 5); item++)
-                    departures.Children.Add(new DepartureCardView(card.Items[item], $"FavoriteDeparture{cardIndex}_{item}", compact: true));
-            }
-            PropertyChangedEventHandler changed = (_, args) =>
-            {
-                if (args.PropertyName is nameof(card.Items) or nameof(card.Lines)) { RenderDepartures(); RenderSummary(); }
-                if (args.PropertyName is nameof(card.Status) or nameof(card.IsBusy) or nameof(card.Result) or nameof(card.IsExpanded))
-                {
-                    status.IsVisible = ShowsFavoriteStatus(card) && !card.IsBusy;
-                    departures.IsVisible = card.IsExpanded;
-                    summaryContainer.IsVisible = !card.IsExpanded;
-                }
-            };
-            card.PropertyChanged += changed;
-            unsubscribe.Add(() => card.PropertyChanged -= changed);
-            RenderSummary(); RenderDepartures(); departures.IsVisible = card.IsExpanded; summaryContainer.IsVisible = !card.IsExpanded; layout.Children.Add(departures);
-            var actions = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
-            var expand = new Button { Text = card.IsExpanded ? "⌃" : "⌄", AutomationId = "ToggleFavorite" + index, HeightRequest = 48, WidthRequest = 48 };
-            SemanticProperties.SetDescription(expand, card.IsExpanded ? "Abfahrten einklappen" : "Abfahrten aufklappen");
-            expand.Command = new AsyncRelayCommand(() => { card.ToggleExpanded(); expand.Text = card.IsExpanded ? "⌃" : "⌄"; SemanticProperties.SetDescription(expand, card.IsExpanded ? "Abfahrten einklappen" : "Abfahrten aufklappen"); return Task.CompletedTask; }, () => true, _ => Title = "Abfahrten konnten nicht ein- oder ausgeklappt werden");
-            actions.Add(expand, 0);
-            unsubscribe.Add(() => expand.Command = null);
-            var refreshButton = new Button { Text = "↻", AutomationId = "RefreshFavorite" + index, Command = card.RefreshCommand, HeightRequest = 48, WidthRequest = 48 };
-            SemanticProperties.SetDescription(refreshButton, "Abfahrten aktualisieren");
-            actions.Add(refreshButton, 1);
-            unsubscribe.Add(() => refreshButton.Command = null);
-            var open = new AsyncRelayCommand(() => monitor.OpenFavoriteAsync(model, card), () => model.Contains(card),
-                _ => Title = "Monitor konnte nicht geöffnet werden");
-            var remove = new AsyncRelayCommand(() => model.RemoveAsync(card), () => !model.IsSaving && model.Contains(card),
-                _ => Title = "Favorit konnte nicht entfernt werden");
-            // Cards render while a removal still runs (IsSaving true); without
-            // this re-evaluation the fresh remove button stays disabled forever.
-            PropertyChangedEventHandler savingChanged = (_, args) =>
-            { if (args.PropertyName == nameof(model.IsSaving)) remove.InvalidateExecution(); };
-            model.PropertyChanged += savingChanged;
-            unsubscribe.Add(() => model.PropertyChanged -= savingChanged);
-            var openButton = new Button { Text = "▣", AutomationId = "OpenFavorite" + index, Command = open, HeightRequest = 48, WidthRequest = 48 };
-            SemanticProperties.SetDescription(openButton, "Abfahrtsmonitor öffnen");
-            actions.Add(openButton, 2);
-            unsubscribe.Add(() => openButton.Command = null);
-            var removeButton = new Button { Text = "☆", AutomationId = "RemoveFavorite" + index, Command = remove, HeightRequest = 48, WidthRequest = 48 };
-            SemanticProperties.SetDescription(removeButton, "Favorit entfernen");
-            actions.Add(removeButton, 3);
-            layout.Children.Add(actions);
-            unsubscribe.Add(() => removeButton.Command = null);
-            cards.Children.Add(new Border { Padding = 16, Content = layout });
-            TransitVisuals.ApplyRoles(layout);
+            var matching = card.Items.Where(item => (item.Line?.Name ?? item.Identity.Line) == line).ToArray();
+            var next = matching
+                .Select(item => item.Realtime.ActualTime ?? item.PlannedTime)
+                .Where(time => time is not null && time >= DateTimeOffset.Now).OrderBy(time => time).FirstOrDefault();
+            var text = next is { } time ? line + "  " + JourneyPresentation.Clock(time) : line;
+            summary.Children.Add(TransitVisuals.Badge(text, matching.FirstOrDefault()?.Line?.Mode));
+            descriptions.Add(text);
         }
+        SemanticProperties.SetDescription(summary, string.Join(" · ", descriptions));
+    }
+
+    private static void RenderFavoriteDepartures(FavoriteMonitorViewModel card, int index, VerticalStackLayout departures)
+    {
+        departures.Children.Clear();
+        for (var item = 0; item < Math.Min(card.Items.Count, 5); item++)
+            departures.Children.Add(new DepartureCardView(card.Items[item], $"FavoriteDeparture{index}_{item}", compact: true));
+    }
+
+    /// <summary>The views of one favorite card that react to card property changes.</summary>
+    /// <param name="Status">Status label of the card.</param>
+    /// <param name="Summary">Summary strip of the card.</param>
+    /// <param name="SummaryContainer">Scroll container hosting the summary strip.</param>
+    /// <param name="Departures">Departure list of the card.</param>
+    /// <returns>A bundle of the card's reactive views.</returns>
+    private sealed record FavoriteCardViews(Label Status, HorizontalStackLayout Summary,
+        ScrollView SummaryContainer, VerticalStackLayout Departures);
+
+    private void SubscribeCardChanges(FavoriteMonitorViewModel card, int index, FavoriteCardViews views)
+    {
+        PropertyChangedEventHandler changed = (_, args) =>
+        {
+            if (args.PropertyName is nameof(card.Items) or nameof(card.Lines)) { RenderFavoriteDepartures(card, index, views.Departures); RenderFavoriteSummary(card, views.Summary); }
+            if (args.PropertyName is nameof(card.Status) or nameof(card.IsBusy) or nameof(card.Result) or nameof(card.IsExpanded))
+            {
+                views.Status.IsVisible = ShowsFavoriteStatus(card) && !card.IsBusy;
+                views.Departures.IsVisible = card.IsExpanded;
+                views.SummaryContainer.IsVisible = !card.IsExpanded;
+            }
+        };
+        card.PropertyChanged += changed;
+        unsubscribe.Add(() => card.PropertyChanged -= changed);
+    }
+
+    private Grid BuildCardActions(FavoriteMonitorViewModel card, int index)
+    {
+        var actionGrid = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
+        var expand = new Button { AutomationId = "ToggleFavorite" + index, HeightRequest = 48, WidthRequest = 48 };
+        TransitIcons.SetIcon(expand, card.IsExpanded ? TransitIcons.ExpandLess : TransitIcons.ExpandMore, card.IsExpanded ? "Abfahrten einklappen" : "Abfahrten aufklappen");
+        expand.Command = new AsyncRelayCommand(() => { card.ToggleExpanded(); TransitIcons.SetIcon(expand, card.IsExpanded ? TransitIcons.ExpandLess : TransitIcons.ExpandMore, card.IsExpanded ? "Abfahrten einklappen" : "Abfahrten aufklappen"); return Task.CompletedTask; }, () => true, _ => Title = "Abfahrten konnten nicht ein- oder ausgeklappt werden");
+        actionGrid.Add(expand, 0);
+        unsubscribe.Add(() => expand.Command = null);
+        var refreshButton = new Button { AutomationId = "RefreshFavorite" + index, Command = card.RefreshCommand, HeightRequest = 48, WidthRequest = 48 };
+        TransitIcons.SetIcon(refreshButton, TransitIcons.Refresh, "Abfahrten aktualisieren");
+        actionGrid.Add(refreshButton, 1);
+        unsubscribe.Add(() => refreshButton.Command = null);
+        var open = new AsyncRelayCommand(() => monitor.OpenFavoriteAsync(model, card), () => model.Contains(card),
+            _ => Title = "Monitor konnte nicht geöffnet werden");
+        var remove = new AsyncRelayCommand(() => model.RemoveAsync(card), () => !model.IsSaving && model.Contains(card),
+            _ => Title = "Favorit konnte nicht entfernt werden");
+        // Cards render while a removal still runs (IsSaving true); without
+        // this re-evaluation the fresh remove button stays disabled forever.
+        PropertyChangedEventHandler savingChanged = (_, args) =>
+        { if (args.PropertyName == nameof(model.IsSaving)) remove.InvalidateExecution(); };
+        model.PropertyChanged += savingChanged;
+        unsubscribe.Add(() => model.PropertyChanged -= savingChanged);
+        var openButton = new Button { AutomationId = "OpenFavorite" + index, Command = open, HeightRequest = 48, WidthRequest = 48 };
+        TransitIcons.SetIcon(openButton, TransitIcons.DepartureBoard, "Abfahrtsmonitor öffnen");
+        actionGrid.Add(openButton, 2);
+        unsubscribe.Add(() => openButton.Command = null);
+        var removeButton = new Button { AutomationId = "RemoveFavorite" + index, Command = remove, HeightRequest = 48, WidthRequest = 48 };
+        TransitIcons.SetIcon(removeButton, TransitIcons.StarOutline, "Favorit entfernen");
+        actionGrid.Add(removeButton, 3);
+        unsubscribe.Add(() => removeButton.Command = null);
+        return actionGrid;
     }
 
     private void RenderNearby()
@@ -304,7 +334,7 @@ public sealed class HomePage : ContentPage
         }
     }
 
-    private static void AddLabel(VerticalStackLayout layout, string id, string property, double size = 14)
+    private static void AddLabel(VerticalStackLayout layout, string id, string property, double size = 13)
     {
         var label = new Label { AutomationId = id, FontSize = size };
         label.SetBinding(Label.TextProperty, property); layout.Children.Add(label);

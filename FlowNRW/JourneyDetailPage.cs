@@ -32,7 +32,7 @@ public sealed class JourneyDetailPage : ContentPage
             if (model.Session.SelectedJourney is { } journey)
             { map.ShowJourney(journey, model.Session.Metadata); await Shell.Current.GoToAsync("map"); }
         }, () => model.Session.SelectedJourney is not null, _ => Title = "Karte konnte nicht geöffnet werden");
-        var mapButton = TransitVisuals.SecondaryAction("⌖", "Verlauf auf Karte öffnen", "ShowJourneyMap", showMap);
+        var mapButton = TransitVisuals.SecondaryAction(TransitIcons.Route, "Verlauf auf Karte öffnen", "ShowJourneyMap", showMap);
         layout.Children.Add(mapButton);
         var status = new Label { AutomationId = "DetailStatus", BindingContext = model.Session };
         status.SetBinding(Label.TextProperty, nameof(model.Session.Status));
@@ -108,7 +108,7 @@ public sealed class JourneyDetailPage : ContentPage
         }
         var index = 0;
         foreach (var section in model.Details.Split("\n\n", StringSplitOptions.RemoveEmptyEntries))
-            sections.Children.Add(new Border { Padding = 16, Content = new Label { Text = section, FontSize = 18, AutomationId = "JourneyDetailSection" + index++ } });
+            sections.Children.Add(new Border { Padding = 16, Content = new Label { Text = section, FontSize = 17, AutomationId = "JourneyDetailSection" + index++ } });
         showMap.Refresh();
     }
 }

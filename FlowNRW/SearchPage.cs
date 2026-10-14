@@ -25,7 +25,7 @@ public sealed class SearchPage : ContentPage
         this.favorites = favorites;
         this.connectionFavorites = connectionFavorites;
         this.model = model; BindingContext = model; Title = "Verbindung suchen";
-        var content = new VerticalStackLayout { Padding = 16, Spacing = 16 };
+        var content = new VerticalStackLayout { Padding = 16, Spacing = 12 };
         content.Children.Add(TransitVisuals.Text("Verbindungen", 32, true));
         content.Children.Add(TransitVisuals.Secondary("Plane deine Fahrt mit Start, Ziel und Abfahrtszeit."));
 #if UI_TEST_FIXTURES
@@ -42,15 +42,15 @@ public sealed class SearchPage : ContentPage
             content.Children.Insert(0, scenario);
         };
 #endif
-        var searchForm = new VerticalStackLayout { Spacing = 12, Padding = 16 };
+        var searchForm = new VerticalStackLayout { Spacing = 12, Padding = 12 };
         searchForm.Children.Add(TransitVisuals.Text("Wohin möchtest du fahren?", 20, true));
         searchForm.Children.Add(Endpoint(model.Origin, "Origin", "Start"));
-        var swap = TransitVisuals.SecondaryAction("⇄", "Start und Ziel vertauschen", "SwapEndpoints",
+        var swap = TransitVisuals.SecondaryAction(TransitIcons.SwapVert, "Start und Ziel vertauschen", "SwapEndpoints",
             new AsyncRelayCommand(() => { model.SwapEndpoints(); return Task.CompletedTask; }, () => true,
                 _ => Title = "Start und Ziel konnten nicht vertauscht werden"));
         searchForm.Children.Add(swap);
         searchForm.Children.Add(Endpoint(model.Destination, "Destination", "Ziel"));
-        var timeLayout = new VerticalStackLayout { Spacing = 8, Padding = new Thickness(4, 8) };
+        var timeLayout = new VerticalStackLayout { Spacing = 8, Padding = new Thickness(4, 4) };
         timeLayout.Children.Add(TransitVisuals.Text("Zeitpunkt", 17, true));
         var timeMode = new Picker { AutomationId = "RoutingTimeMode", Title = "Zeitpunkt", ItemsSource = new[] { "Jetzt", "Andere Zeit" }, SelectedIndex = 0 };
         timeMode.SelectedIndexChanged += (_, _) => model.UseCurrentTime = timeMode.SelectedIndex == 0;
@@ -112,10 +112,10 @@ public sealed class SearchPage : ContentPage
         var toggle = new Switch { AutomationId = prefix + "CoordinateMode" }; toggle.SetBinding(Switch.IsToggledProperty, nameof(endpoint.IsCoordinateMode));
         SemanticProperties.SetDescription(toggle, title + ": Koordinatenmodus");
         var text = new Entry { Placeholder = title + ": Adresse oder Haltestelle", AutomationId = prefix + "Text" }; text.SetBinding(Entry.TextProperty, nameof(endpoint.Text)); text.SetBinding(IsVisibleProperty, nameof(endpoint.IsTextMode));
-        var lookup = new Button { Text = "⌕", AutomationId = prefix + "Search", Command = endpoint.SearchCommand, HeightRequest = 48, WidthRequest = 48 };
-        SemanticProperties.SetDescription(lookup, title + " suchen");
-        var locationButton = new Button { Text = "⌖", AutomationId = prefix + "Location", Command = endpoint.LocationCommand, HeightRequest = 48, WidthRequest = 48 };
-        SemanticProperties.SetDescription(locationButton, title + " Mein Standort");
+        var lookup = new Button { AutomationId = prefix + "Search", Command = endpoint.SearchCommand, HeightRequest = 48, WidthRequest = 48 };
+        TransitIcons.SetIcon(lookup, TransitIcons.Search, title + " suchen");
+        var locationButton = new Button { AutomationId = prefix + "Location", Command = endpoint.LocationCommand, HeightRequest = 48, WidthRequest = 48 };
+        TransitIcons.SetIcon(locationButton, TransitIcons.MyLocation, title + " Mein Standort");
         var inputRow = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto), new(GridLength.Auto)], ColumnSpacing = 8 };
         inputRow.Add(text, 0); inputRow.Add(lookup, 1); inputRow.Add(locationButton, 2); layout.Children.Add(inputRow);
         SemanticProperties.SetDescription(text, title + ": Adresse oder Haltestelle");
@@ -126,11 +126,11 @@ public sealed class SearchPage : ContentPage
         var longitude = new Entry { Placeholder = "z. B. 7,0116", AutomationId = prefix + "Longitude", Keyboard = Keyboard.Numeric }; longitude.SetBinding(Entry.TextProperty, nameof(endpoint.Longitude)); coordinates.Children.Add(longitude); layout.Children.Add(coordinates);
         var coordinateMode = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 12 };
         coordinateMode.Add(TransitVisuals.Text("Koordinaten eingeben", 15), 0); coordinateMode.Add(toggle, 1); layout.Children.Add(coordinateMode);
-        endpoint.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(endpoint.IsCoordinateMode)) { lookup.Text = endpoint.IsCoordinateMode ? "✓" : "⌕"; SemanticProperties.SetDescription(lookup, endpoint.IsCoordinateMode ? title + " Koordinaten übernehmen" : title + " suchen"); } };
+        endpoint.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(endpoint.IsCoordinateMode)) TransitIcons.SetIcon(lookup, endpoint.IsCoordinateMode ? TransitIcons.Check : TransitIcons.Search, endpoint.IsCoordinateMode ? title + " Koordinaten übernehmen" : title + " suchen"); };
         var locationStatus = new Label { AutomationId = prefix + "LocationStatus" }; locationStatus.SetBinding(Label.TextProperty, nameof(endpoint.LocationStatus)); layout.Children.Add(locationStatus);
         var busy = new ActivityIndicator { AutomationId = prefix + "Busy" }; busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(endpoint.IsBusy)); busy.SetBinding(IsVisibleProperty, nameof(endpoint.IsBusy)); layout.Children.Add(busy);
         var status = new Label { AutomationId = prefix + "Status" }; status.SetBinding(Label.TextProperty, nameof(endpoint.Status)); layout.Children.Add(status);
-        var matches = new VerticalStackLayout { Spacing = 8, AutomationId = prefix + "Matches", IsVisible = endpoint.Matches.Count > 0 }; layout.Children.Add(matches);
+        var matches = new VerticalStackLayout { Spacing = 12, AutomationId = prefix + "Matches", IsVisible = endpoint.Matches.Count > 0 }; layout.Children.Add(matches);
         endpoint.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName != nameof(endpoint.Matches)) return;
@@ -175,6 +175,6 @@ public sealed class SearchPage : ContentPage
             if (args.PropertyName == nameof(endpoint.Selection)) selection.IsVisible = true;
             if (args.PropertyName == nameof(endpoint.Metadata)) metadata.IsVisible = !string.IsNullOrWhiteSpace(endpoint.Metadata);
         };
-        return new Border { Padding = 12, Content = layout };
+        return new Border { Padding = 8, Content = layout };
     }
 }

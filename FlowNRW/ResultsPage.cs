@@ -32,11 +32,11 @@ public sealed class ResultsPage : ContentPage
         var connection = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 8 };
         connectionHeader = TransitVisuals.Text("", 20, true, "ConnectionHeader");
         connection.Add(connectionHeader, 0);
-        favoriteConnection = TransitVisuals.SecondaryAction("☆", "Verbindung speichern", "ToggleConnectionFavorite",
+        favoriteConnection = TransitVisuals.SecondaryAction(TransitIcons.StarOutline, "Verbindung speichern", "ToggleConnectionFavorite",
             new AsyncRelayCommand(ToggleConnectionAsync, () => CanToggleConnection(), _ => Title = "Verbindung konnte nicht gespeichert werden"));
         connection.Add(favoriteConnection, 1);
         layout.Children.Add(connection);
-        var status = new Label { FontSize = 24, AutomationId = "ResultsStatus" }; status.SetBinding(Label.TextProperty, nameof(model.Session.Status)); layout.Children.Add(status);
+        var status = new Label { FontSize = 15, AutomationId = "ResultsStatus" }; status.SetBinding(Label.TextProperty, nameof(model.Session.Status)); layout.Children.Add(status);
         var metadata = new Label { AutomationId = "ResultsMetadata" }; metadata.SetBinding(Label.TextProperty, nameof(model.Session.Metadata));
         layout.Children.Add(journeys); layout.Children.Add(metadata); Content = TransitVisuals.Page(layout);
 #if UI_TEST_FIXTURES
@@ -121,8 +121,9 @@ public sealed class ResultsPage : ContentPage
         var destination = model.Session.Destination.SelectedAddress;
         connectionHeader.Text = origin is null || destination is null ? "" : origin.Name + " → " + destination.Name;
         favoriteConnection.IsVisible = CanToggleConnection();
-        favoriteConnection.Text = connectionFavorites.Contains(origin, destination) ? "★" : "☆";
-        SemanticProperties.SetDescription(favoriteConnection, connectionFavorites.Contains(origin, destination) ? "Gespeicherte Verbindung entfernen" : "Verbindung speichern");
+        var saved = connectionFavorites.Contains(origin, destination);
+        TransitIcons.SetIcon(favoriteConnection, saved ? TransitIcons.Star : TransitIcons.StarOutline,
+            saved ? "Gespeicherte Verbindung entfernen" : "Verbindung speichern", filled: saved);
         ((AsyncRelayCommand)favoriteConnection.Command!).Refresh();
     }
 }

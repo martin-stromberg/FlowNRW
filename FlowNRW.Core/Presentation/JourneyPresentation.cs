@@ -6,10 +6,25 @@ namespace FlowNRW.Core.Presentation;
 /// <summary>Shared textual rendering preserving unknown realtime values.</summary>
 public static class JourneyPresentation
 {
+    private static readonly TimeZoneInfo Berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
+
+    /// <summary>Converts an instant into the Europe/Berlin display zone.</summary>
+    /// <param name="time">Supplied instant.</param>
+    /// <returns>The same instant expressed in Europe/Berlin local time.</returns>
+    public static DateTimeOffset LocalTime(DateTimeOffset time)
+    {
+        return TimeZoneInfo.ConvertTime(time, Berlin);
+    }
+
+    /// <summary>Formats an instant as a local wall-clock reading.</summary>
+    /// <param name="time">Supplied instant.</param>
+    /// <returns><c>HH:mm</c> in Europe/Berlin, or „unbekannt" when no instant was supplied.</returns>
+    public static string Clock(DateTimeOffset? time) => time is { } instant ? LocalTime(instant).ToString("HH:mm", CultureInfo.InvariantCulture) : "unbekannt";
+
     /// <summary>Formats an instant with its date and offset.</summary>
     /// <param name="time">Supplied instant.</param>
     /// <returns>Explicit local date and offset.</returns>
-    public static string Time(DateTimeOffset? time) => time is { } instant ? TimeZoneInfo.ConvertTime(instant, TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin")).ToString("dd.MM.yyyy HH:mm 'UTC'zzz", CultureInfo.InvariantCulture) : "unbekannt";
+    public static string Time(DateTimeOffset? time) => time is { } instant ? LocalTime(instant).ToString("dd.MM.yyyy HH:mm 'UTC'zzz", CultureInfo.InvariantCulture) : "unbekannt";
     /// <summary>Formats an instant as a clock reading relative to the journey day.</summary>
     /// <param name="time">Supplied instant.</param>
     /// <param name="reference">Reference instant of the searched or first planned departure.</param>
@@ -17,10 +32,9 @@ public static class JourneyPresentation
     public static string EventTime(DateTimeOffset? time, DateTimeOffset? reference)
     {
         if (time is not { } instant) return "unbekannt";
-        var zone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
-        var local = TimeZoneInfo.ConvertTime(instant, zone);
+        var local = LocalTime(instant);
         var clock = local.ToString("HH:mm", CultureInfo.InvariantCulture);
-        var days = (int)(local.Date - (reference is { } day ? TimeZoneInfo.ConvertTime(day, zone).Date : local.Date)).TotalDays;
+        var days = (int)(local.Date - (reference is { } day ? LocalTime(day).Date : local.Date)).TotalDays;
         return days switch { 0 => clock, -1 => "Vortag " + clock, 1 => "Folgetag " + clock, _ => local.ToString("dd.MM.", CultureInfo.InvariantCulture) + " " + clock };
     }
     /// <summary>Formats endpoint identity.</summary>

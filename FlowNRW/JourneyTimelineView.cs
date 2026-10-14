@@ -18,7 +18,7 @@ public sealed class JourneyTimelineView : VerticalStackLayout
         var last = journey.Legs.LastOrDefault()?.Arrival.PlannedTime;
         var summaryCard = new VerticalStackLayout { Spacing = 6 };
         summaryCard.Children.Add(summary);
-        summaryCard.Children.Add(TransitVisuals.Text(JourneyCardView.Clock(first) + " → " + JourneyCardView.Clock(last), 28, true));
+        summaryCard.Children.Add(TransitVisuals.Text(JourneyPresentation.Clock(first) + " → " + JourneyPresentation.Clock(last), 28, true));
         var duration = first is { } start && last is { } end && end >= start ? (end - start).TotalMinutes.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " Min. · " : "Dauer unbekannt · ";
         summaryCard.Children.Add(TransitVisuals.Secondary(duration + journey.Transfers.Count + (journey.Transfers.Count == 1 ? " Umstieg" : " Umstiege")));
         Children.Add(new Border { Padding = 16, Content = summaryCard });
@@ -65,15 +65,10 @@ public sealed class JourneyTimelineView : VerticalStackLayout
         var actual = item.Realtime.ActualTime ?? item.PlannedTime;
         time.Children.Add(TransitVisuals.Text(JourneyPresentation.EventTime(actual, reference), 15, true));
         if (item.Realtime.ActualTime is { } actualTime && item.PlannedTime is { } planned && actualTime != planned)
-        {
-            var scheduled = TransitVisuals.Secondary(JourneyPresentation.EventTime(planned, reference));
-            scheduled.FontSize = 12;
-            scheduled.TextDecorations = TextDecorations.Strikethrough;
-            time.Children.Add(scheduled);
-        }
+            time.Children.Add(TransitVisuals.StrikethroughTime(JourneyPresentation.EventTime(planned, reference)));
         times.Add(time, 1);
         stack.Children.Add(times);
-        if (item.Realtime.Cancelled == true) stack.Children.Add(TransitVisuals.Text("Fahrt fällt aus", 15, true));
+        if (item.Realtime.Cancelled == true) stack.Children.Add(TransitVisuals.StatusChip(TransitIcons.Cancel, "Fahrt fällt aus", TransitVisuals.Error, TransitVisuals.ErrorDark));
         if (!string.IsNullOrWhiteSpace(item.Realtime.Platform))
         {
             var platform = "Bahnsteig: " + item.Realtime.Platform;

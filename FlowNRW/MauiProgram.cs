@@ -27,8 +27,12 @@ public static class MauiProgram
             .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
             {
-                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                fonts.AddFont("Inter-Regular.ttf", Fonts.Inter);
+                fonts.AddFont("Inter-SemiBold.ttf", Fonts.InterSemiBold);
+                fonts.AddFont("Inter-Bold.ttf", Fonts.InterBold);
+                fonts.AddFont("JetBrainsMono-Bold.ttf", Fonts.JetBrainsMono);
+                fonts.AddFont("MaterialSymbolsRounded.ttf", "MaterialSymbols");
+                fonts.AddFont("MaterialSymbolsRoundedFill.ttf", "MaterialSymbolsFilled");
             });
 
 #if DEBUG

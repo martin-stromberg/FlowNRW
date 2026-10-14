@@ -32,21 +32,22 @@ public sealed class DepartureCardView : Border
         heading.Add(destination, 0, 1);
         Grid.SetColumnSpan(destination, 2);
         var realtime = item.Realtime;
+        var status = DeparturePresentation.Status(item);
         var time = new VerticalStackLayout { Spacing = 0, HorizontalOptions = LayoutOptions.End };
-        var prominentTime = TransitVisuals.Text(Clock(realtime.ActualTime ?? item.PlannedTime), 22, true);
-        prominentTime.FontFamily = DeviceInfo.Platform == DevicePlatform.WinUI ? "Consolas" : "Menlo";
-        if (realtime.Cancelled == true) prominentTime.TextDecorations = TextDecorations.Strikethrough;
+        var prominentTime = TransitVisuals.Text(JourneyPresentation.Clock(realtime.ActualTime ?? item.PlannedTime), 18, true);
+        prominentTime.FontFamily = Fonts.JetBrainsMono;
+        if (status == DepartureStatus.Cancelled) prominentTime.TextDecorations = TextDecorations.Strikethrough;
         time.Children.Add(prominentTime);
         if (realtime.ActualTime is { } actual && item.PlannedTime is { } planned && actual != planned)
-        {
-            var scheduled = TransitVisuals.Secondary(Clock(planned));
-            scheduled.FontSize = 13;
-            scheduled.TextDecorations = TextDecorations.Strikethrough;
-            time.Children.Add(scheduled);
-        }
+            time.Children.Add(TransitVisuals.StrikethroughTime(JourneyPresentation.Clock(planned)));
         heading.Add(time, 1);
         layout.Children.Add(heading);
-        if (realtime.Cancelled == true) layout.Children.Add(TransitVisuals.Text("Fahrt fällt aus", 15, true));
+        if (status == DepartureStatus.Cancelled)
+            layout.Children.Add(TransitVisuals.StatusChip(TransitIcons.Cancel, "Fahrt fällt aus", TransitVisuals.Error, TransitVisuals.ErrorDark));
+        else if (status == DepartureStatus.Delayed && DeparturePresentation.DelayText(item) is { } delay)
+            layout.Children.Add(TransitVisuals.StatusChip(TransitIcons.Schedule, delay, TransitVisuals.Warning, TransitVisuals.WarningDark));
+        else if (status == DepartureStatus.Scheduled)
+            layout.Children.Add(TransitVisuals.Secondary("Keine Echtzeitdaten"));
         if (!string.IsNullOrWhiteSpace(realtime.Platform))
         {
             var platform = "Gleis/Steig: " + realtime.Platform;
@@ -56,18 +57,10 @@ public sealed class DepartureCardView : Border
         }
         if (compact && item.PlannedTime is { } instant)
         {
-            var zone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
-            var date = TimeZoneInfo.ConvertTime(instant, zone);
-            if (date.Date != TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone).Date)
+            var date = JourneyPresentation.LocalTime(instant);
+            if (date.Date != JourneyPresentation.LocalTime(DateTimeOffset.UtcNow).Date)
                 layout.Children.Add(TransitVisuals.Secondary(date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)));
         }
         Content = layout;
-    }
-
-    private static string Clock(DateTimeOffset? instant)
-    {
-        return instant is { } value
-            ? TimeZoneInfo.ConvertTime(value, TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin")).ToString("HH:mm", CultureInfo.InvariantCulture)
-            : "unbekannt";
     }
 }
