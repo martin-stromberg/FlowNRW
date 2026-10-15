@@ -14,11 +14,13 @@ public static class RefreshWindow {
 "@
 $previousSettings = $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS
 $previousFavorites = $env:FLOWNRW_UI_TEST_FAVORITES
+$previousConnectionFavorites = $env:FLOWNRW_UI_TEST_CONNECTION_FAVORITES
 $previousScenario = $env:FLOWNRW_UI_TEST_SCENARIO
 $testDirectory = Join-Path (Get-Location) ('artifacts/tests/refresh/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force $testDirectory | Out-Null
 $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = Join-Path $testDirectory 'refresh.json'
 $env:FLOWNRW_UI_TEST_FAVORITES = Join-Path $testDirectory 'favorites.json'
+$env:FLOWNRW_UI_TEST_CONNECTION_FAVORITES = Join-Path $testDirectory 'connection-favorites.json'
 $env:FLOWNRW_UI_TEST_SCENARIO = 'complete'
 $script:app = $null
 $script:window = $null
@@ -298,5 +300,6 @@ try {
     Get-Process FlowNRW -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = $previousSettings
     $env:FLOWNRW_UI_TEST_FAVORITES = $previousFavorites
+    $env:FLOWNRW_UI_TEST_CONNECTION_FAVORITES = $previousConnectionFavorites
     $env:FLOWNRW_UI_TEST_SCENARIO = $previousScenario
 }
