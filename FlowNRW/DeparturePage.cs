@@ -63,7 +63,9 @@ public sealed class DeparturePage : ContentPage
         var settingsButton = TransitVisuals.SecondaryAction(TransitIcons.Settings, "Aktualisierung einstellen", "OpenRefreshSettings",
             new AsyncRelayCommand(() => Shell.Current.GoToAsync("refresh-settings"), () => true,
                 _ => Title = "Einstellungen konnten nicht geöffnet werden"));
-        var actions = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
+        // Icon buttons are fixed-width; give the labeled favorite action the remaining
+        // space so its text ("Speichern"/"Entfernen") is not truncated on narrow windows.
+        var actions = new Grid { ColumnDefinitions = [new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 8 };
         actions.Add(refresh, 0); actions.Add(favoriteButton, 1); actions.Add(settingsButton, 2);
         layout.Children.Add(actions);
         favoriteStatus = new Label { AutomationId = "FavoriteToggleStatus", BindingContext = favorites };

@@ -52,7 +52,10 @@ public sealed class SearchPage : ContentPage
         searchForm.Children.Add(Endpoint(model.Destination, "Destination", "Ziel"));
         var timeLayout = new VerticalStackLayout { Spacing = 8, Padding = new Thickness(4, 4) };
         timeLayout.Children.Add(TransitVisuals.Text("Zeitpunkt", 17, true));
-        var timeMode = new Picker { AutomationId = "RoutingTimeMode", Title = "Zeitpunkt", ItemsSource = new[] { "Jetzt", "Andere Zeit" }, SelectedIndex = 0 };
+        // No Title here: the section label above already reads "Zeitpunkt" and Windows
+        // renders Picker.Title as a second visible label. Keep the accessible name.
+        var timeMode = new Picker { AutomationId = "RoutingTimeMode", ItemsSource = new[] { "Jetzt", "Andere Zeit" }, SelectedIndex = 0 };
+        SemanticProperties.SetDescription(timeMode, "Zeitpunkt");
         timeMode.SelectedIndexChanged += (_, _) => model.UseCurrentTime = timeMode.SelectedIndex == 0;
         timeLayout.Children.Add(timeMode);
         var alternative = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8, IsVisible = false };

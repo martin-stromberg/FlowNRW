@@ -8,8 +8,8 @@ und müssen manuell oder in einem erneuten Lauf bearbeitet werden.
 
 ## Offene Planelemente
 
-- [ ] Task 25 — Separate visuelle Abnahme (AAA-Nachweis): subjektive Bewertung gegen `docs/design/acceptance.md` + Referenz-HTMLs; nicht automatisierbar (menschliche Sichtprüfung). Matrix liegt bereit unter `docs/help/design/verification/icon-matrix/`.
-- [ ] Task 26 — iOS-Checkliste: Abhaken der `acceptance.md`-Checkliste erfordert iOS-Gerät/Mac; auf Windows nicht ausführbar.
+- [x] Task 25 — Separate visuelle Abnahme (AAA-Nachweis): erledigt 2026-10-15. Matrix vervollständigt (Dark-Kombinationen neu aufgenommen, `refresh-store-error` ergänzt → 226 PNGs + `matrix.jsonl`), Stichprobe von 24 Bildern + Pixelchecks gegen `docs/design/acceptance.md` bewertet. Ergebnis: **Windows-Abnahme bestanden**, dokumentiert in `docs/help/design/verification/visual-acceptance.md` (drei Anmerkungen ohne Blockercharakter). Hinweis: ohne verschachtelte Subagenten wurde die Abnahme vom ausführenden Agenten dokumentiert selbst durchgeführt.
+- [ ] Task 26 — iOS-Checkliste: Abhaken der `acceptance.md`-Checkliste erfordert iOS-Gerät/Mac; auf Windows nicht ausführbar. Bleibt offen — kein iOS-Gerät in dieser Umgebung verfügbar; Gerätebilder nicht zu behaupten.
 
 ## Code-Review-Befunde
 

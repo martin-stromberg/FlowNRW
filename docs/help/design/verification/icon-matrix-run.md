@@ -2,7 +2,8 @@
 
 Neuaufnahme der Design-Screenshot-Matrix auf dem Stand mit Material-Symbols-Icons,
 Inter-/JetBrains-Mono-Typografie und Status-Chips. Ablage: `icon-matrix/`
-(222 Bilder + `matrix.jsonl` mit Build-Hash/Commit/Geometrie je Bild).
+(226 Bilder + `matrix.jsonl` mit Build-Hash/Commit/Geometrie je Bild —
+Endstand nach Fortsetzungslauf 2026-10-15, siehe unten).
 
 ## Ausführung
 
@@ -52,9 +53,30 @@ Shortcut-Icons und selektierter Tab rendern in der Interaktionsfarbe
 `#0058BC` (light) bzw. aufgehellt (dark); Status-Chips zeigen
 `Error`/`Warning`-Färbung mit Icon + Text.
 
-## Offen für die separate Abnahme
+## Fortsetzung 2026-10-15 (Dark-Neuaufnahme + Speicherfehler)
 
-Die subjektive AAA-Bewertung gegen `docs/design/acceptance.md` + Referenz-HTMLs
-ist ein manueller Schritt (nicht automatisierbar); die Matrix bildet alle
-Zeilen der Referenz ab (hell/dunkel, schmal/breit, 150 % Skalierung,
-Ausfall-/Verspätungs-/Leer-/Fehlerzustände, Tab-Bar mit Icons).
+Der vorangegangene Lauf war nach den drei hellen Kombinationen
+abgebrochen; die `dark-*`-Bilder waren im Arbeitsbaum gelöscht worden.
+In diesem Lauf wurden gegen denselben UiTest-Build (`buildSha256`
+`6F608E16…`, Commit `a34a04f` + Nachbearbeitungen) die drei dunklen
+Kombinationen neu aufgenommen sowie das `refresh-store-error`-Szenario
+(Speicherfehler via Tastatur, hell/dunkel × 150 %) ergänzt:
+
+| Kombination | Ergebnis |
+|---|---|
+| dark · 430×900 · 100 % | bestanden (alle Assertionen + CAPTUREs) |
+| dark · 430×900 · 150 % | bestanden |
+| dark · 1024×768 · 100 % | bestanden |
+| light/dark · 430×900 · 150 % · `refresh-store-error` | bestanden (`settings-error-keyboard`) |
+
+Hinweis zur Ausführung: Die Skripte wurden über `schtasks … /it` in der
+interaktiven Sitzung gestartet; ein direkter Lauf aus einer nicht-
+interaktiven Shell scheitert an der Foreground-Prüfung
+(`Physical input cancelled`), einzelne Läufe brachen ohne Fehlermeldung
+ab und wurden wiederholt — die wiederholten Einträge wurden in
+`matrix.jsonl` dedupliziert (letzter Eintrag je Bildname gewinnt).
+
+Endstand: **226 PNGs + `matrix.jsonl`** — alle Pflichtvarianten aus
+`docs/design/acceptance.md` abgedeckt (inkl. Speicherfehler). Die
+separate visuelle Abnahme ist dokumentiert in
+`docs/help/design/verification/visual-acceptance.md`.

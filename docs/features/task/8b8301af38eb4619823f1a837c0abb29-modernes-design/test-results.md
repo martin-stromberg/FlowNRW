@@ -20,6 +20,8 @@ Befehl: `dotnet test FlowNRW.Tests/FlowNRW.Tests.csproj --collect:"XPlat Code Co
 
 Hinweis: Die PowerShell-UI-Testskripte unter `tests/WindowsJourneyUiTests/` sind nicht Teil dieses Laufs; sie wurden separat gegen den `UiTest`-Build ausgeführt (Nachbearbeitung: `WindowsJourneyUiTests` inkl. `-Monitors`/`-Favorites`/`-Locations`/`-Maps`, `WindowsRefreshUiTests`, `WindowsLifecycleUiTests`, `WindowsDepartureCacheUiTests` sowie die `WindowsDesignUiTests.ps1`-Screenshot-Matrix — alle bestanden, Ablage `docs/help/design/verification/icon-matrix/`).
 
+Nachtrag 2026-10-15 (Fortsetzungslauf): `dotnet build FlowNRW.sln` (0 Warnungen, 0 Fehler) und `dotnet test FlowNRW.Tests` erneut ausgeführt — **294/294 bestanden** (350 ms). Zusätzlich liefen die `WindowsDesignUiTests.ps1`-Dark-Kombinationen (430×900×100, 430×900×150, 1024×768×100) und das `refresh-store-error`-Szenario (hell/dunkel, 150 %) vollständig grün inkl. aller `AssertTouchTarget`- und Fokus-Assertionen.
+
 ## Testabdeckung
 
 **Abdeckung:** 88,92 % (Zeilen, Paket `FlowNRW.Core`; Branch-Abdeckung: 75,99 %)
