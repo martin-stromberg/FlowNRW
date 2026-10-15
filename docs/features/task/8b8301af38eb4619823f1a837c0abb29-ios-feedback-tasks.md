@@ -1,0 +1,34 @@
+# Tasks: iOS-Nutzungsfeedback — Favoriten, Hinweismeldung, Karte und Trefferlisten
+
+| # | Bereich | Aufgabe | Status | Testnachweis |
+|---|---|---|---|---|
+| 1 | Core: Namen | `JourneyPresentation.DisplayName(string)` anlegen: führendes „{prefix}, " entfernen, wenn `rest` mit `prefix` + Wortgrenze (Ende, `' '`, `'('`, `'-'`, `'/'`) beginnt; XML-Doc, Block-Body | Offen | — |
+| 2 | Core: Namen | `JourneyPresentation.DisplayAddress(Address)` anlegen: `DisplayName(Name)` + optionale Koordinaten, ohne `Source`/`Id`/`Dhid`; XML-Doc, Block-Body | Offen | — |
+| 3 | Core: Favoriten | `FavoriteMonitorViewModel.HasDataNotice` ergänzen (`Result`-Flags `Warnings`/`IsFallback`/`IsStale`); Notify in `RefreshBindings` | Offen | — |
+| 4 | Core: Favoriten | `FavoriteMonitorViewModel.RefreshCoreAsync`: degradierte angezeigte Ergebnisse (`ErrorCode is null`, `!IsComplete`) reichern `Lines` per Vereinigung an; `IsComplete`-Pfad und Persistenz unverändert | Offen | — |
+| 5 | Core: Monitor | `StopMonitorViewModel.HasDataNotice` ergänzen (gleiche Ableitung); Notify in `RefreshBindings` | Offen | — |
+| 6 | Core: Nahe-Liste | `FavoriteHomeViewModel`: gefilterte `NearbyStopResult`s in privatem Feld halten + `NearbyDistanceLabel(Address)` (Provider `DistanceMeters` → „Entfernung: X m", sonst Haversine via `position`/`Distance` → „Luftlinie: X m", sonst „Entfernung unbekannt") | Offen | — |
+| 7 | Core: Suche | `EndpointViewModel.Selection` auf `JourneyPresentation.DisplayAddress` umstellen (Name + Koordinaten, ohne Kennung) | Offen | — |
+| 8 | Core: Karte | `MapStation.Label` (`MapViewModel.cs` Z.25–28) über `DisplayName` rendern | Offen | — |
+| 9 | UI: Icons | `TransitIcons.Warning` (U+F083, `warning`) ergänzen; Codepoint gegen `docs/design/licenses/MaterialSymbolsRounded.codepoints` (Z.4163) verifizieren | Offen | — |
+| 10 | UI: Favoritenkarte | `HomePage`: `ToggleFavorite{index}` samt `SetExpandIcon` aus `BuildCardActions` nach `BuildCardHeader` verlagern (Kopf-Grid `[Star, Auto, Auto]`); Aktionsleiste auf drei Spalten reduzieren | Offen | — |
+| 11 | UI: Favoritenkarte | `HomePage.BuildFavoriteCard`/`SubscribeCardChanges`: `FavoriteNotice{index}`-Button (48×48, `Warning`-Glyph, `Warning`/`WarningDark`, `IsVisible` = `HasDataNotice && !IsBusy`) + `FavoriteMetadata{index}`-Toggle-Detail (`card.Metadata`, Beschreibungswechsel); `FavoriteCardViews` erweitern | Offen | — |
+| 12 | UI: Favoritenkarte | `HomePage.ShowsFavoriteStatus`: „unvollständig"-Match entfernen (übrige Statusfälle bleiben sichtbar) | Offen | — |
+| 13 | UI: Favoritenkarte | `HomePage.RenderNearby`: `Candidate(..., model.NearbyDistanceLabel(candidate), showTechnicalIdentity: false, detailsId: "NearbyDistance" + index)` | Offen | — |
+| 14 | UI: Monitor | `DeparturePage`: `MonitorNotice`-Button + `MonitorMetadata`-Toggle-Detail im `monitorState`-Block; `UpdateMonitorStatus` ohne „unvollständig"-Match; Notice-Sichtbarkeit in `ModelChanged` mitbewerten | Offen | — |
+| 15 | UI: Suche | `SearchPage.Endpoint` (Z.145): `showTechnicalIdentity: false`; `RenderFavorites`-Buttons über `JourneyPresentation.DisplayName` | Offen | — |
+| 16 | UI: Listen-Rendering | `TransitVisuals.Candidate`: `DisplayName` für `action.Text`/`false`-Beschreibung; optionaler `detailsId`-Parameter an `Secondary` durchreichen | Offen | — |
+| 17 | UI: Details | `JourneyPresentation.Event` (Z.91) und `JourneyTimelineView` (Z.32–33, Z.53) auf `DisplayName` umstellen; `FavoriteMonitorViewModel.Title`/`StopMonitorViewModel.Title` ebenfalls | Offen | — |
+| 18 | Karte | `map.js`: Per-Tile-Timeout (~15 s) je `waiting`-Eintrag (`done(Error)` + `cancel`-Nachricht) und Fortschritts-Watchdog nach `init` (kein Kachel-Fortschritt/`load` >15 s → einmalig `failed`); Rücksetzung bei Fortschritt und `init`-Reset | Offen | — |
+| 19 | Karte | `MapPage`: nativer Post-`init`-Watchdog (30 s ohne `loaded`/`failed` → „Basiskarte konnte nicht geladen werden. Haltestellenliste und Zurück bleiben nutzbar.", `tileRequests` abbrechen); `loaded`/`failed`/`init`/Lebenszyklus beenden den Watchdog | Offen | — |
+| 20 | Karte | `MapPage.MessageReceived`: verworfene Tile-Anfragen (`pending >= 64`, doppelte `id`) mit expliziter leerer `tile`-Antwort (`data:''`, `error:false`) abschließen; `AppLog.Write`-Diagnose für `ready`/`init`/`loaded`/`failed`/Tile-Fehler | Offen | — |
+| 21 | Tests | `JourneyPresentationTests`: `DisplayName`-Fälle („Münster (Westf), Münster (Westf) Hbf" → „Münster (Westf) Hbf"; „Bochum, Hbf"/„Essen Hbf"/leer unverändert; „Bergheim, Bergheimer Str." unverändert; „Essen, Essen-Steele" → „Essen-Steele") + `DisplayAddress` (Kennung weg, Koordinaten bleiben) | Offen | `dotnet test FlowNRW.Tests` |
+| 22 | Tests | `FavoriteDepartureCacheIntegrationTests`: `Refresh_PersistsLineInventoryOnlyFromCompleteResponses` an Merge-Semantik anpassen (`card.Lines` = `["S1","S2"]`, Cache bleibt `["S1"]`); neuer Test `Refresh_DegradedResultEnrichesDisplayedLines` (Lines aus degradiertem Erstboard) | Offen | `dotnet test FlowNRW.Tests` |
+| 23 | Tests | `HasDataNotice`-Unit-Tests für `FavoriteMonitorViewModel` und `StopMonitorViewModel` (Warnung/Fallback/Stale → true; komplett/null → false) | Offen | `dotnet test FlowNRW.Tests` |
+| 24 | Tests | `FavoriteHomeViewModel.NearbyDistanceLabel`-Tests (Provider-Distanz / Haversine-Fallback / unbekannt) mit `ControlledLocation`/`ControlledNearby`-Doubles | Offen | `dotnet test FlowNRW.Tests` |
+| 25 | Tests | `EndpointViewModelTests`: `Selection` enthält Namen + Koordinaten, keine `Source`/`Id`/`Dhid` | Offen | `dotnet test FlowNRW.Tests` |
+| 26 | Tests | `UiTestMapTiles` (`tests/WindowsJourneyUiTests/UiTestFixtureServices.cs`) um Szenario `map-hang` erweitern (Kachel-Abrufe antworten nie → Watchdog-Nachweis) | Offen | — |
+| 27 | E2E-Tests | `WindowsJourneyUiTests.ps1` anpassen/erweitern: Z.717 Kennungs-Assertion entfernen (Name-Match + `-notmatch 'de:'`); neue Checks `FavoriteNotice{far}`-Toggle → `FavoriteMetadata{far}`, `FavoriteStatus{far}` ohne „unvollständig", `NearbyDistance0` enthält „Entfernung", `map-hang` → `MapStatus` endet nicht auf „wird geladen", `ToggleFavorite{far}` im Header auf/zu | Offen | Skriptlauf bestanden (interaktive Session, `schtasks /it`) |
+| 28 | E2E-Tests | `WindowsDepartureCacheUiTests.ps1`, `WindowsLifecycleUiTests.ps1`, `WindowsRefreshUiTests.ps1` vollständig ausführen (Lines-Inventar, Expand, Status-Texte) | Offen | Alle drei Skripte bestanden |
+| 29 | E2E-Tests | `WindowsDesignUiTests.ps1`: Screenshot-Matrix prüfen/neu aufnehmen — Header-Toggle, `warning`-Icon (hell/dunkel), 150 % Textskalierung ohne Glyph-Clipping, Entfernungszeile in Nahe-Liste | Offen | Matrix-Lauf + visuelle Prüfung dokumentiert |
+| 30 | E2E-Tests | iOS-Verifikation Punkt 4: Karten-Fix auf iOS-Simulator/Gerät prüfen (Safari-Web-Inspector, `AppLog`-Auswertung) | Offen | Auf Windows nicht ausführbar — separater Gerätenachweis |
