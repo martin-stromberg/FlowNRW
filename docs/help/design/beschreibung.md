@@ -38,7 +38,8 @@ Die Statusentscheidung trifft `DeparturePresentation.Status` in FlowNRW.Core aus
 
 - **Abfahrtskarte mit Verspätung:** Linienbadge und Ziel links, Hauptzeit in JetBrains Mono rechts; weicht die Istzeit ab, steht die Sollzeit durchgestrichen darunter, gefolgt vom `schedule`-Chip „+3 Min." in Warning-Farbe.
 - **Favoritenstern im Abfahrtsmonitor:** `DeparturePage.RefreshFavorite` zeigt den Umriss-Stern + „Speichern" bzw. den gefüllten Stern (FILL1-Instanz) + „Entfernen".
-- **Auf-/Einklappen auf der Startseite:** `HomePage.BuildCardActions` wechselt das Symbol zwischen `expand_more` und `expand_less`, jeweils mit passender Sprachbeschreibung.
+- **Auf-/Einklappen auf der Startseite:** `HomePage.BuildCardHeader` wechselt das Symbol des Schalters rechts oben im Kartenkopf zwischen `expand_more` und `expand_less`, jeweils mit passender Sprachbeschreibung.
+- **Datenhinweis:** Trägt ein angezeigtes Ergebnis Warnungen, eine Ersatzquelle oder veraltete Daten, zeigt `TransitVisuals.NoticeToggle` ein `warning`-Symbol (`TransitIcons.Warning`, Semantikfarbe `Warning`/`WarningDark`) statt einer dauerhaften Textzeile; erst ein Tipp blendet die Provenienz ein.
 - **Tab-Leiste:** „Abfahrten" (`departure_board`), „Verbindungen" (`route`), „Haltestellen" (`location_on`) als Symbole mit Text.
 
 ## Einschränkungen

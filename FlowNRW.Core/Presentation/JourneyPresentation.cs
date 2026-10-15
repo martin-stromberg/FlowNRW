@@ -37,10 +37,28 @@ public static class JourneyPresentation
         var days = (int)(local.Date - (reference is { } day ? LocalTime(day).Date : local.Date)).TotalDays;
         return days switch { 0 => clock, -1 => "Vortag " + clock, 1 => "Folgetag " + clock, _ => local.ToString("dd.MM.", CultureInfo.InvariantCulture) + " " + clock };
     }
-    /// <summary>Formats endpoint identity.</summary>
+    /// <summary>Removes a literally repeated leading place name for display.</summary>
+    /// <param name="name">Original provider stop name.</param>
+    /// <returns>The trailing stop name when the part before the first comma is repeated at its start and ends on a word boundary; otherwise the unchanged name, or an empty string for <see langword="null"/>.</returns>
+    public static string DisplayName(string? name)
+    {
+        if (name is null) return string.Empty;
+        var comma = name.IndexOf(',', StringComparison.Ordinal);
+        if (comma < 0) return name;
+        var prefix = name[..comma].Trim();
+        var rest = name[(comma + 1)..].Trim();
+        if (prefix.Length == 0 || rest.Length == 0) return name;
+        if (!rest.StartsWith(prefix, StringComparison.Ordinal)) return name;
+        if (rest.Length != prefix.Length && rest[prefix.Length] is not (' ' or '(' or '-' or '/')) return name;
+        return rest;
+    }
+    /// <summary>Formats an endpoint for display without technical identifiers.</summary>
     /// <param name="address">Candidate.</param>
-    /// <returns>Disambiguating label.</returns>
-    public static string Address(Address address) => $"{address.Name} · {address.Stop?.Source} {address.Stop?.Id} {address.Stop?.Dhid}".Trim() + (address.Coordinate is { } c ? FormattableString.Invariant($" · {c.Latitude:0.#####}, {c.Longitude:0.#####}") : "");
+    /// <returns>The cleaned display name plus optional coordinates; never the source, id or shared identifier.</returns>
+    public static string DisplayAddress(Address address)
+    {
+        return DisplayName(address.Name) + CoordinateSuffix(address.Coordinate);
+    }
     /// <summary>Formats safe provider provenance.</summary>
     /// <typeparam name="T">Item type.</typeparam>
     /// <param name="result">Provider response.</param>
@@ -87,6 +105,10 @@ public static class JourneyPresentation
         var reference = journey.Legs.FirstOrDefault()?.Departure.PlannedTime;
         return Summary(journey) + "\n\n" + string.Join("\n\n", journey.Legs.Select(leg => LegName(leg) + "\nAbfahrt " + Event(leg.Departure, reference) + "\nAnkunft " + Event(leg.Arrival, reference))) + "\n\n" + string.Join("\n", journey.Transfers.Select(t => $"Umstieg: {t.Stop?.Name ?? "Haltestelle unbekannt"} · {t.Duration?.TotalMinutes.ToString("0", CultureInfo.InvariantCulture) ?? "unbekannt"} Min."));
     }
+    private static string CoordinateSuffix(GeoCoordinate? coordinate)
+    {
+        return coordinate is { } c ? FormattableString.Invariant($" · {c.Latitude:0.#####}, {c.Longitude:0.#####}") : "";
+    }
     private static string LegName(JourneyLeg leg) => leg.Walking is { } walk ? $"Fußweg · {walk.DistanceMeters?.ToString("0", CultureInfo.InvariantCulture) ?? "unbekannt"} m · {walk.Duration?.TotalMinutes.ToString("0", CultureInfo.InvariantCulture) ?? "unbekannt"} Min." : $"{LegLineName(leg)} · Betreiber: {leg.Line?.Operator?.Name ?? leg.Departure.Line?.Operator?.Name ?? leg.Departure.Identity.Operator ?? "unbekannt"}";
-    private static string Event(StopEvent item, DateTimeOffset? reference) => $"{item.Identity.Stop.Name}\nSoll: {EventTime(item.PlannedTime, reference)} · Ist: {(item.Realtime.ActualTime is null ? "keine Echtzeitdaten" : EventTime(item.Realtime.ActualTime, reference))}\n" + (item.Realtime.Cancelled switch { true => "Ausfall", false => "Kein Ausfall gemeldet", null => "Ausfallstatus unbekannt" }) + $" · Bahnsteig Soll: {item.Realtime.PlannedPlatform ?? "unbekannt"}, Ist: {item.Realtime.Platform ?? "unbekannt"}" + (string.IsNullOrEmpty(item.Realtime.Source) ? "" : $" · Echtzeitquelle: {item.Realtime.Source}, Stand: {Time(item.Realtime.RetrievedAt)}");
+    private static string Event(StopEvent item, DateTimeOffset? reference) => $"{DisplayName(item.Identity.Stop.Name)}\nSoll: {EventTime(item.PlannedTime, reference)} · Ist: {(item.Realtime.ActualTime is null ? "keine Echtzeitdaten" : EventTime(item.Realtime.ActualTime, reference))}\n" + (item.Realtime.Cancelled switch { true => "Ausfall", false => "Kein Ausfall gemeldet", null => "Ausfallstatus unbekannt" }) + $" · Bahnsteig Soll: {item.Realtime.PlannedPlatform ?? "unbekannt"}, Ist: {item.Realtime.Platform ?? "unbekannt"}" + (string.IsNullOrEmpty(item.Realtime.Source) ? "" : $" · Echtzeitquelle: {item.Realtime.Source}, Stand: {Time(item.Realtime.RetrievedAt)}");
 }

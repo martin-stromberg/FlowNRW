@@ -8,6 +8,8 @@ Start und Ziel besitzen je ein `EndpointViewModel` mit eigener transienter `ISto
 
 `JourneySearchViewModel.SearchAsync` verlangt zwei ausgewählte Endpunkte und ruft `IRoutingService.RouteAsync` mit `DateTimeOffset.Now` auf. `ProviderResult` liefert Ergebnisse und Metadaten; die UI übernimmt die Core-Reihenfolge. Lade-, Leer-, Fehler-, Warn-, Fallback- und Stale-Zustände bleiben sichtbar. `JourneyPresentation` formatiert in `Europe/Berlin` einschließlich Datum/UTC-Offset; fehlende Echtzeit bleibt unbekannt. Details lesen die ausgewählte Fahrt aus derselben Sitzung.
 
+Treffertexte und die „Ausgewählt"-Zeile laufen über `JourneyPresentation.DisplayName`/`DisplayAddress` (`EndpointViewModel.Selection`): doppelt genannte Ortspräfixe werden für die Anzeige gekürzt und die technische Kennung (`Source`/`Id`/`Dhid`) erscheint nicht mehr; Koordinaten bleiben als Bestätigung der Nutzereingabe erhalten. Die übernommene `Address`-/`Stop`-Identität ist davon unberührt.
+
 Die [Providerarchitektur und Datenschutzgrenzen](../fahrplanauskunft/architektur.md) sowie [Konfiguration](../fahrplanauskunft/installation.md) gelten unverändert. Keine neue Datenbank oder dauerhafte Suchhistorie wird angelegt.
 
 ## Tests

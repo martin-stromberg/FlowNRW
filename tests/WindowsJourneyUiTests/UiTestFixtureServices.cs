@@ -165,6 +165,7 @@ internal sealed class UiTestMapTiles(MapViewModel model) : IMapTileService
         var name = model.Stations.FirstOrDefault()?.Candidate.Name ?? "";
         if (name.Contains("map-offline") && Interlocked.Increment(ref failedTiles) <= 4)
             return new("", Error: true);
+        if (name.Contains("map-hang")) await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
         if (name.Contains("map-slow")) await Task.Delay(6000, cancellationToken);
         return await images.GetAsync(zoom, x, y, cancellationToken);
     }

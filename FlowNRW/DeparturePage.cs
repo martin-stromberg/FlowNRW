@@ -17,6 +17,7 @@ public sealed class DeparturePage : ContentPage
     private readonly RefreshLoop refreshLoop;
     private readonly Label monitorStatus;
     private readonly Label favoriteStatus;
+    private readonly TransitVisuals.NoticeToggle monitorNotice;
     private bool active;
     private long appearance;
     private readonly RefreshFreshness freshness;
@@ -84,13 +85,19 @@ public sealed class DeparturePage : ContentPage
             activity.SetBinding(Label.TextProperty, nameof(foreground.IsActive)); layout.Children.Insert(2, activity);
         };
 #endif
-        monitorStatus = new Label { AutomationId = "MonitorStatus" };
+        monitorStatus = new Label { AutomationId = "MonitorStatus", VerticalOptions = LayoutOptions.Center };
         monitorStatus.SetBinding(Label.TextProperty, nameof(model.Status));
+        monitorNotice = new TransitVisuals.NoticeToggle("MonitorNotice", "MonitorMetadata");
+        monitorNotice.Metadata.SetBinding(Label.TextProperty, nameof(model.Metadata));
+        monitorNotice.Update(model.HasDataNotice && !model.IsBusy);
         var monitorState = new VerticalStackLayout { Spacing = 4, Padding = new Thickness(4, 0) };
-        monitorState.Children.Add(monitorStatus); monitorState.Children.Add(favoriteStatus);
+        var statusRow = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 8 };
+        statusRow.Add(monitorStatus, 0); statusRow.Add(monitorNotice.Button, 1);
+        monitorState.Children.Add(statusRow); monitorState.Children.Add(monitorNotice.Metadata); monitorState.Children.Add(favoriteStatus);
         layout.Children.Add(monitorState);
         layout.Children.Add(items);
         Content = TransitVisuals.Page(layout);
+        monitorNotice.ApplyWarningColors();
     }
 
     /// <inheritdoc />
@@ -131,7 +138,7 @@ public sealed class DeparturePage : ContentPage
     {
         if (args.PropertyName == nameof(model.Items)) RenderItems();
         if (args.PropertyName == nameof(model.SelectedStop)) RefreshFavorite();
-        if (args.PropertyName is nameof(model.Status) or nameof(model.IsBusy)) UpdateMonitorStatus();
+        if (args.PropertyName is nameof(model.Status) or nameof(model.IsBusy) or nameof(model.Result) or nameof(model.HasDataNotice)) UpdateMonitorStatus();
     }
 
     private void UpdateMonitorStatus()
@@ -139,12 +146,12 @@ public sealed class DeparturePage : ContentPage
         var status = model.Status;
         monitorStatus.IsVisible = !model.IsBusy
             && (status.Contains("Keine nächsten", StringComparison.OrdinalIgnoreCase)
-                || status.Contains("unvollständig", StringComparison.OrdinalIgnoreCase)
                 || status.Contains("fehlgeschlagen", StringComparison.OrdinalIgnoreCase)
                 || status.Contains("nicht geladen", StringComparison.OrdinalIgnoreCase)
                 || status.Contains("abgebrochen", StringComparison.OrdinalIgnoreCase)
                 || status.Contains("Letzte bekannte", StringComparison.OrdinalIgnoreCase)
                 || status.Contains("Datenstand", StringComparison.OrdinalIgnoreCase));
+        monitorNotice.Update(model.HasDataNotice && !model.IsBusy);
     }
 
     private void UpdateFavoriteStatus()

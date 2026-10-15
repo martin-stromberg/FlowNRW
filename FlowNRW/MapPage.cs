@@ -18,6 +18,8 @@ public sealed class MapPage : ContentPage
     private readonly Label status = new() { Text = "Karte wird geladen …", AutomationId = "MapStatus", FontSize = 15 };
     private CancellationTokenSource? lifetime;
     private bool ready;
+    private bool loadSettled;
+    private int loadId;
     private int pending;
     private readonly Dictionary<int, CancellationTokenSource> tileRequests = [];
 #if UI_TEST_FIXTURES
@@ -74,11 +76,10 @@ public sealed class MapPage : ContentPage
         foreach (var station in model.Stations)
             list.Children.Add(TransitVisuals.Candidate(station.Candidate, new Button
             {
-                Text = station.Label,
                 LineBreakMode = LineBreakMode.WordWrap,
                 AutomationId = "MapStation" + station.Index,
                 Command = new AsyncRelayCommand(() => model.SelectAsync(session, station.Index), () => true, failure: _ => status.Text = "Monitor konnte nicht geöffnet werden.")
-            }, station.Position is null ? " · Keine Kartenposition vorhanden" : "", showTechnicalIdentity: false));
+            }, station.Position is null ? " · Keine Kartenposition vorhanden" : ""));
         layout.Children.Add(actions);
         layout.Children.Add(map);
         layout.Children.Add(new Label { Text = options.Attribution, AutomationId = "MapAttribution", FontSize = 13 });
@@ -133,10 +134,15 @@ public sealed class MapPage : ContentPage
         catch (Exception) { status.Text = "Karte nicht verfügbar. Bitte die Haltestellenliste verwenden."; }
     }
 
-    private Task InitializeAsync()
+    private async Task InitializeAsync()
     {
-        if (lifetime is null || !foreground.IsActive) return Task.CompletedTask;
+        if (lifetime is null || !foreground.IsActive) return;
         lifetime.Cancel(); lifetime.Dispose(); lifetime = new();
+        var token = lifetime.Token;
+        var session = model.Session;
+        var generation = ++loadId;
+        CancelTileRequests();
+        loadSettled = false;
         status.Text = "Basiskarte wird geladen …";
         var markers = new JsonArray();
         foreach (var station in model.Stations.Where(station => station.Position is not null))
@@ -144,16 +150,45 @@ public sealed class MapPage : ContentPage
         var segments = new JsonArray();
         foreach (var segment in model.Segments)
             segments.Add(new JsonObject { ["label"] = segment.Label, ["points"] = Points(segment.Points) });
-        return SendAsync(new JsonObject
+        Core.Diagnostics.AppLog.Write("map", SessionTag(session) + ": init load=" + generation + " markers=" + markers.Count + " segments=" + segments.Count);
+        await SendAsync(new JsonObject
         {
             ["type"] = "init",
-            ["session"] = model.Session,
+            ["session"] = session,
+            ["loadId"] = generation,
             ["markers"] = markers,
             ["segments"] = segments,
             ["endpoints"] = Points(model.Endpoints),
             ["minZoom"] = options.MinZoom,
             ["maxZoom"] = options.MaxZoom
         });
+        _ = WatchLoadAsync(session, generation, token);
+    }
+
+    private static string SessionTag(string session) => session.Length <= 8 ? session : session[..8];
+
+    private async Task WatchLoadAsync(string session, int generation, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(30), token);
+            if (loadSettled || generation != loadId || session != model.Session || !foreground.IsActive) return;
+            Core.Diagnostics.AppLog.Write("map", SessionTag(session) + ": no loaded/failed within 30 s, pending=" + pending);
+            status.Text = "Basiskarte konnte nicht geladen werden. Haltestellenliste und Zurück bleiben nutzbar.";
+            CancelTileRequests();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception error) { Core.Diagnostics.AppLog.Write("map", SessionTag(session) + ": load watchdog failed: " + error.GetType().Name); }
+    }
+
+    private void CancelTileRequests()
+    {
+        foreach (var request in tileRequests.Values)
+        {
+            try { request.Cancel(); }
+            catch (Exception) { }
+        }
+        tileRequests.Clear();
     }
 
     private static JsonArray Points(IEnumerable<FlowNRW.Core.Transit.GeoCoordinate> points)
@@ -174,26 +209,46 @@ public sealed class MapPage : ContentPage
             using var document = JsonDocument.Parse(message);
             var root = document.RootElement;
             var type = root.GetProperty("type").GetString();
-            if (type == "ready") { ready = true; await InitializeAsync(); return; }
+            if (type == "ready") { ready = true; Core.Diagnostics.AppLog.Write("map", "ready"); await InitializeAsync(); return; }
             if (token.IsCancellationRequested || !foreground.IsActive) return;
             if (root.GetProperty("session").GetString() != model.Session) return;
 #if UI_TEST_FIXTURES
             if (type == "view") { viewport.Text = root.GetProperty("lat").GetRawText() + ";" + root.GetProperty("lon").GetRawText() + ";" + root.GetProperty("zoom").GetRawText(); return; }
 #endif
             if (type == "select") { await model.SelectAsync(model.Session, root.GetProperty("id").GetInt32()); return; }
-            if (type == "loaded") { status.Text = "Basiskarte geladen."; return; }
-            if (type == "failed") { status.Text = "Basiskarte fehlt oder ist veraltet. Haltestellen und gelieferte Verläufe bleiben nutzbar."; return; }
+            if (type == "loaded" || type == "failed")
+            {
+                if (!root.TryGetProperty("loadId", out var generation) || generation.ValueKind != JsonValueKind.Number || generation.GetInt32() != loadId)
+                {
+                    Core.Diagnostics.AppLog.Write("map", SessionTag(model.Session) + ": ignored stale " + type);
+                    return;
+                }
+                loadSettled = true;
+                Core.Diagnostics.AppLog.Write("map", SessionTag(model.Session) + ": " + type + " pending=" + pending);
+                status.Text = type == "loaded" ? "Basiskarte geladen." : "Basiskarte fehlt oder ist veraltet. Haltestellen und gelieferte Verläufe bleiben nutzbar.";
+                return;
+            }
             if (type == "cancel") { if (tileRequests.TryGetValue(root.GetProperty("id").GetInt32(), out var previous)) previous.Cancel(); return; }
             if (type != "tile") return;
             var id = root.GetProperty("id").GetInt32();
             var z = root.GetProperty("z").GetInt32(); var x = root.GetProperty("x").GetInt32(); var y = root.GetProperty("y").GetInt32();
-            if (pending >= 64 || tileRequests.ContainsKey(id)) return;
+            if (pending >= 64 || tileRequests.ContainsKey(id))
+            {
+                // A dropped request is a real failure for this tile: answering with
+                // error:true lets the JS layer finish it on the error path and report
+                // 'failed' instead of announcing 'loaded' for a map whose tiles are
+                // permanently missing (a saturated 'pending' means hung requests).
+                Core.Diagnostics.AppLog.Write("map", SessionTag(model.Session) + ": tile dropped id=" + id + " pending=" + pending);
+                await SendAsync(new JsonObject { ["type"] = "tile", ["session"] = model.Session, ["id"] = id, ["data"] = "", ["error"] = true });
+                return;
+            }
             pending++;
             using var tileLifetime = CancellationTokenSource.CreateLinkedTokenSource(token);
             tileRequests[id] = tileLifetime;
             try
             {
                 var tile = await tiles.GetAsync(z, x, y, tileLifetime.Token);
+                if (tile.Error) Core.Diagnostics.AppLog.Write("map", SessionTag(model.Session) + ": tile error id=" + id + " stale=" + tile.Stale);
                 if (!tileLifetime.IsCancellationRequested)
                     await SendAsync(new JsonObject { ["type"] = "tile", ["session"] = model.Session, ["id"] = id, ["data"] = tile.Data, ["error"] = tile.Error });
             }

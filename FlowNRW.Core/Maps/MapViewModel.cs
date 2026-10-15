@@ -24,7 +24,7 @@ public sealed record MapStation(int Index, Address Candidate)
     /// <summary>Readable station label and missing-position explanation.</summary>
     public string Label
     {
-        get { return Candidate.Name + (Position is null ? " · Keine Kartenposition vorhanden" : ""); }
+        get { return JourneyPresentation.DisplayName(Candidate.Name) + (Position is null ? " · Keine Kartenposition vorhanden" : ""); }
     }
 }
 

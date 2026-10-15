@@ -152,6 +152,44 @@ public sealed class StopMonitorTests
         Assert.Equal(new[] { early, late, unknown }, model.Items);
     }
 
+    /// <summary>The notice flag follows the displayed board's data quality.</summary>
+    [Fact]
+    public async Task HasDataNotice_ReflectsDisplayedResult()
+    {
+        var search = new ControlledSearchService();
+        var departures = new ControlledDepartureService();
+        var model = new StopMonitorViewModel(search, departures, new DepartureTestNavigation(), 200);
+        var candidate = await Lookup(model, search, "Essen");
+        Assert.False(model.HasDataNotice);
+        var opening = model.OpenAsync(candidate);
+        departures.Pending[0].SetResult(new() { Source = "partial", Warnings = ["timeout"], Items = [FutureEvent()] });
+        await opening;
+        Assert.True(model.HasDataNotice);
+        var refresh = model.RefreshAsync();
+        departures.Pending[1].SetResult(new() { Source = "ok", Items = [FutureEvent()] });
+        await refresh;
+        Assert.False(model.HasDataNotice);
+    }
+
+    /// <summary>A fallback source or stale marker alone each raises the notice flag on the displayed board.</summary>
+    /// <param name="fallback">Whether the response came from a secondary source.</param>
+    /// <param name="stale">Whether the response is beyond its freshness period.</param>
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task HasDataNotice_FlagsFallbackAndStale(bool fallback, bool stale)
+    {
+        var search = new ControlledSearchService();
+        var departures = new ControlledDepartureService();
+        var model = new StopMonitorViewModel(search, departures, new DepartureTestNavigation(), 200);
+        var candidate = await Lookup(model, search, "Essen");
+        var opening = model.OpenAsync(candidate);
+        departures.Pending[0].SetResult(new() { Source = "marked", IsFallback = fallback, IsStale = stale, Items = [FutureEvent()] });
+        await opening;
+        Assert.True(model.HasDataNotice);
+        Assert.Equal("marked", model.Result?.Source);
+    }
+
     /// <summary>Search addresses and initial provider failures remain clearly recoverable.</summary>
     [Fact]
     public async Task ExplainsNoStopsAndInitialFailure()

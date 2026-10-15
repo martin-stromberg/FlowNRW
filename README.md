@@ -10,7 +10,7 @@ FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahr
 
 ## Aktueller Funktionsstand
 
-- Startseite mit dauerhaft gespeicherten Favoriten, unabhängigen Abfahrtstafeln und expliziter Entfernungssortierung. [Bedienung und Speicherung](docs/help/favoriten/index.md).
+- Startseite mit dauerhaft gespeicherten Favoriten, unabhängigen Abfahrtstafeln und expliziter Entfernungssortierung. Zugeklappte Tafeln zeigen eine kompakte Linienübersicht, die sich auch aus teilweise gelieferten Antworten ergänzt; der Auf-/Zuklapp-Schalter sitzt im Kartenkopf. Ist ein angezeigtes Ergebnis möglicherweise unvollständig oder veraltet, ersetzt ein Warnsymbol mit Details per Tipp die frühere Hinweiszeile. [Bedienung und Speicherung](docs/help/favoriten/index.md).
 - Vordergrundmonitore können mit Aus/30/60/120/300 Sekunden automatisch aktualisiert werden (Standard 60). Die Auswahl wird erst nach erfolgreichem Speichern wirksam; Navigation und Fensterdeaktivierung stoppen automatische Abrufe. Manuelle Aktualisierung bleibt verfügbar. [Bedienung, Speicherung und iOS-Prüfung](docs/help/monitorintervalle/index.md).
 - Wiederaufnahme erneuert veraltete sichtbare Abfahrten und Verbindungen ohne Seitensprung. iOS-Hintergrundaktualisierung für Favoriten ist registriert und zeitlich begrenzt; ihre native Geräteabnahme steht aus. **Aus** deaktiviert auch automatische Resume-/Hintergrundabrufe. [Ablauf und Grenzen](docs/help/monitorintervalle/ablauf-technisch.md).
 
@@ -19,10 +19,10 @@ FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahr
 - Konfigurierbare `db.transport.rest`- und EFA-Adapter mit NRW-Priorität, Fallback, Cache, Abbruch und begrenzten Wiederholungen.
 - Konservative Echtzeitkonsolidierung: Haltestellen- und Fahrtidentität müssen eindeutig zusammenpassen; fehlende Werte bleiben unbekannt.
 - Regionale Teilergebnisse werden um zusätzliche bundesweite Fahrten ergänzt; eindeutige Treffer behalten regionale Echtzeitpriorität. [106 Tests und Windows-Build geprüft](docs/help/fahrplanauskunft/verification/union-correction-checks.md).
-- Native Suche mit Adress-/Haltestellentreffern und Koordinaten, Ergebnissen und Details; Lade-/Fehler-/Leerzustände, Quellen und Datenalter sind sichtbar. [Bedienung](docs/help/verbindungssuche/beschreibung.md).
-- Native Haltestellensuche und manueller Abfahrtsmonitor mit Echtzeitstatus, Gleiswechseln und erhaltenen Daten bei Aktualisierungsfehlern. [Bedienung](docs/help/abfahrten/beschreibung.md).
-- Interaktive Haltestellenkarte mit nativer Listenalternative und gelieferten Verbindungsverläufen. [Bedienung und Kartenkonfiguration](docs/help/karte/beschreibung.md).
-- Expliziter aktueller Standort als Start/Ziel und nahe Haltestellen in Liste/Karte; Fehler erhalten die manuelle Nutzung. [Bedienung und iOS-Prüfung](docs/help/standort/index.md). Native Windows-Fixtures und echter Windows-Standortversuch erfolgreich.
+- Native Suche mit Adress-/Haltestellentreffern und Koordinaten, Ergebnissen und Details; Lade-/Fehler-/Leerzustände, Quellen und Datenalter sind sichtbar. Trefferlisten zeigen keine internen Kennungen; doppelt genannte Ortsnamen („X, X Hbf") werden als „X Hbf" angezeigt. [Bedienung](docs/help/verbindungssuche/beschreibung.md).
+- Native Haltestellensuche und manueller Abfahrtsmonitor mit Echtzeitstatus, Gleiswechseln und erhaltenen Daten bei Aktualisierungsfehlern; möglicherweise unvollständige oder veraltete Ergebnisse meldet auch hier ein Warnsymbol mit Details per Tipp. [Bedienung](docs/help/abfahrten/beschreibung.md).
+- Interaktive Haltestellenkarte mit nativer Listenalternative und gelieferten Verbindungsverläufen; Kachel-Timeouts und ein Lade-Watchdog begrenzen den Kartenaufbau, sodass „Basiskarte wird geladen …" nicht hängen bleibt. [Bedienung und Kartenkonfiguration](docs/help/karte/beschreibung.md).
+- Expliziter aktueller Standort als Start/Ziel und nahe Haltestellen in Liste/Karte; Fehler erhalten die manuelle Nutzung. Nahe Haltestellen zeigen die Entfernung (Anbieterwert oder gekennzeichnete Luftlinie) statt interner Kennungen. [Bedienung und iOS-Prüfung](docs/help/standort/index.md). Native Windows-Fixtures und echter Windows-Standortversuch erfolgreich.
 - Modernes Design: Aktionsbuttons, Statuszeilen und die drei Tab-Symbole nutzen die Icon-Font Material Symbols Rounded (FILL0/FILL1, opsz 24) statt Unicode-Textglyphen; UI-Schrift ist Inter (SIL OFL), prominente Abfahrtszeiten JetBrains Mono (OFL). Status wie Ausfall, Verspätung und „Keine Echtzeitdaten" erscheinen als Chips aus Symbol plus Text. [Design-Dokumentation](docs/help/design/index.md).
 - iOS-Einstieg und Zielplattform vorhanden; [Visual-Studio-/iOS-Einrichtung und manuelle Prüfliste](docs/help/verbindungssuche/installation.md).
 
@@ -129,7 +129,7 @@ dotnet build FlowNRW.sln -c Release -p:TreatWarningsAsErrors=true
 dotnet test FlowNRW.Tests/FlowNRW.Tests.csproj -c Release --no-build --collect:"XPlat Code Coverage"
 ```
 
-293 Core-Tests bestehen, darunter `DepartureStatusTests` für die neue Statussemantik. Die Icon-/Font-Darstellung ist durch eine Windows-Screenshot-Matrix (hell/dunkel, 430×900 und 1024×768, 100 %/150 % Textskalierung) unter [docs/help/design/verification/icon-matrix/](docs/help/design/verification/icon-matrix/) belegt.
+307 Core-Tests bestehen, darunter `DepartureStatusTests` für die neue Statussemantik. Die Icon-/Font-Darstellung ist durch eine Windows-Screenshot-Matrix (hell/dunkel, 430×900 und 1024×768, 100 %/150 % Textskalierung) unter [docs/help/design/verification/icon-matrix/](docs/help/design/verification/icon-matrix/) belegt.
 
 Die historische [Verifikation der Verbindungssuche vom 16.09.2026](docs/help/verbindungssuche/verification/checks-2026-09-16.md) dokumentiert den damaligen Build-/Teststand und separate echte Bedienproben. Nachweise gelten jeweils für den dort genannten Stand; sie sind keine Abnahme späterer Funktionen. [UI-Harness ausführen](tests/WindowsJourneyUiTests/README.md). `UiTest` ist ein isolierter Fixture-Build; nur reguläre Releaseartefakte ausliefern. Die native iOS-Geräteprüfung bleibt beim Nutzer. Die bestehenden Release-Skripttests laufen mit `npm run test:release-version`.
 

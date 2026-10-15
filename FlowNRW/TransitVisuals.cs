@@ -62,18 +62,25 @@ internal static class TransitVisuals
     /// <value>Design-token-backed color.</value>
     internal static readonly Color ErrorDark = Color.FromArgb("#FF897D");
 
-    internal static Border Candidate(FlowNRW.Core.Transit.Address candidate, Button action, string suffix = "", bool showTechnicalIdentity = true)
+    /// <summary>Wraps a full-width candidate button and its optional detail line without technical identifiers.</summary>
+    /// <param name="candidate">Complete provider candidate.</param>
+    /// <param name="action">Prepared select button; text, padding and accessible description are applied here.</param>
+    /// <param name="suffix">Additional detail appended to the description, for example a distance.</param>
+    /// <param name="detailsId">Optional accessible identifier of the secondary detail line.</param>
+    /// <returns>A bordered card containing the button and, when the suffix carries content, the detail line.</returns>
+    internal static Border Candidate(FlowNRW.Core.Transit.Address candidate, Button action, string suffix = "", string? detailsId = null)
     {
-        var description = (showTechnicalIdentity ? FlowNRW.Core.Presentation.JourneyPresentation.Address(candidate) : candidate.Name) + suffix;
-        action.Text = candidate.Name + suffix;
+        var displayName = FlowNRW.Core.Presentation.JourneyPresentation.DisplayName(candidate.Name);
+        var description = displayName + suffix;
+        action.Text = description;
         action.Padding = new Thickness(0);
         action.SetAppThemeColor(Button.BackgroundColorProperty, Colors.Transparent, Colors.Transparent);
         action.SetAppThemeColor(Button.TextColorProperty, Ink, InkDark);
         SemanticProperties.SetDescription(action, description);
-        var details = description.StartsWith(candidate.Name, StringComparison.Ordinal) ? description[candidate.Name.Length..].Trim(' ', '·') : description;
+        var details = description.StartsWith(displayName, StringComparison.Ordinal) ? description[displayName.Length..].Trim(' ', '·') : description;
         var layout = new VerticalStackLayout { Spacing = 4, Padding = new Thickness(2) };
         layout.Children.Add(action);
-        if (!string.IsNullOrWhiteSpace(details)) layout.Children.Add(Secondary(details));
+        if (!string.IsNullOrWhiteSpace(details)) layout.Children.Add(Secondary(details, detailsId));
         return new Border { Padding = 16, Content = layout };
     }
 
@@ -172,6 +179,54 @@ internal static class TransitVisuals
             Color.FromRgba(light.Red, light.Green, light.Blue, 0.14f),
             Color.FromRgba(dark.Red, dark.Green, dark.Blue, 0.22f));
         return chip;
+    }
+
+    /// <summary>A 48×48 warning button that reveals an accompanying provenance label on demand.</summary>
+    internal sealed class NoticeToggle
+    {
+        /// <summary>Creates the toggle pair for one data-notice location.</summary>
+        /// <param name="noticeId">Accessible identifier of the toggle button.</param>
+        /// <param name="metadataId">Accessible identifier of the expandable provenance label.</param>
+        internal NoticeToggle(string noticeId, string metadataId)
+        {
+            Metadata = new Label { AutomationId = metadataId, IsVisible = false };
+            Button = new Button { AutomationId = noticeId, HeightRequest = 48, WidthRequest = 48 };
+            TransitIcons.SetIcon(Button, TransitIcons.Warning, "Hinweis zu den Daten anzeigen");
+            Button.Command = new FlowNRW.Core.Presentation.RelayCommand(_ =>
+            {
+                Metadata.IsVisible = !Metadata.IsVisible;
+                SemanticProperties.SetDescription(Button, Metadata.IsVisible ? "Hinweis schließen" : "Hinweis zu den Daten anzeigen");
+            });
+        }
+
+        /// <summary>Toggle button showing the warning glyph.</summary>
+        /// <value>The themed warning color is applied via <see cref="ApplyWarningColors"/> after <see cref="ApplyRoles(Element)"/>.</value>
+        internal Button Button { get; }
+        /// <summary>Expandable provenance detail revealed by the button.</summary>
+        /// <value>Initially hidden label.</value>
+        internal Label Metadata { get; }
+
+        /// <summary>Shows the button only while a notice exists and collapses the detail whenever it is hidden.</summary>
+        /// <param name="visible">Whether a data-quality notice is currently presentable.</param>
+        internal void Update(bool visible)
+        {
+            Button.IsVisible = visible;
+            if (!visible && Metadata.IsVisible)
+            {
+                Metadata.IsVisible = false;
+                SemanticProperties.SetDescription(Button, "Hinweis zu den Daten anzeigen");
+            }
+        }
+
+        /// <summary>Applies the themed warning color to <see cref="Button"/>.</summary>
+        /// <remarks>
+        /// The shared button role in <see cref="ApplyRoles(Element)"/> recolors every button
+        /// glyph; the warning semantics must survive, so call this only after the roles ran.
+        /// </remarks>
+        internal void ApplyWarningColors()
+        {
+            Button.SetAppThemeColor(Button.TextColorProperty, Warning, WarningDark);
+        }
     }
 
     internal static Button SecondaryAction(string icon, string description, string automationId, ICommand command)

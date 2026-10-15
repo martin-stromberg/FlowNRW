@@ -128,6 +128,64 @@ public sealed class FavoriteTests
         Assert.All(home.Cards, card => Assert.Null(card.DistanceMeters));
     }
 
+    /// <summary>The notice flag follows the displayed board's data quality.</summary>
+    [Fact]
+    public async Task HasDataNotice_ReflectsDisplayedResult()
+    {
+        var service = new ControlledDepartureService();
+        var card = new FavoriteMonitorViewModel(StopAt("a", 51), service);
+        Assert.False(card.HasDataNotice);
+        var request = card.RefreshAsync();
+        service.Pending[0].SetResult(new() { Source = "partial", Warnings = ["timeout"], Items = [new() { PlannedTime = DateTimeOffset.Now.AddHours(1) }] });
+        await request;
+        Assert.True(card.HasDataNotice);
+        Assert.Contains("unvollständig", card.Status);
+        request = card.RefreshAsync();
+        service.Pending[1].SetResult(new() { Source = "ok", Items = [new() { PlannedTime = DateTimeOffset.Now.AddHours(1) }] });
+        await request;
+        Assert.False(card.HasDataNotice);
+    }
+
+    /// <summary>A fallback source or stale marker alone each raises the notice flag on the displayed board.</summary>
+    /// <param name="fallback">Whether the response came from a secondary source.</param>
+    /// <param name="stale">Whether the response is beyond its freshness period.</param>
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task HasDataNotice_FlagsFallbackAndStale(bool fallback, bool stale)
+    {
+        var service = new ControlledDepartureService();
+        var card = new FavoriteMonitorViewModel(StopAt("a", 51), service);
+        Assert.False(card.HasDataNotice);
+        var request = card.RefreshAsync();
+        service.Pending[0].SetResult(new() { Source = "marked", IsFallback = fallback, IsStale = stale, Items = [new() { PlannedTime = DateTimeOffset.Now.AddHours(1) }] });
+        await request;
+        Assert.True(card.HasDataNotice);
+        Assert.Equal("marked", card.Result?.Source);
+    }
+
+    /// <summary>Nearby labels prefer the provider distance, fall back to the air line and admit unknown distances.</summary>
+    [Fact]
+    public async Task NearbyDistanceLabel_PrefersProviderFallsBackToAirline()
+    {
+        var location = new ControlledLocation();
+        var nearby = new ControlledNearby();
+        var home = new FavoriteHomeViewModel(new MemoryFavorites(), () => new ControlledDepartureService(), location, nearby);
+        await home.LoadAsync();
+        var task = home.RefreshNearbyAsync();
+        location.Pending[0].SetResult(new(LocationStatus.Success, new GeoCoordinate(51.4556, 7.0116)));
+        var providerStop = new Stop { Id = "p", Source = "fixture", Name = "Provider", Coordinate = new GeoCoordinate(51.46, 7.01) };
+        var airlineStop = new Stop { Id = "a", Source = "fixture", Name = "Airline", Coordinate = new GeoCoordinate(51.47, 7.01) };
+        var unlocatedStop = new Stop { Id = "u", Source = "fixture", Name = "Unlocated" };
+        nearby.Pending[0].SetResult(new() { Items = [new() { Stop = providerStop, DistanceMeters = 225 }, new() { Stop = airlineStop }, new() { Stop = unlocatedStop }] });
+        await task;
+
+        Assert.Equal(" · Entfernung: 225 m", home.NearbyDistanceLabel(home.NearbyStops[0]));
+        Assert.Contains("Luftlinie", home.NearbyDistanceLabel(home.NearbyStops[1]));
+        Assert.Equal(" · Entfernung unbekannt", home.NearbyDistanceLabel(home.NearbyStops[2]));
+        Assert.Equal(" · Entfernung unbekannt", home.NearbyDistanceLabel(new Address { Name = "other" }));
+    }
+
     /// <summary>Equal distances preserve stored order and stale map cards cannot open re-added identities.</summary>
     [Fact]
     public async Task EqualDistancesAndStaleMapMembership()

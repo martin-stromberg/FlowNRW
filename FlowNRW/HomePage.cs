@@ -207,10 +207,18 @@ public sealed class HomePage : ContentPage
         var layout = new VerticalStackLayout { Spacing = 8, BindingContext = card };
         layout.Children.Add(BuildCardHeader(card, index));
         AddLabel(layout, "FavoriteDistance" + index, nameof(card.DistanceLabel));
-        var status = new Label { AutomationId = "FavoriteStatus" + index };
+        var statusRow = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 8 };
+        var status = new Label { AutomationId = "FavoriteStatus" + index, VerticalOptions = LayoutOptions.Center };
         status.SetBinding(Label.TextProperty, nameof(card.Status));
         status.IsVisible = ShowsFavoriteStatus(card) && !card.IsBusy;
-        layout.Children.Add(status);
+        statusRow.Add(status, 0);
+        var notice = new TransitVisuals.NoticeToggle("FavoriteNotice" + index, "FavoriteMetadata" + index);
+        notice.Metadata.SetBinding(Label.TextProperty, nameof(card.Metadata));
+        notice.Update(card.HasDataNotice && !card.IsBusy);
+        unsubscribe.Add(() => notice.Button.Command = null);
+        statusRow.Add(notice.Button, 1);
+        layout.Children.Add(statusRow);
+        layout.Children.Add(notice.Metadata);
         var summary = new HorizontalStackLayout { Spacing = 8, AutomationId = "FavoriteLines" + index };
         var summaryContainer = new ScrollView { Orientation = ScrollOrientation.Horizontal, Content = summary };
         layout.Children.Add(summaryContainer);
@@ -220,21 +228,31 @@ public sealed class HomePage : ContentPage
         RenderFavoriteDepartures(card, index, departures);
         departures.IsVisible = card.IsExpanded;
         summaryContainer.IsVisible = !card.IsExpanded;
-        SubscribeCardChanges(card, index, new(status, summary, summaryContainer, departures));
+        SubscribeCardChanges(card, index, new(status, summary, summaryContainer, departures, notice));
         layout.Children.Add(BuildCardActions(card, index));
         TransitVisuals.ApplyRoles(layout);
+        notice.ApplyWarningColors();
         return new Border { Padding = 16, Content = layout };
     }
 
-    private static Grid BuildCardHeader(FavoriteMonitorViewModel card, int index)
+    private Grid BuildCardHeader(FavoriteMonitorViewModel card, int index)
     {
-        var header = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 8 };
+        var header = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto), new(GridLength.Auto)], ColumnSpacing = 8 };
         header.Add(TransitVisuals.Text(card.Title, 22, true, "FavoriteName" + index), 0);
         var busy = new ActivityIndicator { AutomationId = "FavoriteBusy" + index, VerticalOptions = LayoutOptions.Center };
         busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(card.IsBusy));
         busy.SetBinding(IsVisibleProperty, nameof(card.IsBusy));
         SemanticProperties.SetDescription(busy, "Abfahrten werden aktualisiert");
         header.Add(busy, 1);
+        var expand = new Button { AutomationId = "ToggleFavorite" + index, HeightRequest = 48, WidthRequest = 48 };
+        void SetExpandIcon()
+        {
+            TransitIcons.SetIcon(expand, card.IsExpanded ? TransitIcons.ExpandLess : TransitIcons.ExpandMore, card.IsExpanded ? "Abfahrten einklappen" : "Abfahrten aufklappen");
+        }
+        SetExpandIcon();
+        expand.Command = new AsyncRelayCommand(() => { card.ToggleExpanded(); SetExpandIcon(); return Task.CompletedTask; }, () => true, _ => Title = "Abfahrten konnten nicht ein- oder ausgeklappt werden");
+        header.Add(expand, 2);
+        unsubscribe.Add(() => expand.Command = null);
         return header;
     }
 
@@ -267,20 +285,22 @@ public sealed class HomePage : ContentPage
     /// <param name="Summary">Summary strip of the card.</param>
     /// <param name="SummaryContainer">Scroll container hosting the summary strip.</param>
     /// <param name="Departures">Departure list of the card.</param>
+    /// <param name="Notice">Data-notice toggle of the card.</param>
     /// <returns>A bundle of the card's reactive views.</returns>
     private sealed record FavoriteCardViews(Label Status, HorizontalStackLayout Summary,
-        ScrollView SummaryContainer, VerticalStackLayout Departures);
+        ScrollView SummaryContainer, VerticalStackLayout Departures, TransitVisuals.NoticeToggle Notice);
 
     private void SubscribeCardChanges(FavoriteMonitorViewModel card, int index, FavoriteCardViews views)
     {
         PropertyChangedEventHandler changed = (_, args) =>
         {
             if (args.PropertyName is nameof(card.Items) or nameof(card.Lines)) { RenderFavoriteDepartures(card, index, views.Departures); RenderFavoriteSummary(card, views.Summary); }
-            if (args.PropertyName is nameof(card.Status) or nameof(card.IsBusy) or nameof(card.Result) or nameof(card.IsExpanded))
+            if (args.PropertyName is nameof(card.Status) or nameof(card.IsBusy) or nameof(card.Result) or nameof(card.IsExpanded) or nameof(card.HasDataNotice))
             {
                 views.Status.IsVisible = ShowsFavoriteStatus(card) && !card.IsBusy;
                 views.Departures.IsVisible = card.IsExpanded;
                 views.SummaryContainer.IsVisible = !card.IsExpanded;
+                views.Notice.Update(card.HasDataNotice && !card.IsBusy);
             }
         };
         card.PropertyChanged += changed;
@@ -289,19 +309,10 @@ public sealed class HomePage : ContentPage
 
     private Grid BuildCardActions(FavoriteMonitorViewModel card, int index)
     {
-        var actionGrid = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
-        var expand = new Button { AutomationId = "ToggleFavorite" + index, HeightRequest = 48, WidthRequest = 48 };
-        void SetExpandIcon()
-        {
-            TransitIcons.SetIcon(expand, card.IsExpanded ? TransitIcons.ExpandLess : TransitIcons.ExpandMore, card.IsExpanded ? "Abfahrten einklappen" : "Abfahrten aufklappen");
-        }
-        SetExpandIcon();
-        expand.Command = new AsyncRelayCommand(() => { card.ToggleExpanded(); SetExpandIcon(); return Task.CompletedTask; }, () => true, _ => Title = "Abfahrten konnten nicht ein- oder ausgeklappt werden");
-        actionGrid.Add(expand, 0);
-        unsubscribe.Add(() => expand.Command = null);
+        var actionGrid = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
         var refreshButton = new Button { AutomationId = "RefreshFavorite" + index, Command = card.RefreshCommand, HeightRequest = 48, WidthRequest = 48 };
         TransitIcons.SetIcon(refreshButton, TransitIcons.Refresh, "Abfahrten aktualisieren");
-        actionGrid.Add(refreshButton, 1);
+        actionGrid.Add(refreshButton, 0);
         unsubscribe.Add(() => refreshButton.Command = null);
         var open = new AsyncRelayCommand(() => monitor.OpenFavoriteAsync(model, card), () => model.Contains(card),
             _ => Title = "Monitor konnte nicht geöffnet werden");
@@ -315,11 +326,11 @@ public sealed class HomePage : ContentPage
         unsubscribe.Add(() => model.PropertyChanged -= savingChanged);
         var openButton = new Button { AutomationId = "OpenFavorite" + index, Command = open, HeightRequest = 48, WidthRequest = 48 };
         TransitIcons.SetIcon(openButton, TransitIcons.DepartureBoard, "Abfahrtsmonitor öffnen");
-        actionGrid.Add(openButton, 2);
+        actionGrid.Add(openButton, 1);
         unsubscribe.Add(() => openButton.Command = null);
         var removeButton = new Button { AutomationId = "RemoveFavorite" + index, Command = remove, HeightRequest = 48, WidthRequest = 48 };
         TransitIcons.SetIcon(removeButton, TransitIcons.StarOutline, "Favorit entfernen");
-        actionGrid.Add(removeButton, 3);
+        actionGrid.Add(removeButton, 2);
         unsubscribe.Add(() => removeButton.Command = null);
         return actionGrid;
     }
@@ -331,10 +342,9 @@ public sealed class HomePage : ContentPage
         {
             var candidate = model.NearbyStops[index];
             var button = new Button { AutomationId = "NearbyStop" + index, HeightRequest = 48, HorizontalOptions = LayoutOptions.Fill };
-            SemanticProperties.SetDescription(button, "Nahe Haltestelle " + candidate.Name);
             button.Command = new AsyncRelayCommand(() => monitor.OpenNearbyFromHomeAsync(candidate), () => candidate.Stop is not null,
                 _ => Title = "Haltestelle konnte nicht geöffnet werden");
-            nearbyCards.Children.Add(TransitVisuals.Candidate(candidate, button));
+            nearbyCards.Children.Add(TransitVisuals.Candidate(candidate, button, model.NearbyDistanceLabel(candidate), detailsId: "NearbyDistance" + index));
         }
     }
 
@@ -359,7 +369,6 @@ public sealed class HomePage : ContentPage
 
     private static bool ShowsFavoriteStatus(FavoriteMonitorViewModel card) => card.Status.Contains("Keine nächsten", StringComparison.OrdinalIgnoreCase)
         || card.Status.Contains("Letzter Stand", StringComparison.OrdinalIgnoreCase)
-        || card.Status.Contains("unvollständig", StringComparison.OrdinalIgnoreCase)
         || card.Status.Contains("fehlgeschlagen", StringComparison.OrdinalIgnoreCase)
         || card.Status.Contains("nicht geladen", StringComparison.OrdinalIgnoreCase);
 }

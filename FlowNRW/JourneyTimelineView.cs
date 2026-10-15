@@ -29,8 +29,8 @@ public sealed class JourneyTimelineView : VerticalStackLayout
         {
             legIndex++;
             var title = leg.Walking is not null ? "Fußweg" : JourneyPresentation.LegLineName(leg);
-            var origin = string.IsNullOrWhiteSpace(leg.Departure.Identity.Stop.Name) ? "Start unbekannt" : leg.Departure.Identity.Stop.Name;
-            var destination = string.IsNullOrWhiteSpace(leg.Arrival.Identity.Stop.Name) ? "Ziel unbekannt" : leg.Arrival.Identity.Stop.Name;
+            var origin = string.IsNullOrWhiteSpace(leg.Departure.Identity.Stop.Name) ? "Start unbekannt" : JourneyPresentation.DisplayName(leg.Departure.Identity.Stop.Name);
+            var destination = string.IsNullOrWhiteSpace(leg.Arrival.Identity.Stop.Name) ? "Ziel unbekannt" : JourneyPresentation.DisplayName(leg.Arrival.Identity.Stop.Name);
             var heading = new Grid { ColumnDefinitions = [new(GridLength.Auto), new(GridLength.Star)], ColumnSpacing = 12 };
             var badge = TransitVisuals.Badge(title, leg.Walking is null ? JourneyPresentation.LegLineMode(leg) : null);
             if (badge.Content is Label lineLabel) lineLabel.AutomationId = "JourneyLine" + index;
@@ -50,7 +50,7 @@ public sealed class JourneyTimelineView : VerticalStackLayout
             if (leg.Walking is null && ++transitIndex < journey.Transfers.Count)
             {
                 var transfer = journey.Transfers[transitIndex];
-                Children.Add(new Border { Padding = 16, Content = TransitVisuals.Text("Umstieg: " + (string.IsNullOrWhiteSpace(transfer.Stop?.Name) ? "Haltestelle unbekannt" : transfer.Stop.Name) + " · " + (transfer.Duration?.TotalMinutes.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "unbekannt") + " Min.", id: "JourneyDetailSection" + index) });
+                Children.Add(new Border { Padding = 16, Content = TransitVisuals.Text("Umstieg: " + (string.IsNullOrWhiteSpace(transfer.Stop?.Name) ? "Haltestelle unbekannt" : JourneyPresentation.DisplayName(transfer.Stop.Name)) + " · " + (transfer.Duration?.TotalMinutes.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "unbekannt") + " Min.", id: "JourneyDetailSection" + index) });
                 index++;
             }
         }
