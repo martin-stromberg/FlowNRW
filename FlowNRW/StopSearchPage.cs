@@ -43,11 +43,11 @@ public sealed class StopSearchPage : ContentPage
         var showMap = new AsyncRelayCommand(async () => { map.ShowStops(); await Shell.Current.GoToAsync("map"); },
             () => model.Stops.Count > 0 && !model.Lookup.IsBusy && !model.IsNearbyBusy, _ => Title = "Karte konnte nicht geöffnet werden");
         model.PropertyChanged += (_, _) => showMap.Refresh();
-        var find = new Button { Text = "⌕", AutomationId = "FindStops", Command = model.Lookup.SearchCommand, HeightRequest = 48, WidthRequest = 48, Padding = new Thickness(0) };
-        SemanticProperties.SetDescription(find, "Haltestelle suchen");
-        var nearby = new Button { Text = "⌖", AutomationId = "FindNearbyStops", Command = model.NearbyCommand, HeightRequest = 48, WidthRequest = 48, Padding = new Thickness(0) };
-        SemanticProperties.SetDescription(nearby, "Haltestellen in meiner Nähe");
-        var showMapButton = TransitVisuals.SecondaryAction("⌖", "Haltestellen auf Karte zeigen", "ShowStopMap", showMap);
+        var find = new Button { AutomationId = "FindStops", Command = model.Lookup.SearchCommand, HeightRequest = 48, WidthRequest = 48 };
+        TransitIcons.SetIcon(find, TransitIcons.Search, "Haltestelle suchen");
+        var nearby = new Button { AutomationId = "FindNearbyStops", Command = model.NearbyCommand, HeightRequest = 48, WidthRequest = 48 };
+        TransitIcons.SetIcon(nearby, TransitIcons.MyLocation, "Haltestellen in meiner Nähe");
+        var showMapButton = TransitVisuals.SecondaryAction(TransitIcons.Map, "Haltestellen auf Karte zeigen", "ShowStopMap", showMap);
         var inputRow = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto), new(GridLength.Auto), new(GridLength.Auto)], ColumnSpacing = 8 };
         inputRow.Add(input, 0); inputRow.Add(find, 1); inputRow.Add(nearby, 2); inputRow.Add(showMapButton, 3); searchCard.Children.Add(inputRow);
         var nearbyStatus = new Label { AutomationId = "NearbyStatus" }; nearbyStatus.SetBinding(Label.TextProperty, nameof(model.NearbyStatus)); layout.Children.Add(nearbyStatus);

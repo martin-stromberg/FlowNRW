@@ -11,24 +11,31 @@
     <Color x:Key="PrimaryDarkText">#242424</Color>
     <Color x:Key="Secondary">#E8F0FC</Color>
     <Color x:Key="SecondaryDarkText">#F5F5F7</Color>
-    <Color x:Key="Tertiary">#003E85</Color>
     <Color x:Key="CanvasLight">#FAF9FE</Color>
     <Color x:Key="CanvasDark">#000000</Color>
     <Color x:Key="CardLight">#FFFFFF</Color>
     <Color x:Key="CardDark">#1C1C1E</Color>
-    <Color x:Key="GroupLight">#F4F3F8</Color>
-    <Color x:Key="GroupDark">#2C2C2E</Color>
     <Color x:Key="InkLight">#1A1B1F</Color>
     <Color x:Key="InkDark">#F5F5F7</Color>
     <Color x:Key="MutedLight">#414755</Color>
     <Color x:Key="MutedDark">#C5C7D0</Color>
     <Color x:Key="OutlineLight">#E3E2E7</Color>
     <Color x:Key="OutlineDark">#414149</Color>
+    <Color x:Key="GroupStrong">#EEEDF3</Color>
+    <Color x:Key="GroupStrongDark">#2C2C2E</Color>
+    <Color x:Key="Success">#006E28</Color>
+    <Color x:Key="Warning">#894D00</Color>
+    <Color x:Key="Error">#BA1A1A</Color>
+    <!-- Kontrastgeprüfte Semantik-Dunkelvarianten auf CardDark #1C1C1E / GroupStrongDark #2C2C2E:
+         SuccessDark #3ECF6B ≈ 8,4:1 / 6,9:1, WarningDark #F0A840 ≈ 8,4:1 / 6,9:1,
+         ErrorDark #FF897D ≈ 7,4:1 / 6,1:1 — alle ≥4,5:1 (WCAG AA Normaltext). -->
+    <Color x:Key="SuccessDark">#3ECF6B</Color>
+    <Color x:Key="WarningDark">#F0A840</Color>
+    <Color x:Key="ErrorDark">#FF897D</Color>
 
     <Color x:Key="White">White</Color>
     <Color x:Key="Black">Black</Color>
     <Color x:Key="Magenta">#D600AA</Color>
-    <Color x:Key="MidnightBlue">#190649</Color>
     <Color x:Key="OffBlack">#1f1f1f</Color>
 
     <Color x:Key="Gray100">#E1E1E1</Color>
@@ -39,19 +46,4 @@
     <Color x:Key="Gray600">#404040</Color>
     <Color x:Key="Gray900">#212121</Color>
     <Color x:Key="Gray950">#141414</Color>
-
-    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
-    <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
-    <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>
-    <SolidColorBrush x:Key="WhiteBrush" Color="{StaticResource White}"/>
-    <SolidColorBrush x:Key="BlackBrush" Color="{StaticResource Black}"/>
-
-    <SolidColorBrush x:Key="Gray100Brush" Color="{StaticResource Gray100}"/>
-    <SolidColorBrush x:Key="Gray200Brush" Color="{StaticResource Gray200}"/>
-    <SolidColorBrush x:Key="Gray300Brush" Color="{StaticResource Gray300}"/>
-    <SolidColorBrush x:Key="Gray400Brush" Color="{StaticResource Gray400}"/>
-    <SolidColorBrush x:Key="Gray500Brush" Color="{StaticResource Gray500}"/>
-    <SolidColorBrush x:Key="Gray600Brush" Color="{StaticResource Gray600}"/>
-    <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
-    <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
 </ResourceDictionary>

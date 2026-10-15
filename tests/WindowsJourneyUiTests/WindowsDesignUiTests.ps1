@@ -6,7 +6,7 @@ New-Item -ItemType Directory -Force $ScreenshotDirectory | Out-Null
 $ScreenshotDirectory = (Resolve-Path $ScreenshotDirectory).Path
 $run = Join-Path $env:TEMP ('flownrw-design-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory $run | Out-Null
-$keys = @('FLOWNRW_UI_TEST_THEME','FLOWNRW_UI_TEST_TEXT_SCALE','FLOWNRW_UI_TEST_HIDE_CONTROLS','FLOWNRW_UI_TEST_SCENARIO','FLOWNRW_UI_TEST_FAVORITES','FLOWNRW_UI_TEST_REFRESH_SETTINGS','FLOWNRW_UI_TEST_PIN_ACTIVE')
+$keys = @('FLOWNRW_UI_TEST_THEME','FLOWNRW_UI_TEST_TEXT_SCALE','FLOWNRW_UI_TEST_HIDE_CONTROLS','FLOWNRW_UI_TEST_SCENARIO','FLOWNRW_UI_TEST_FAVORITES','FLOWNRW_UI_TEST_CONNECTION_FAVORITES','FLOWNRW_UI_TEST_REFRESH_SETTINGS','FLOWNRW_UI_TEST_PIN_ACTIVE')
 $previous=@{}; foreach($key in $keys) { $previous[$key]=[Environment]::GetEnvironmentVariable($key) }
 $env:FLOWNRW_UI_TEST_THEME=$Theme
 $env:FLOWNRW_UI_TEST_PIN_ACTIVE='1'
@@ -14,6 +14,7 @@ $env:FLOWNRW_UI_TEST_TEXT_SCALE="$TextScale"
 $env:FLOWNRW_UI_TEST_HIDE_CONTROLS='1'
 $env:FLOWNRW_UI_TEST_SCENARIO=$Scenario
 $env:FLOWNRW_UI_TEST_FAVORITES=Join-Path $run 'favorites.json'
+$env:FLOWNRW_UI_TEST_CONNECTION_FAVORITES=Join-Path $run 'connection-favorites.json'
 $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS=Join-Path $run 'refresh.json'
 [IO.File]::WriteAllText($env:FLOWNRW_UI_TEST_REFRESH_SETTINGS,'0')
 # The capture path sends physical input and therefore requires an interactive foreground window.
@@ -166,7 +167,16 @@ public static class DesignWindow {
     try { $buildHash = ([BitConverter]::ToString($sha256.ComputeHash([IO.File]::ReadAllBytes($buildPath)))).Replace('-', '') }
     finally { $sha256.Dispose() }
     function AssertOwnForeground {
-        if ([DesignWindow]::GetForegroundWindow() -ne $handle) { throw 'Physical input cancelled: app is not the foreground window.' }
+        # Focus theft is transient (notifications, other apps): try to reclaim the
+        # foreground for a few seconds before treating the run as cancelled. The
+        # physical-input guard itself is unchanged — input is only sent while the
+        # app window is actually in the foreground.
+        for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            if ([DesignWindow]::GetForegroundWindow() -eq $handle) { return }
+            [DesignWindow]::SetForegroundWindow($handle) | Out-Null
+            Start-Sleep -Milliseconds 250
+        }
+        throw 'Physical input cancelled: app is not the foreground window.'
     }
     function AssertTouchTarget([string]$id) {
         if ($id -eq 'OriginCoordinateMode') {

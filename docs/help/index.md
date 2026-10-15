@@ -15,3 +15,7 @@
 
 - [Automatische Monitoraktualisierung](monitorintervalle/index.md) — Gespeicherte Vordergrundintervalle, Wiederaufnahme, iOS-Hintergrundgrenzen und Fehlerhilfe.
 - [Favoriten auf der Startseite](favoriten/index.md) — Gespeicherte Haltestellen mit unabhängigen Abfahrtstafeln und Entfernungssortierung.
+
+## Design
+
+- [Design](design/index.md) — Icon-Font, lizenzfreie Typografie, Status-Chips, Design-Tokens und visuelle Nachweise.

@@ -44,7 +44,7 @@ public sealed class MapPage : ContentPage
         viewport.IsVisible = Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_HIDE_CONTROLS") != "1";
         layout.Children.Add(viewport);
 #endif
-        var reset = TransitVisuals.SecondaryAction("↻", "Karte neu laden", "ResetMap",
+        var reset = TransitVisuals.SecondaryAction(TransitIcons.Refresh, "Karte neu laden", "ResetMap",
             new AsyncRelayCommand(InitializeAsync, () => true, failure: _ => status.Text = "Karte nicht verfügbar. Bitte die Haltestellenliste verwenden."));
         SizeChanged += (_, _) => map.HeightRequest = Math.Max(320, Height * 0.55);
         var information = new VerticalStackLayout { Spacing = 8, IsVisible = false };
@@ -52,8 +52,8 @@ public sealed class MapPage : ContentPage
         information.Children.Add(new Label { Text = "Kartendaten: Die angezeigte Region wird beim Kartenanbieter abgerufen. Keine Standortfreigabe erforderlich.", FontSize = 13 });
         foreach (var segment in model.Segments)
             information.Children.Add(new Label { Text = "Verlauf: " + segment.Label, AutomationId = "MapSegment" + model.Segments.ToList().IndexOf(segment), FontSize = 13 });
-        var infoButton = new Button { Text = "ⓘ", AutomationId = "MapInformation", HeightRequest = 48, WidthRequest = 48, Padding = new Thickness(0) };
-        SemanticProperties.SetDescription(infoButton, "Quellen und Kartendaten");
+        var infoButton = new Button { AutomationId = "MapInformation", HeightRequest = 48, WidthRequest = 48 };
+        TransitIcons.SetIcon(infoButton, TransitIcons.Info, "Quellen und Kartendaten");
         infoButton.Command = new RelayCommand(_ =>
         {
             information.IsVisible = !information.IsVisible;

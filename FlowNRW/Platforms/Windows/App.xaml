@@ -3,6 +3,30 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:maui="using:Microsoft.Maui"
+    xmlns:winui="using:Microsoft.UI.Xaml.Controls"
     xmlns:local="using:FlowNRW.WinUI">
+
+    <maui:MauiWinUIApplication.Resources>
+        <ResourceDictionary>
+            <!-- Compact shell tabs: with icons the default spacing pushes the
+                 third tab into the "Mehr" overflow menu at the verified 430 px
+                 matrix width. The reduced theme margins keep all tabs visible. -->
+            <Thickness x:Key="NavigationViewItemButtonMargin">0,2</Thickness>
+            <Thickness x:Key="TopNavigationViewItemContentPresenterMargin">4,-1,4,-1</Thickness>
+            <!-- Same bindings as MAUI's default template (Controls TabbedPageStyle.xaml),
+                 only the label font size is reduced. -->
+            <DataTemplate x:Key="TabBarNavigationViewMenuItem">
+                <winui:NavigationViewItem
+                    x:Name="navViewItem"
+                    Content="{Binding Content}"
+                    Background="{Binding Background}"
+                    IsEnabled="{Binding IsEnabled}"
+                    IsSelected="{Binding IsSelected, Mode=TwoWay}"
+                    MenuItemsSource="{Binding MenuItemsSource}"
+                    Icon="{Binding Icon}"
+                    FontSize="13" />
+            </DataTemplate>
+        </ResourceDictionary>
+    </maui:MauiWinUIApplication.Resources>
 
 </maui:MauiWinUIApplication>

@@ -18,7 +18,7 @@ public sealed class JourneyTimelineView : VerticalStackLayout
         var last = journey.Legs.LastOrDefault()?.Arrival.PlannedTime;
         var summaryCard = new VerticalStackLayout { Spacing = 6 };
         summaryCard.Children.Add(summary);
-        summaryCard.Children.Add(TransitVisuals.Text(JourneyCardView.Clock(first) + " → " + JourneyCardView.Clock(last), 28, true));
+        summaryCard.Children.Add(TransitVisuals.Text(JourneyPresentation.Clock(first) + " → " + JourneyPresentation.Clock(last), 28, true));
         var duration = first is { } start && last is { } end && end >= start ? (end - start).TotalMinutes.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " Min. · " : "Dauer unbekannt · ";
         summaryCard.Children.Add(TransitVisuals.Secondary(duration + journey.Transfers.Count + (journey.Transfers.Count == 1 ? " Umstieg" : " Umstiege")));
         Children.Add(new Border { Padding = 16, Content = summaryCard });
@@ -28,11 +28,11 @@ public sealed class JourneyTimelineView : VerticalStackLayout
         foreach (var leg in journey.Legs)
         {
             legIndex++;
-            var title = leg.Walking is not null ? "Fußweg" : leg.Line?.Name ?? leg.Departure.Line?.Name ?? leg.Departure.Identity.Line ?? "Linie unbekannt";
+            var title = leg.Walking is not null ? "Fußweg" : JourneyPresentation.LegLineName(leg);
             var origin = string.IsNullOrWhiteSpace(leg.Departure.Identity.Stop.Name) ? "Start unbekannt" : leg.Departure.Identity.Stop.Name;
             var destination = string.IsNullOrWhiteSpace(leg.Arrival.Identity.Stop.Name) ? "Ziel unbekannt" : leg.Arrival.Identity.Stop.Name;
             var heading = new Grid { ColumnDefinitions = [new(GridLength.Auto), new(GridLength.Star)], ColumnSpacing = 12 };
-            var badge = TransitVisuals.Badge(title, leg.Walking is null ? (leg.Line ?? leg.Departure.Line)?.Mode : null);
+            var badge = TransitVisuals.Badge(title, leg.Walking is null ? JourneyPresentation.LegLineMode(leg) : null);
             if (badge.Content is Label lineLabel) lineLabel.AutomationId = "JourneyLine" + index;
             heading.Add(badge, 0);
             var names = TransitVisuals.Text(origin + " → " + destination, 17, true, "JourneyDetailSection" + index);
@@ -65,15 +65,10 @@ public sealed class JourneyTimelineView : VerticalStackLayout
         var actual = item.Realtime.ActualTime ?? item.PlannedTime;
         time.Children.Add(TransitVisuals.Text(JourneyPresentation.EventTime(actual, reference), 15, true));
         if (item.Realtime.ActualTime is { } actualTime && item.PlannedTime is { } planned && actualTime != planned)
-        {
-            var scheduled = TransitVisuals.Secondary(JourneyPresentation.EventTime(planned, reference));
-            scheduled.FontSize = 12;
-            scheduled.TextDecorations = TextDecorations.Strikethrough;
-            time.Children.Add(scheduled);
-        }
+            time.Children.Add(TransitVisuals.StrikethroughTime(JourneyPresentation.EventTime(planned, reference)));
         times.Add(time, 1);
         stack.Children.Add(times);
-        if (item.Realtime.Cancelled == true) stack.Children.Add(TransitVisuals.Text("Fahrt fällt aus", 15, true));
+        if (item.Realtime.Cancelled == true) stack.Children.Add(TransitVisuals.StatusChip(TransitIcons.Cancel, "Fahrt fällt aus", TransitVisuals.Error, TransitVisuals.ErrorDark));
         if (!string.IsNullOrWhiteSpace(item.Realtime.Platform))
         {
             var platform = "Bahnsteig: " + item.Realtime.Platform;

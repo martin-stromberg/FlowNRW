@@ -18,12 +18,13 @@ if ($ScreenshotDirectory) {
     New-Item -ItemType Directory -Force $ScreenshotDirectory | Out-Null
     $ScreenshotDirectory = (Resolve-Path $ScreenshotDirectory).Path
 }
-$keys = @('FLOWNRW_UI_TEST_FAVORITES', 'FLOWNRW_UI_TEST_DEPARTURE_CACHE', 'FLOWNRW_UI_TEST_REFRESH_SETTINGS', 'FLOWNRW_UI_TEST_SCENARIO', 'FLOWNRW_UI_TEST_HIDE_CONTROLS', 'FLOWNRW_UI_TEST_PIN_ACTIVE')
+$keys = @('FLOWNRW_UI_TEST_FAVORITES', 'FLOWNRW_UI_TEST_CONNECTION_FAVORITES', 'FLOWNRW_UI_TEST_DEPARTURE_CACHE', 'FLOWNRW_UI_TEST_REFRESH_SETTINGS', 'FLOWNRW_UI_TEST_SCENARIO', 'FLOWNRW_UI_TEST_HIDE_CONTROLS', 'FLOWNRW_UI_TEST_PIN_ACTIVE')
 $previous = @{}
 foreach ($key in $keys) { $previous[$key] = [Environment]::GetEnvironmentVariable($key) }
 $directory = Join-Path (Get-Location) ('artifacts/tests/departure-cache/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force $directory | Out-Null
 $env:FLOWNRW_UI_TEST_FAVORITES = Join-Path $directory 'favorites.json'
+$env:FLOWNRW_UI_TEST_CONNECTION_FAVORITES = Join-Path $directory 'connection-favorites.json'
 $env:FLOWNRW_UI_TEST_DEPARTURE_CACHE = Join-Path $directory 'departure-cache.json'
 $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = Join-Path $directory 'refresh-settings.json'
 $env:FLOWNRW_UI_TEST_SCENARIO = 'success'
