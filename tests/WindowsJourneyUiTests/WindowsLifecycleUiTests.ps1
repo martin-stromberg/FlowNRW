@@ -10,6 +10,10 @@ public static class RefreshWindow {
  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int command);
+ [DllImport("user32.dll", EntryPoint="GetWindowThreadProcessId")] public static extern uint GetThreadIdOfWindow(IntPtr h, IntPtr pid);
+ [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+ [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
+ [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
 }
 "@
 $previousSettings = $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS
@@ -87,7 +91,10 @@ function Hold([int]$seconds, [bool]$active = $true) {
     $reported = -1
     while ($clock.Elapsed.TotalSeconds -lt $seconds) {
         if ($active) { RequireForeground }
-        elseif ([RefreshWindow]::GetForegroundWindow() -eq [IntPtr]$script:window.Current.NativeWindowHandle) { throw 'Window unexpectedly reactivated during inactive observation' }
+        # GetForegroundWindow still reports the just-minimized window for several
+        # hundred ms before Windows reassigns the foreground; only a restored
+        # (non-iconic) foreground window is a real reactivation.
+        elseif ([RefreshWindow]::GetForegroundWindow() -eq [IntPtr]$script:window.Current.NativeWindowHandle -and -not [RefreshWindow]::IsIconic([IntPtr]$script:window.Current.NativeWindowHandle)) { throw 'Window unexpectedly reactivated during inactive observation' }
         $bucket = [int][Math]::Floor($clock.Elapsed.TotalSeconds / 5)
         if ($bucket -gt $reported) { Write-Output ('WAIT real time ' + [int]$clock.Elapsed.TotalSeconds + '/' + $seconds + ' seconds'); $reported = $bucket }
         Start-Sleep -Milliseconds 250
@@ -179,6 +186,20 @@ function Snapshot([string]$name) {
     } finally { $graphics.Dispose(); $bitmap.Dispose() }
 }
 function PauseAndResume([int]$seconds = 1) {
+    # Hand the foreground to this script's own console window before minimizing:
+    # when the foreground window is minimized Windows picks the "next" window on
+    # its own and can activate the just-minimized app again if that pick fails.
+    # AttachThreadInput bypasses the background-process foreground restriction.
+    $own = [Diagnostics.Process]::GetCurrentProcess().MainWindowHandle
+    if ($own -ne [IntPtr]::Zero) {
+        # AttachThreadInput needs the foreground window's THREAD id (the return
+        # value of GetWindowThreadProcessId), not the process id it writes out.
+        $fgTid = [RefreshWindow]::GetThreadIdOfWindow([RefreshWindow]::GetForegroundWindow(), [IntPtr]::Zero)
+        if ($fgTid -ne 0) { [RefreshWindow]::AttachThreadInput([RefreshWindow]::GetCurrentThreadId(), $fgTid, $true) | Out-Null }
+        [RefreshWindow]::SetForegroundWindow($own) | Out-Null
+        if ($fgTid -ne 0) { [RefreshWindow]::AttachThreadInput([RefreshWindow]::GetCurrentThreadId(), $fgTid, $false) | Out-Null }
+        Start-Sleep -Milliseconds 250
+    }
     [RefreshWindow]::ShowWindow([IntPtr]$script:window.Current.NativeWindowHandle,6) | Out-Null
     Start-Sleep -Milliseconds 300
     Hold $seconds $false

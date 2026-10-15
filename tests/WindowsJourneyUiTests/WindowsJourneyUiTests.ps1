@@ -328,6 +328,10 @@ public static class FavoriteKeyboard {
         Contains 'FavoriteName0' 'Favorite Near'; Assert ($null -eq (Find 'FavoriteName1')) 'Late removed-card response cannot recreate favorite'
         SetText 'HomeScenario' 'success'; Click 'RemoveFavorite0'; FavoriteCards 0
         RestartFavorites; FavoriteCards 0; Contains 'HomeStatus' 'Keine Favoriten|keine Favoriten|Haltestelle'
+        # The process restart restores the scenario from the environment, which
+        # is still 'favorite-cache-seed' (complete); the notice proof needs a
+        # degraded board, so the restarted process must select 'success' again.
+        SetText 'HomeScenario' 'success'
         # A degraded first board replaces the intrusive status text with a
         # small notice toggle; the expand toggle lives in the card header.
         AddFavorite 'Favorite Warned'; FavoriteCards 1
