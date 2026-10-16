@@ -1,10 +1,10 @@
 # Abfahrten einer Haltestelle
 
-Auf der Suchseite **Abfahrten** öffnen, Haltestellenname oder Ort eingeben und **Haltestellen suchen** wählen. Bei mehreren Treffern anhand Name, Kennung und Koordinaten die passende Haltestelle auswählen. Adresstreffer ohne Haltestelle werden nicht angeboten. Ein Standortzugriff ist nicht erforderlich.
+Auf der Suchseite **Abfahrten** öffnen, Haltestellenname oder Ort eingeben und **Haltestellen suchen** wählen. Bei mehreren Treffern anhand des Namens die passende Haltestelle auswählen; ein doppelt genannter Ortsname („Münster (Westf), Münster (Westf) Hbf") wird als „Münster (Westf) Hbf" angezeigt, interne Kennungen werden nicht gezeigt. Adresstreffer ohne Haltestelle werden nicht angeboten. Ein Standortzugriff ist nicht erforderlich.
 
 Der Monitor zeigt die nächsten gelieferten Abfahrten mit Linie, Ziel, Soll-/Istzeit, Verspätung, Ausfall und Gleis/Steig. Ein Gleiswechsel und ein Ausfall werden ausdrücklich als Text angezeigt. „Keine Echtzeitdaten“ und „Ausfallstatus unbekannt“ sind keine Pünktlichkeits- oder Betriebsgarantie.
 
-**Aktualisieren** lädt manuell neu. Quelle, Datenstand und Datenalter stehen oberhalb der Liste. Bei einem Fehler bleiben letzte bekannte Daten mit einem Fehlerhinweis stehen; eine erfolgreiche leere Antwort zeigt den Leerzustand. Zurück führt zur erhaltenen Haltestellensuche. Ein anderer Stop startet mit eigenen Daten. Automatische Intervalle, GPS und Favoriten folgen in späteren Schritten.
+**Aktualisieren** lädt manuell neu. Quelle, Datenstand und Datenalter stehen oberhalb der Liste. Liegt das angezeigte Ergebnis möglicherweise unvollständig oder veraltet vor (Anbieterwarnung, Ersatzquelle oder veralteter Cache), erscheint zusätzlich ein kleines Warnsymbol neben der Statuszeile; erst ein Tipp darauf blendet die zugehörigen Details ein oder aus. Bei einem Fehler bleiben letzte bekannte Daten mit einem Fehlerhinweis stehen; eine erfolgreiche leere Antwort zeigt den Leerzustand. Zurück führt zur erhaltenen Haltestellensuche. Ein anderer Stop startet mit eigenen Daten. Automatische Intervalle, GPS und Favoriten folgen in späteren Schritten.
 
 ## Einrichtung und iOS-Abnahme
 

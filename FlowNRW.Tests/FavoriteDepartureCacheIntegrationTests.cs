@@ -107,7 +107,7 @@ public sealed class FavoriteDepartureCacheIntegrationTests
         Assert.Single(cache.Entries);
     }
 
-    /// <summary>A partial provider response retains both the visible complete board and its durable line inventory.</summary>
+    /// <summary>A discarded degraded provider response retains the visible complete board and its durable line inventory without contributing lines.</summary>
     [Fact]
     public async Task Refresh_PersistsLineInventoryOnlyFromCompleteResponses()
     {
@@ -128,6 +128,44 @@ public sealed class FavoriteDepartureCacheIntegrationTests
         Assert.Equal(["S1"], Assert.Single(cache.Entries).Lines);
         Assert.Equal(["S1"], card.Lines);
         Assert.Equal("live", card.Result?.Source);
+    }
+
+    /// <summary>A degraded but displayed first board contributes its delivered lines without touching the durable inventory.</summary>
+    [Fact]
+    public async Task Refresh_DegradedResultEnrichesDisplayedLines()
+    {
+        var stop = Stop("one");
+        var cache = new MemoryDepartureCache();
+        var service = new ControlledDepartureService();
+        var home = new FavoriteHomeViewModel(new MemoryFavoriteStore(stop), () => service, new ControlledLocation(), cache: cache);
+        await home.LoadAsync();
+        var card = Assert.Single(home.Cards);
+        Assert.Empty(card.Lines);
+
+        var first = card.RefreshAsync();
+        service.Pending[0].SetResult(new ProviderResult<StopEvent>
+        {
+            Source = "partial",
+            Warnings = ["partial-primary"],
+            Items =
+            [
+                Event(DateTimeOffset.Now.AddMinutes(5)) with { Identity = new TripIdentity { Source = "fixture", Stop = Stop("event"), Line = "S2" } },
+                Event(DateTimeOffset.Now.AddMinutes(6)) with { Identity = new TripIdentity { Source = "fixture", Stop = Stop("event"), Line = "S1" } },
+                Event(DateTimeOffset.Now.AddMinutes(7)) with { Identity = new TripIdentity { Source = "fixture", Stop = Stop("event"), Line = "S2" } }
+            ]
+        });
+        await first;
+
+        Assert.Equal("partial", card.Result?.Source);
+        Assert.Equal(["S1", "S2"], card.Lines);
+        Assert.Empty(cache.Entries);
+
+        var second = card.RefreshAsync();
+        service.Pending[1].SetResult(new ProviderResult<StopEvent> { Source = "live", Items = [Event(DateTimeOffset.Now.AddMinutes(8)) with { Identity = new TripIdentity { Source = "fixture", Stop = Stop("event"), Line = "RE 9" } }] });
+        await second;
+
+        Assert.Equal(["RE 9"], card.Lines);
+        Assert.Equal(["RE 9"], Assert.Single(cache.Entries).Lines);
     }
 
     /// <summary>Loading cleans unrelated cache boards, and removing a favorite removes its matching board.</summary>

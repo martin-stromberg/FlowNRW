@@ -51,6 +51,9 @@ internal static class TransitIcons
     /// <summary>Glyph <c>info</c> (U+E88E): Informationen ein-/ausblenden.</summary>
     internal const string Info = "\uE88E";
 
+    /// <summary>Glyph <c>warning</c> (U+F083): Hinweis auf unvollständige oder veraltete Daten ein-/ausblenden.</summary>
+    internal const string Warning = "\uF083";
+
     /// <summary>Glyph <c>map</c> (U+E55B): Auf Karte zeigen.</summary>
     internal const string Map = "\uE55B";
 

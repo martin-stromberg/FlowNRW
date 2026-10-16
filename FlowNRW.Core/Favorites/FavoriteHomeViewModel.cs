@@ -1,3 +1,4 @@
+using System.Globalization;
 using FlowNRW.Core.Presentation;
 using FlowNRW.Core.Transit;
 using FlowNRW.Core.Refresh;
@@ -19,6 +20,7 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     private CancellationTokenSource? locationRequest;
     private long locationRevision;
     private GeoCoordinate? position;
+    private NearbyStopResult[] nearbyItems = [];
 
     /// <summary>Creates the home session without accessing location or providers.</summary>
     /// <param name="store">Bounded technical stop persistence.</param>
@@ -106,26 +108,43 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     /// <param name="cancellationToken">Cancels the current location or nearby-stop lookup.</param>
     public async Task RefreshNearbyAsync(CancellationToken cancellationToken = default)
     {
-        if (nearby is null) { NearbyStops = []; NearbyStatus = "Nahe Haltestellen sind nicht verfügbar."; Notify(nameof(NearbyStops)); Notify(nameof(NearbyStatus)); return; }
+        if (nearby is null) { nearbyItems = []; NearbyStops = []; NearbyStatus = "Nahe Haltestellen sind nicht verfügbar."; Notify(nameof(NearbyStops)); Notify(nameof(NearbyStatus)); return; }
         try
         {
             var current = await location.GetCurrentAsync(cancellationToken);
-            if (!current.HasCurrentPosition) { NearbyStops = []; NearbyStatus = current.FailureDescription; Notify(nameof(NearbyStops)); Notify(nameof(NearbyStatus)); return; }
+            if (!current.HasCurrentPosition) { nearbyItems = []; NearbyStops = []; NearbyStatus = current.FailureDescription; Notify(nameof(NearbyStops)); Notify(nameof(NearbyStatus)); return; }
             position = current.Coordinate;
             SortCards();
             SetSuccessfulLocationStatus(current.AccuracyDescription);
             var result = await nearby.NearbyAsync(current.Coordinate!, cancellationToken);
-            if (result.ErrorCode is not null) { NearbyStops = []; NearbyStatus = "Nahe Haltestellen konnten nicht geladen werden."; Notify(nameof(NearbyStops)); Notify(nameof(NearbyStatus)); return; }
+            if (result.ErrorCode is not null) { nearbyItems = []; NearbyStops = []; NearbyStatus = "Nahe Haltestellen konnten nicht geladen werden."; Notify(nameof(NearbyStops)); Notify(nameof(NearbyStatus)); return; }
             var favorites = savedOrder.Select(card => card.Stop).ToArray();
-            NearbyStops = result.Items
+            nearbyItems = result.Items
                 .Where(item => item.Stop is not null && !favorites.Any(favorite => SameIdentity(favorite, item.Stop!)))
+                .ToArray();
+            NearbyStops = nearbyItems
                 .Select(item => new Address { Name = item.Stop!.Name, Stop = item.Stop, Coordinate = item.Stop.Coordinate })
                 .ToArray();
             NearbyStatus = NearbyStops.Count == 0 ? "Keine weiteren Haltestellen in der Nähe." : $"{NearbyStops.Count} weitere Haltestellen in der Nähe";
         }
         catch (OperationCanceledException) { return; }
-        catch (Exception) { NearbyStops = []; NearbyStatus = "Nahe Haltestellen konnten nicht geladen werden."; }
+        catch (Exception) { nearbyItems = []; NearbyStops = []; NearbyStatus = "Nahe Haltestellen konnten nicht geladen werden."; }
         Notify(nameof(NearbyStops)); Notify(nameof(NearbyStatus));
+    }
+
+    /// <summary>Describes the distance of a current nearby candidate without exposing technical identifiers.</summary>
+    /// <param name="candidate">Candidate from the current <see cref="NearbyStops"/> projection.</param>
+    /// <returns>A provider-distance or straight-line-distance suffix, or an explicit unknown-distance suffix.</returns>
+    public string NearbyDistanceLabel(Address candidate)
+    {
+        var item = candidate.Stop is { } stop
+            ? nearbyItems.FirstOrDefault(item => item.Stop is { } known && (ReferenceEquals(known, stop) || SameIdentity(known, stop)))
+            : null;
+        if (item?.DistanceMeters is { } meters && double.IsFinite(meters) && meters >= 0)
+            return " · Entfernung: " + meters.ToString("0", CultureInfo.GetCultureInfo("de-DE")) + " m";
+        if (item is not null && position is { } origin && (candidate.Stop?.Coordinate ?? candidate.Coordinate) is { } target)
+            return " · Luftlinie: " + Distance(origin, target).ToString("0", CultureInfo.GetCultureInfo("de-DE")) + " m";
+        return " · Entfernung unbekannt";
     }
 
     /// <summary>Renews current stale cards in bounded batches without accessing position or writing favorites.</summary>

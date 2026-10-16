@@ -35,3 +35,10 @@
 ## `FontImageSource`-Icon hat falsche Farbe im Dunkelmodus
 
 **Ursache:** `FontImageSource.Color` wurde nicht thematisch gesetzt. `TransitIcons.IconImage`/`TabIcon` setzen `SetAppThemeColor` mit `TransitVisuals.Action`/`ActionDark` — bei eigenen `FontImageSource`s dasselbe Muster verwenden, keine statische Farbe.
+
+## Das Warnsymbol zum Datenqualitätshinweis erscheint nicht oder falsch
+
+- **Es gibt schlicht keinen Hinweis:** `HasDataNotice` gilt nur, wenn das angezeigte `Result` `Warnings`, `IsFallback` oder `IsStale` trägt; ein sauberes oder komplett fehlgeschlagenes Ergebnis zeigt bewusst kein Symbol. Während `IsBusy` ist der Schalter verborgen.
+- **Glyph als Kästchen:** `TransitIcons.Warning` ist U+F083 — wie oben gegen `MaterialSymbolsRounded.codepoints` verifizieren.
+- **Warnfarbe fehlt:** `NoticeToggle.ApplyWarningColors()` muss **nach** `TransitVisuals.ApplyRoles` laufen; die gemeinsame Button-Rolle überschreibt die `Warning`/`WarningDark`-Textfarbe sonst mit der Aktionsfarbe.
+- **Detail klappt nicht auf:** Schalter und `Metadata`-Label gehören paarweise (`FavoriteNotice{i}`/`FavoriteMetadata{i}`, `MonitorNotice`/`MonitorMetadata`); `Update(false)` schließt das Detail automatisch — ein verschwundener Hinweis hinterlässt kein geöffnetes Detail.

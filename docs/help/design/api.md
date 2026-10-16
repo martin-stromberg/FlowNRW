@@ -28,13 +28,22 @@ Unverändert: `BadgeColor(line, mode)` und `Describe(item)`.
 |---|---|
 | `LocalTime(DateTimeOffset time) → DateTimeOffset` | Derselbe Zeitpunkt in Europe/Berlin (einmalig gecachte Zone). |
 | `Clock(DateTimeOffset? time) → string` | `HH:mm` in Europe/Berlin oder `„unbekannt"`. |
+| `DisplayName(string? name) → string` | Anzeigename ohne wörtlich wiederholten Ortspräfix („X, X …" → „X …" nur bei Wortgrenze am Restanfang); `null` → `string.Empty`, sonst unverändert. |
+| `DisplayAddress(Address address) → string` | `DisplayName(Name)` plus optionale Koordinaten ` · {Lat}, {Lon}`; enthält nie `Source`/`Id`/`Dhid`. |
 
-`Time`, `EventTime`, `Address`, `Summary` und übrige Member nutzen intern jetzt `LocalTime`/`Clock`; ihr Verhalten ist unverändert.
+`Time`, `EventTime`, `Summary` und übrige Member nutzen intern jetzt `LocalTime`/`Clock`; ihr Verhalten ist unverändert. Das frühere technische Format `Address(Address)` mit Quelle/Id/DHID ist entfallen — Anzeigestellen verwenden `DisplayName`/`DisplayAddress`.
+
+## Datenqualitätshinweis und Entfernung (Erweiterungen)
+
+| Signatur | Rückgabe |
+|---|---|
+| `FavoriteMonitorViewModel.HasDataNotice` / `StopMonitorViewModel.HasDataNotice` → `bool` | `true`, wenn das **angezeigte** `Result` Warnungen, `IsFallback` oder `IsStale` trägt (gemeinsame Ableitung in der internen Extension `DataNotice.HasDataQualityNotice`); `null`- oder Fehlerergebnis → `false`. |
+| `FavoriteHomeViewModel.NearbyDistanceLabel(Address candidate) → string` | Suffix ` · Entfernung: X m` (Provider-`DistanceMeters`), ` · Luftlinie: X m` (Haversine-Fallback) oder ` · Entfernung unbekannt`. |
 
 ## Interne App-Helfer (kein öffentlicher Vertrag)
 
-`TransitIcons` (Glyph-Konstanten, `SetIcon`, `IconImage`, `TabIcon`), `Fonts` (Alias-Konstanten) und `TransitVisuals` (`StatusChip`, `IconLabel`, `StrikethroughTime`, `SecondaryAction`, `Badge`, `Candidate`, `Page`, `ApplyRoles`) sind `internal` zur FlowNRW-App und kein freigegebenes API.
+`TransitIcons` (Glyph-Konstanten, `SetIcon`, `IconImage`, `TabIcon`), `Fonts` (Alias-Konstanten) und `TransitVisuals` (`StatusChip`, `IconLabel`, `StrikethroughTime`, `SecondaryAction`, `Badge`, `Candidate`, `NoticeToggle`, `Page`, `ApplyRoles`) sind `internal` zur FlowNRW-App und kein freigegebenes API.
 
 ## Tests
 
-`FlowNRW.Tests/DepartureStatusTests.cs` deckt die Statusableitung und Verspätungstexte ab; `FlowNRW.Tests/PresentationTests.cs` ergänzt Fälle für `LocalTime`/`Clock`.
+`FlowNRW.Tests/DepartureStatusTests.cs` deckt die Statusableitung und Verspätungstexte ab; `FlowNRW.Tests/PresentationTests.cs` ergänzt Fälle für `LocalTime`/`Clock` sowie `DisplayName`/`DisplayAddress`. `HasDataNotice` und `NearbyDistanceLabel` sind in `FavoriteTests`/`StopMonitorTests`, die Linien-Merge-Semantik in `FavoriteDepartureCacheIntegrationTests` abgedeckt.

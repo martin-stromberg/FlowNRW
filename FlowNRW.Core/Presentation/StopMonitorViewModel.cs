@@ -77,7 +77,10 @@ public sealed class StopMonitorViewModel : ObservableObject
     /// <summary>Complete selected stop identity.</summary>
     public Stop? SelectedStop { get; private set; }
     /// <summary>Selected stop title.</summary>
-    public string Title => SelectedStop?.Name ?? "Abfahrten";
+    public string Title
+    {
+        get { return SelectedStop is { } stop ? JourneyPresentation.DisplayName(stop.Name) : "Abfahrten"; }
+    }
     /// <summary>Last successful result, retained on failed updates.</summary>
     public ProviderResult<StopEvent>? Result { get; private set; }
     /// <summary>Latest attempted provider response.</summary>
@@ -92,6 +95,11 @@ public sealed class StopMonitorViewModel : ObservableObject
             var displayed = Result ?? LastAttempt;
             return displayed is null ? "" : JourneyPresentation.Metadata(displayed);
         }
+    }
+    /// <summary>Whether the displayed result carries a data-quality notice worth an unobtrusive indicator.</summary>
+    public bool HasDataNotice
+    {
+        get { return Result.HasDataQualityNotice(); }
     }
     /// <summary>Whether an update is active.</summary>
     public bool IsBusy { get; private set; }
@@ -381,6 +389,7 @@ public sealed class StopMonitorViewModel : ObservableObject
         Notify(nameof(LastAttempt));
         Notify(nameof(Items));
         Notify(nameof(Metadata));
+        Notify(nameof(HasDataNotice));
         Notify(nameof(IsBusy));
         RefreshCommand.Refresh();
     }

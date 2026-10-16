@@ -15,7 +15,8 @@ Keine. Das Design gilt appweit; helles/dunkles Erscheinungsbild folgt der System
    - „Fahrt fällt aus" bzw. „Ausfall gemeldet" erscheint als Chip mit Symbol — nie nur als Farbe.
    - „+n Min." zeigt eine gemeldete Verspätung als Chip.
    - „Keine Echtzeitdaten" bedeutet ausdrücklich, dass keine aktuelle Meldung vorliegt — nicht, dass die Fahrt pünktlich ist.
-5. **Favoriten:** Der Stern ist umrandet, solange die Haltestelle oder Verbindung nicht gespeichert ist, und gefüllt, sobald sie gespeichert ist. Auf der Startseite klappen die Chevron-Symbole die Abfahrtsliste einer Favoritenkarte auf oder zu.
+5. **Favoriten:** Der Stern ist umrandet, solange die Haltestelle oder Verbindung nicht gespeichert ist, und gefüllt, sobald sie gespeichert ist. Auf der Startseite klappt der Chevron-Schalter rechts oben im Kartenkopf die Abfahrtsliste einer Favoritenkarte auf oder zu — ein erneutes Zuklappen ist ohne Scrollen erreichbar.
+6. **Datenhinweis lesen:** Erscheint am Zeilenende einer Favoritenkarte oder im Abfahrtsmonitor ein kleines `warning`-Symbol, liegt eine Anbieterwarnung, eine Ersatzquelle oder veraltete Daten vor. Ein Tipp auf das Symbol blendet Quelle, Datenstand und Provenienz ein oder aus; solange kein Symbol sichtbar ist, gibt es nichts Verborgenes.
 
 ## Ergebnis
 

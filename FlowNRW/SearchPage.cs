@@ -161,8 +161,8 @@ public sealed class SearchPage : ContentPage
             favoritesList.Children.Clear();
             foreach (var card in matches)
             {
-                var favorite = new Button { Text = card.Stop.Name, AutomationId = prefix + "Favorite" + card.Stop.Id, HeightRequest = 44 };
-                SemanticProperties.SetDescription(favorite, "Favorit " + card.Stop.Name);
+                var favorite = new Button { Text = JourneyPresentation.DisplayName(card.Stop.Name), AutomationId = prefix + "Favorite" + card.Stop.Id, HeightRequest = 44 };
+                SemanticProperties.SetDescription(favorite, "Favorit " + JourneyPresentation.DisplayName(card.Stop.Name));
                 favorite.Command = new Command(() => { endpoint.SelectFavorite(card.Stop); favoritesList.IsVisible = false; });
                 favoritesList.Children.Add(favorite);
             }

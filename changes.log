@@ -1,3 +1,13 @@
+## 2026-10-15 — iOS-Nutzungsfeedback
+
+- Haltestellennamen werden für die Anzeige bereinigt: Ein führender Ortsname, der am Anfang des Rests wörtlich wiederholt wird („Münster (Westf), Münster (Westf) Hbf"), entfällt, sodass nur noch „Münster (Westf) Hbf" steht — in allen Trefferlisten, der Auswahlzeile, der Kartenliste, Verbindungsdetails, der Zeitachse sowie den Monitor- und Favoritentiteln. Die technische Identität (Quelle, Id, DHID) und gespeicherte Namen bleiben unverändert.
+- Interne Kennungen (Quelle, Stop-Id, DHID) sind aus den Trefferlisten der Haltestellen-, Nah- und Verbindungssuche sowie aus der „Ausgewählt"-Zeile verschwunden; die Auswahl zeigt nur noch den bereinigten Namen und gegebenenfalls die eingegebenen Koordinaten.
+- Die Nahe-Liste auf der Startseite zeigt statt Kennungen die Entfernung je Haltestelle: bevorzugt die Provider-Angabe, sonst die gekennzeichnete Luftlinie, ohne beides „Entfernung unbekannt".
+- Der Hinweis „Daten möglicherweise unvollständig oder veraltet." ist keine dauerhafte Textzeile mehr: Trägt das angezeigte Ergebnis Warnungen, eine Ersatzquelle oder veraltete Daten, erscheint ein kleines Warnsymbol; erst ein Tipp darauf blendet Quelle, Datenstand und Provenienz ein oder aus. Gilt in Favoritenkarten und im Abfahrtsmonitor; echte Fehler- und Leerzustände bleiben Textzeilen.
+- Der Auf-/Zuklapp-Schalter jeder Favoritenkarte sitzt jetzt rechts oben im Kartenkopf; die zugeklappte Linienübersicht zeigt auch bei degradierten Antworten alle gelieferten Linien (Vereinigung mit dem letzten vollständigen Bestand; persistiert wird weiterhin nur aus vollständigen Antworten).
+- Karten-Ladepfad gehärtet: Lade-Generationen verwerfen verspätete „geladen/fehlgeschlagen"-Meldungen, einzelne Kacheln und der Gesamtlauf erhalten Fortschritts-Timeouts (15 s in `map.js`, 30 s nativ), verworfene Kachelanfragen werden als Kachelfehler beantwortet statt endlos zu warten, und `AppLog` protokolliert den Ladeweg für die iOS-Felddiagnose.
+- 307 Core-Tests bestehen; die interaktiven Windows-UIA-Läufe und die native iOS-Geräteverifikation des Kartenverhaltens stehen aus.
+
 ## 2026-10-14 — Modernes Design auf AAA-Niveau
 
 - Echte Iconografie statt Unicode-Textglyphen: Aktionsbuttons, Statuszeilen und die drei Shell-Tabs nutzen die Icon-Font Material Symbols Rounded (FILL0- und FILL1-Instanz, opsz 24), zentral über `TransitIcons` gesteuert und gegen das Codepoint-Manifest der eingebetteten TTF verifiziert. Tab-Symbole laufen über `FontImageSource`; Titel und Routen bleiben unverändert.

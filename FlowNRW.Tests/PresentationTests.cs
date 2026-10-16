@@ -69,6 +69,19 @@ public sealed class EndpointViewModelTests
         a.Pending[0].SetResult(new()); b.Pending[0].SetResult(new() { Source = "b", IsStale = true, IsFallback = true, Warnings = ["timeout"] }); await Task.WhenAll(first, second);
         Assert.Contains("Keine Treffer", destination.Status); Assert.Contains("Veralteter Cache", destination.Metadata); Assert.Contains("Fallback", destination.Metadata);
     }
+    /// <summary>The selection shows the cleaned name and coordinates but never the technical identity.</summary>
+    [Fact]
+    public async Task Selection_OmitsTechnicalIdentityKeepsCoordinates()
+    {
+        var service = new ControlledSearchService(); var model = new EndpointViewModel(service, 100) { Text = "Essen" };
+        var task = model.SearchAsync();
+        var address = new Address { Name = "Essen, Essen Hbf", Coordinate = new GeoCoordinate(51.45, 7.0116), Stop = new Stop { Id = "1", Source = "efa", Dhid = "de:05113:1" } };
+        service.Pending[0].SetResult(new() { Items = [address] }); await task; model.SelectAddress(address);
+        Assert.Contains("Essen Hbf", model.Selection);
+        Assert.Contains("51.45", model.Selection);
+        Assert.DoesNotContain("efa", model.Selection);
+        Assert.DoesNotContain("de:05113", model.Selection);
+    }
     /// <summary>Validation, errors and cancellation remain recoverable.</summary>
     [Fact]
     public async Task RepresentsEmptyErrorAndMetadata()
@@ -144,6 +157,45 @@ public sealed class JourneyPresentationTests
         Assert.Equal("", JourneyPresentation.CompactWarning<StopEvent>(new()));
         var warning = JourneyPresentation.CompactWarning(new ProviderResult<StopEvent> { IsStale = true, IsFallback = true, Warnings = ["partial"] });
         Assert.Equal("Daten möglicherweise unvollständig", warning);
+    }
+
+    /// <summary>A literally repeated leading place name is removed once for display.</summary>
+    [Fact]
+    public void DisplayName_RemovesRepeatedPrefix()
+    {
+        Assert.Equal("Münster (Westf) Hbf", JourneyPresentation.DisplayName("Münster (Westf), Münster (Westf) Hbf"));
+        Assert.Equal("Köln Hbf", JourneyPresentation.DisplayName("Köln, Köln Hbf"));
+    }
+
+    /// <summary>Names without a repeated comma prefix stay untouched.</summary>
+    [Fact]
+    public void DisplayName_KeepsNonRepeatedAndMissingComma()
+    {
+        Assert.Equal("Bochum, Hbf", JourneyPresentation.DisplayName("Bochum, Hbf"));
+        Assert.Equal("Essen Hbf", JourneyPresentation.DisplayName("Essen Hbf"));
+        Assert.Equal("", JourneyPresentation.DisplayName(""));
+        Assert.Equal("", JourneyPresentation.DisplayName(null));
+    }
+
+    /// <summary>The repeated prefix only counts when it ends on a word boundary.</summary>
+    [Fact]
+    public void DisplayName_RequiresWordBoundary()
+    {
+        Assert.Equal("Bergheim, Bergheimer Str.", JourneyPresentation.DisplayName("Bergheim, Bergheimer Str."));
+        Assert.Equal("Essen-Steele", JourneyPresentation.DisplayName("Essen, Essen-Steele"));
+    }
+
+    /// <summary>Display addresses keep coordinates but drop source, id and shared identifier.</summary>
+    [Fact]
+    public void DisplayAddress_OmitsIdentityKeepsCoordinates()
+    {
+        var address = new Address { Name = "Essen, Essen Hbf", Coordinate = new GeoCoordinate(51.45, 7.0116), Stop = new Stop { Id = "1", Source = "efa", Dhid = "de:05113:1" } };
+        var text = JourneyPresentation.DisplayAddress(address);
+        Assert.Contains("Essen Hbf", text);
+        Assert.Contains("51.45", text);
+        Assert.DoesNotContain("efa", text);
+        Assert.DoesNotContain("de:05113", text);
+        Assert.Equal("Essen Hbf", JourneyPresentation.DisplayAddress(new Address { Name = "Essen, Essen Hbf" }));
     }
 
     /// <summary>Local clock readings mark cross-day events instead of technical offsets.</summary>

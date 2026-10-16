@@ -85,7 +85,7 @@ public sealed class EndpointViewModel : ObservableObject
     {
         get
         {
-            return SelectedAddress is null ? "Noch kein Endpunkt ausgewählt." : "Ausgewählt: " + JourneyPresentation.Address(SelectedAddress);
+            return SelectedAddress is null ? "Noch kein Endpunkt ausgewählt." : "Ausgewählt: " + JourneyPresentation.DisplayAddress(SelectedAddress);
         }
     }
     /// <summary>Current candidates in provider order.</summary>

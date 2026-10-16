@@ -2,7 +2,7 @@ param([Parameter(Mandatory = $true)][string]$Exe, [string]$ScreenshotDirectory, 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
-Add-Type @"
+if (-not ('RefreshWindow' -as [type])) { Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public static class DepartureCacheWindow {
@@ -12,7 +12,7 @@ public static class DepartureCacheWindow {
  [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr h);
  [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint flags);
 }
-"@
+"@ }
 
 if ($ScreenshotDirectory) {
     New-Item -ItemType Directory -Force $ScreenshotDirectory | Out-Null

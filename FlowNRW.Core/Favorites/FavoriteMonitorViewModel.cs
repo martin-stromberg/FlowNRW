@@ -26,19 +26,27 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
     /// <summary>Complete saved provider stop.</summary>
     public Stop Stop { get; }
     /// <summary>Card title.</summary>
-    public string Title => Stop.Name;
+    public string Title
+    {
+        get { return JourneyPresentation.DisplayName(Stop.Name); }
+    }
     /// <summary>Last successful departures.</summary>
     public ProviderResult<StopEvent>? Result { get; private set; }
     /// <summary>Latest attempted provider result.</summary>
     public ProviderResult<StopEvent>? LastAttempt { get; private set; }
     /// <summary>Displayed departures in effective-time order.</summary>
     public IReadOnlyList<StopEvent> Items => Result?.Items ?? [];
-    /// <summary>Last complete line inventory, including lines without a currently known departure time.</summary>
+    /// <summary>Last complete line inventory merged with the delivered lines of displayed degraded results, including lines without a currently known departure time.</summary>
     public IReadOnlyList<string> Lines { get; private set; } = [];
     /// <summary>Provenance belonging to displayed data.</summary>
     public string Metadata
     {
         get { var displayed = Result ?? LastAttempt; return displayed is null ? "" : JourneyPresentation.Metadata(displayed); }
+    }
+    /// <summary>Whether the displayed result carries a data-quality notice worth an unobtrusive indicator.</summary>
+    public bool HasDataNotice
+    {
+        get { return Result.HasDataQualityNotice(); }
     }
     /// <summary>Whether this card alone is loading.</summary>
     public bool IsBusy { get; private set; }
@@ -82,8 +90,7 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
     {
         if (entry.Key.Source != Stop.Source || entry.Key.Id != Stop.Id) return false;
         var storedLines = entry.Lines ?? [];
-        Lines = (storedLines.Count > 0 ? storedLines : entry.Result.Items.Select(LineName))
-            .Where(line => !string.IsNullOrWhiteSpace(line)).Distinct(StringComparer.Ordinal).OrderBy(line => line, StringComparer.Ordinal).ToArray();
+        Lines = SortedLines(storedLines.Count > 0 ? storedLines : entry.Result.Items.Select(LineName));
         var retained = entry.Result.Items.Where(item => EffectiveTime(item) is { } time && time >= now)
             .OrderBy(item => EffectiveTime(item)!.Value).ToArray();
         if (retained.Length == 0) { RefreshBindings(); return false; }
@@ -128,7 +135,7 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
                     : Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · {(automatic ? "automatisch" : "manuell")} aktualisiert.";
                 if (IsComplete(result))
                 {
-                    Lines = result.Items.Select(LineName).Where(line => !string.IsNullOrWhiteSpace(line)).Distinct(StringComparer.Ordinal).OrderBy(line => line, StringComparer.Ordinal).ToArray();
+                    Lines = SortedLines(result.Items.Select(LineName));
                     Notify(nameof(Lines));
                     var cached = Result with
                     {
@@ -138,6 +145,7 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
                     try { if (persist is not null) await persist(new DepartureCacheEntry { Source = Stop.Source, StopId = Stop.Id, Result = cached, Lines = Lines }); }
                     catch (Exception) { }
                 }
+                else EnrichLines(result);
             }
         }
         catch (OperationCanceledException) { if (version == revision) Status = "Aktualisierung abgebrochen."; }
@@ -147,6 +155,18 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
 
     private static bool IsComplete(ProviderResult<StopEvent> result) => result.ErrorCode is null && result.Warnings.Count == 0 && !result.IsFallback && !result.IsStale;
     private static string LineName(StopEvent item) => item.Line?.Name ?? item.Identity.Line ?? string.Empty;
+
+    private void EnrichLines(ProviderResult<StopEvent> result)
+    {
+        Lines = SortedLines(result.Items.Select(LineName).Concat(Lines));
+        Notify(nameof(Lines));
+    }
+
+    private static string[] SortedLines(IEnumerable<string> lines)
+    {
+        return lines.Where(line => !string.IsNullOrWhiteSpace(line))
+            .Distinct(StringComparer.Ordinal).OrderBy(line => line, StringComparer.Ordinal).ToArray();
+    }
 
     /// <summary>Cancels removed or departed cards and rejects uncooperative late responses.</summary>
     public void CancelPending()
@@ -173,7 +193,7 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
 
     private void RefreshBindings()
     {
-        Notify(nameof(Result)); Notify(nameof(LastAttempt)); Notify(nameof(Items)); Notify(nameof(Lines)); Notify(nameof(Metadata)); Notify(nameof(Status)); Notify(nameof(IsBusy)); Notify(nameof(IsExpanded));
+        Notify(nameof(Result)); Notify(nameof(LastAttempt)); Notify(nameof(Items)); Notify(nameof(Lines)); Notify(nameof(Metadata)); Notify(nameof(HasDataNotice)); Notify(nameof(Status)); Notify(nameof(IsBusy)); Notify(nameof(IsExpanded));
         RefreshCommand.Refresh();
     }
 }

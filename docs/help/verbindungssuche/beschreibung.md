@@ -5,7 +5,7 @@
 Wählen Sie Start und Ziel manuell. Eine Standortfreigabe ist dafür nicht erforderlich.
 
 1. Geben Sie unter „Start: Adresse oder Haltestelle“ einen Ort ein, etwa „Gelsenkirchen Hbf“, und drücken Sie „Suchen / Koordinate übernehmen“.
-2. Wählen Sie den passenden Treffer. Name, zusätzliche Kennungen und Koordinaten helfen, ähnlich benannte Haltestellen auseinanderzuhalten. „Ausgewählt:“ bestätigt Ihre Wahl.
+2. Wählen Sie den passenden Treffer. Die Treffer zeigen nur den Haltestellennamen; ein doppelt genannter Ortsname („Münster (Westf), Münster (Westf) Hbf") wird als „Münster (Westf) Hbf" angezeigt und interne Kennungen werden nicht gezeigt. „Ausgewählt:“ bestätigt Ihre Wahl mit Name und gegebenenfalls Koordinaten.
 3. Wiederholen Sie dies unter „Ziel“, etwa für „Essen Hbf“.
 4. Drücken Sie „Verbindungen suchen“. Die Suche verwendet den aktuellen Zeitpunkt. Während „Verbindungen werden geladen …“ angezeigt wird, warten Sie auf das Ergebnis.
 5. Unter „Verbindungen“ sehen Sie geplante Zeiten („Soll“), verfügbare tatsächliche Zeiten („Ist“), Umstiege, Linien, Betreiber und Fußwege. Tippen Sie eine Verbindung an, um „Verbindungsdetails“ zu öffnen.

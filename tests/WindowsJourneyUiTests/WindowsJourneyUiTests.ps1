@@ -215,6 +215,7 @@ public static class NativeWindowCapture {
         HomeReady; FavoriteCards 0
         Assert ($null -eq (Find 'FavoriteCount')) 'Home does not show a saved-favorite count panel'
         SetText 'HomeScenario' 'complete'; Wait 'NearbyStop0' | Out-Null
+        Contains 'NearbyDistance0' 'Entfernung'; Assert ((Name 'NearbyStop0') -notmatch 'de:|fixture-nearby') 'Nearby entry omits the technical identity'
         Click 'NearbyStop0'; MonitorReady
         Contains 'MonitorStop' 'Umgebung Süd'
         BackHome
@@ -327,6 +328,24 @@ public static class FavoriteKeyboard {
         Contains 'FavoriteName0' 'Favorite Near'; Assert ($null -eq (Find 'FavoriteName1')) 'Late removed-card response cannot recreate favorite'
         SetText 'HomeScenario' 'success'; Click 'RemoveFavorite0'; FavoriteCards 0
         RestartFavorites; FavoriteCards 0; Contains 'HomeStatus' 'Keine Favoriten|keine Favoriten|Haltestelle'
+        # The process restart restores the scenario from the environment, which
+        # is still 'favorite-cache-seed' (complete); the notice proof needs a
+        # degraded board, so the restarted process must select 'success' again.
+        SetText 'HomeScenario' 'success'
+        # A degraded first board replaces the intrusive status text with a
+        # small notice toggle; the expand toggle lives in the card header.
+        AddFavorite 'Favorite Warned'; FavoriteCards 1
+        AwaitBusyDone 'FavoriteBusy0'
+        $noticeStatus = Find 'FavoriteStatus0'
+        Assert ($null -eq $noticeStatus -or $noticeStatus.Current.Name -notmatch 'unvollständig') 'Degraded favorite shows the notice icon instead of the status text'
+        Click 'FavoriteNotice0'; Contains 'FavoriteMetadata0' 'Quelle'
+        Click 'FavoriteNotice0'
+        $noticeDetail = Find 'FavoriteMetadata0'
+        Assert ($null -eq $noticeDetail -or $noticeDetail.Current.IsOffscreen) 'Favorite notice detail collapses after the second click'
+        Click 'ToggleFavorite0'; Contains 'ToggleFavorite0' 'einklappen'; Wait 'FavoriteDeparture0_0' | Out-Null
+        Click 'ToggleFavorite0'; Contains 'ToggleFavorite0' 'aufklappen'
+        Write-Output 'PASS degraded favorite notice toggle, header expand switch and status without intrusive text'
+        SetText 'HomeScenario' 'success'; Click 'RemoveFavorite0'; FavoriteCards 0
         Write-Output 'PASS native favorites: add/failure/retry, duplicate, four process starts, sorting/fallback, independent refresh, removal/failure/retry, empty home, navigation and keyboard'
     } elseif ($LiveLocations) {
         # Never capture screenshots, raw UI names, endpoint values or returned stop identities here.
@@ -604,6 +623,14 @@ public static class MapPointer {
         Back; Status 'MapStatus' 'Basiskarte geladen\.'; BackToSearch
         SetText 'StopQuery' 'map-slow'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
         Wait 'MapCanvas' | Out-Null; BackToSearch
+        SetText 'StopQuery' 'map-hang'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
+        # Tiles never answer; the JS per-tile timeout (~15 s) or the native
+        # 30 s watchdog must end the endless 'Basiskarte wird geladen' state.
+        $hangSettled = $false
+        for ($i = 0; $i -lt 500; $i++) { if ((Name 'MapStatus') -notmatch 'wird geladen') { $hangSettled = $true; break }; Start-Sleep -Milliseconds 100 }
+        Assert $hangSettled 'map-hang: watchdog ends the endless base-map loading state'
+        Contains 'MapStatus' 'fehlt oder ist veraltet|konnte nicht geladen'
+        BackToSearch
         SetText 'StopQuery' 'Newest map'; Click 'FindStops'; Wait 'StopMatch0' | Out-Null; Click 'ShowStopMap'
         Status 'MapStatus' 'Basiskarte geladen\.'; Start-Sleep -Seconds 6
         # Elements below the map canvas never reach the UIAutomation tree;
@@ -668,6 +695,15 @@ public static class MapPointer {
         SetText 'StopQuery' 'monitor-error'; Click 'FindStops'; Click 'StopMatch0'; Status 'MonitorStatus' 'nicht geladen'
         Assert ($null -eq (Find 'Departure0')) 'New stop does not retain previous stop departures'
         Back
+        # A degraded monitor board replaces the intrusive status text with a small notice toggle.
+        SetText 'NearbyScenario' 'success'; SetText 'StopQuery' 'monitor-notice'; Click 'FindStops'; Click 'StopMatch0'; MonitorReady
+        $monitorState = Find 'MonitorStatus'
+        Assert ($null -eq $monitorState -or $monitorState.Current.Name -notmatch 'unvollständig') 'Degraded monitor shows the notice icon instead of the status text'
+        Click 'MonitorNotice'; Contains 'MonitorMetadata' 'Quelle'
+        Click 'MonitorNotice'
+        $monitorDetail = Find 'MonitorMetadata'
+        Assert ($null -eq $monitorDetail -or $monitorDetail.Current.IsOffscreen) 'Monitor notice detail collapses after the second click'
+        Back; SetText 'NearbyScenario' 'favorite-cache-seed'
         SetText 'StopQuery' 'monitor-slow'; Click 'FindStops'; Click 'StopMatch0'; MonitorReady
         Back
         SetText 'StopQuery' 'New Stop'; Click 'FindStops'; Click 'StopMatch0'; MonitorReady
@@ -714,7 +750,9 @@ public static class MapPointer {
         SetText 'OriginText' 'Essen Hbf'; Assert (!(Wait 'SearchJourneys').Current.IsEnabled) 'BackNavigation: input invalidates old route'
         Assert ((Name 'RoutingMetadata') -eq '') 'BackNavigation: old route metadata cleared'
         SelectEndpoint 'Origin' 'Essen Hbf'; SelectEndpoint 'Destination' 'Berlin Hbf'
-        Contains 'OriginSelection' 'fixture-0.*de:05113'; Contains 'DestinationSelection' 'fixture-0.*de:05113'
+        Contains 'OriginSelection' 'Essen Hbf'; Contains 'DestinationSelection' 'Berlin Hbf'
+        Assert ((Name 'OriginSelection') -notmatch 'de:') 'OriginSelection omits the technical stop identity'
+        Assert ((Name 'DestinationSelection') -notmatch 'de:') 'DestinationSelection omits the technical stop identity'
         RoundTrip; Write-Output 'PASS StopEndpoints'
         Toggle 'OriginCoordinateMode'; Click 'OriginSearch'; Contains 'OriginStatus' 'Breite|Länge'
         SetText 'OriginLatitude' '91'; SetText 'OriginLongitude' '7'; Click 'OriginSearch'; Contains 'OriginStatus' 'Breite'

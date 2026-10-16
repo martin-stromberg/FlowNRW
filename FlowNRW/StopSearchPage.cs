@@ -71,12 +71,11 @@ public sealed class StopSearchPage : ContentPage
                 var candidate = model.Stops[index];
                 matches.Children.Add(TransitVisuals.Candidate(candidate, new Button
                 {
-                    Text = JourneyPresentation.Address(candidate) + model.DistanceLabel(candidate),
                     LineBreakMode = LineBreakMode.WordWrap,
                     AutomationId = "StopMatch" + index,
                     Command = new AsyncRelayCommand(() => model.OpenAsync(candidate), () => !model.IsBusy,
                         _ => Title = "Monitor konnte nicht geöffnet werden")
-                }, model.DistanceLabel(candidate), showTechnicalIdentity: false));
+                }, model.DistanceLabel(candidate)));
             }
         }
         void RefreshInformation()
