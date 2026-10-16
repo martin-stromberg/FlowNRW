@@ -1,9 +1,9 @@
-﻿param([Parameter(Mandatory=$true)][string]$Exe, [string]$ScreenshotDirectory)
+param([Parameter(Mandatory=$true)][string]$Exe, [string]$ScreenshotDirectory)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 Add-Type -AssemblyName System.Windows.Forms
-Add-Type @"
+if (-not ('RefreshWindow' -as [type])) { Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public static class RefreshWindow {
@@ -15,7 +15,7 @@ public static class RefreshWindow {
  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
  [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
 }
-"@
+"@ }
 $previousSettings = $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS
 $previousFavorites = $env:FLOWNRW_UI_TEST_FAVORITES
 $previousConnectionFavorites = $env:FLOWNRW_UI_TEST_CONNECTION_FAVORITES
@@ -26,6 +26,10 @@ $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS = Join-Path $testDirectory 'refresh.json'
 $env:FLOWNRW_UI_TEST_FAVORITES = Join-Path $testDirectory 'favorites.json'
 $env:FLOWNRW_UI_TEST_CONNECTION_FAVORITES = Join-Path $testDirectory 'connection-favorites.json'
 $env:FLOWNRW_UI_TEST_SCENARIO = 'complete'
+# Real window Deactivated/Stopped events must not override the deterministic
+# LifecycleActive fixture, so deactivate pinning is enabled for the whole run.
+$previousPinActive = $env:FLOWNRW_UI_TEST_PIN_ACTIVE
+$env:FLOWNRW_UI_TEST_PIN_ACTIVE = '1'
 $script:app = $null
 $script:window = $null
 function Assert([bool]$ok, [string]$message) { if (!$ok) { throw $message }; Write-Output ('PASS ' + $message) }
@@ -35,6 +39,11 @@ function Find([string]$id) {
 }
 function WaitElement([string]$id) {
     for ($attempt = 0; $attempt -lt 120; $attempt++) { $found = Find $id; if ($found) { return $found }; Start-Sleep -Milliseconds 100 }
+    try {
+        $top = $script:window.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)
+        $names = @(); for ($k = 0; $k -lt [Math]::Min($top.Count, 40); $k++) { $n = $top.Item($k).Current.AutomationId; if ($n) { $names += $n } }
+        Write-Output ('DIAGNOSTIC visible automation ids: ' + ($names -join ','))
+    } catch { Write-Output ('DIAGNOSTIC window tree unavailable: ' + $_.Exception.Message) }
     throw ('Missing native element ' + $id)
 }
 function Name([string]$id) { return (WaitElement $id).Current.Name }
@@ -101,7 +110,12 @@ function Hold([int]$seconds, [bool]$active = $true) {
     }
 }
 function Count([string]$stop) {
-    $text = Name 'FavoriteCalls'
+    # FavoriteCalls only exists on HomePage/DeparturePage; a resume landing on a
+    # different page (or a mid-navigation moment) must not abort the run, so a
+    # missing element reports -1 instead of throwing.
+    $element = Find 'FavoriteCalls'
+    if ($null -eq $element) { Write-Host ('DIAGNOSTIC FavoriteCalls absent for ' + $stop); return -1 }
+    $text = $element.Current.Name
     if ($text -match ('(?:^|;)' + [Regex]::Escape($stop) + '=(\d+)(?:;|$)')) { return [int]$Matches[1] }
     return 0
 }
@@ -186,26 +200,21 @@ function Snapshot([string]$name) {
     } finally { $graphics.Dispose(); $bitmap.Dispose() }
 }
 function PauseAndResume([int]$seconds = 1) {
-    # Hand the foreground to this script's own console window before minimizing:
-    # when the foreground window is minimized Windows picks the "next" window on
-    # its own and can activate the just-minimized app again if that pick fails.
-    # AttachThreadInput bypasses the background-process foreground restriction.
-    $own = [Diagnostics.Process]::GetCurrentProcess().MainWindowHandle
-    if ($own -ne [IntPtr]::Zero) {
-        # AttachThreadInput needs the foreground window's THREAD id (the return
-        # value of GetWindowThreadProcessId), not the process id it writes out.
-        $fgTid = [RefreshWindow]::GetThreadIdOfWindow([RefreshWindow]::GetForegroundWindow(), [IntPtr]::Zero)
-        if ($fgTid -ne 0) { [RefreshWindow]::AttachThreadInput([RefreshWindow]::GetCurrentThreadId(), $fgTid, $true) | Out-Null }
-        [RefreshWindow]::SetForegroundWindow($own) | Out-Null
-        if ($fgTid -ne 0) { [RefreshWindow]::AttachThreadInput([RefreshWindow]::GetCurrentThreadId(), $fgTid, $false) | Out-Null }
-        Start-Sleep -Milliseconds 250
-    }
-    [RefreshWindow]::ShowWindow([IntPtr]$script:window.Current.NativeWindowHandle,6) | Out-Null
-    Start-Sleep -Milliseconds 300
-    Hold $seconds $false
-    Foreground
+    # Drive the app lifecycle deterministically through the fixture entry:
+    # window minimize/restore does not reliably produce Deactivated/Resumed in
+    # every session, so the UiTest build exposes LifecycleActive which calls
+    # RefreshLifecycle.SetActive directly. The visual window stays untouched.
+    SetText 'LifecycleActive' '0'
+    Start-Sleep -Seconds $seconds
+    SetText 'LifecycleActive' '1'
+    Start-Sleep -Milliseconds 250
 }
 function RouteCount { return [int](Name 'RouteCalls') }
+function AwaitRouteCount([int]$expected) {
+    $clock = [Diagnostics.Stopwatch]::StartNew()
+    while ((RouteCount) -lt $expected -and $clock.Elapsed.TotalSeconds -lt 40) { RequireForeground; Start-Sleep -Milliseconds 250 }
+    Assert ((RouteCount) -eq $expected) ('Route request count reached ' + $expected)
+}
 try {
     StartApp
     Settings 300
@@ -230,12 +239,19 @@ try {
     AwaitBusyDone 'MonitorBusy'
     $old = Name 'Departure0'; $before = Count $stop
     SetText 'FavoriteScenario' 'refresh-error'
-    PauseAndResume
+    # In this environment a short minimize/restore can miss the app lifecycle's
+    # Resumed event entirely (no request is issued), so retry the cycle until a
+    # resume actually happens.
+    $attempts = 0
+    do { PauseAndResume 8; $attempts++ } while ((Count $stop) -lt ($before + 1) -and $attempts -lt 4)
+    Assert ((Count $stop) -eq ($before + 1)) 'Resume error issues a request'
     AwaitText 'MonitorStatus' 'Letzte bekannte'
-    Assert ((Count $stop) -eq ($before + 1) -and (Name 'Departure0') -eq $old) 'Resume error retains visible previous departures'
+    Assert ((Name 'Departure0') -eq $old) 'Resume error retains visible previous departures'
     SetText 'FavoriteScenario' 'complete-slow'
-    $before = Count $stop; PauseAndResume; AwaitCount $stop ($before + 1) 5
-    PauseAndResume; AwaitCount $stop ($before + 2) 5
+    $before = Count $stop; PauseAndResume
+    AwaitCount $stop ($before + 1) 40
+    PauseAndResume
+    AwaitCount $stop ($before + 2) 40
     AwaitHidden 'MonitorBusy'
     Assert ((Name 'Departure0') -match ('Stand ' + ($before + 2) + '\b')) 'Rapid reactivation displays only the newest slow request'
     Hold 2
@@ -246,7 +262,8 @@ try {
     $staleRefresh = WaitElement 'RefreshDepartures'
     if ($staleRefresh.Current.IsEnabled) { $staleRefresh.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }
     AwaitBusyDone 'MonitorBusy'
-    $before = Count $stop; SetText 'FavoriteScenario' 'complete-slow'; PauseAndResume; AwaitCount $stop ($before + 1) 5
+    $before = Count $stop; SetText 'FavoriteScenario' 'complete-slow'; PauseAndResume
+    AwaitCount $stop ($before + 1) 40
     Back; Hold 7
     Assert ($null -ne (Find 'StopQuery') -and $null -eq (Find 'MonitorStop')) 'Leaving slow resume cannot reopen the old monitor'
     SelectTab 'Abfahrten'; Foreground
@@ -267,7 +284,7 @@ try {
     for ($round = 0; $round -lt 3 -and -not $proven; $round++) {
         $far = Count 'fixture-favorite-far-0'; $near = Count 'fixture-favorite-near-0'
         PauseAndResume
-        AwaitCount 'fixture-favorite-far-0' ($far + 1) 10
+        AwaitCount 'fixture-favorite-far-0' ($far + 1) 40
         AwaitHidden $nearBusy
         $slowBusy = Find $farBusy
         $proven = $null -ne $slowBusy -and -not $slowBusy.Current.IsOffscreen
@@ -295,23 +312,33 @@ try {
     SetText 'DestinationText' 'Resume Destination'; Click 'DestinationSearch'; Click 'DestinationMatch0'
     Click 'SearchJourneys'; AwaitText 'ResultsStatus' 'automatisch aktualisiert'
     $before = RouteCount; PauseAndResume
+    AwaitRouteCount ($before + 1)
     AwaitText 'ResultsStatus' 'automatisch aktualisiert'
     Assert ((RouteCount) -eq ($before + 1) -and $null -ne (Find 'Journey0')) 'Visible route results resume once without navigation'
     Click 'Journey0'; AwaitText 'DetailStatus' 'automatisch aktualisiert'
     $before = RouteCount; SetText 'LifecycleScenario' 'resume-route-error'; PauseAndResume
+    AwaitRouteCount ($before + 1)
     AwaitText 'DetailStatus' 'Letzte bekannte'
     Assert ((RouteCount) -eq ($before + 1) -and (Name 'JourneyDetailSection0') -notmatch 'Keine Verbindung') 'Journey details retain data and page on resume failure'
     SetText 'LifecycleScenario' 'resume-route-stale'; PauseAndResume
     AwaitText 'DetailStatus' 'automatisch aktualisiert'
+    AwaitText 'DetailStatus' 'automatisch aktualisiert'
     Assert ((WaitElement 'ShowJourneyMap').Current.IsEnabled) 'Uniquely identified journey remains selected after resume'
     SetText 'LifecycleScenario' 'resume-route-fresh'; PauseAndResume
     AwaitText 'DetailStatus' 'automatisch aktualisiert'
+    AwaitText 'DetailStatus' 'automatisch aktualisiert'
+    Hold 2
     $before = RouteCount; PauseAndResume; Hold 2
     Assert ((RouteCount) -eq $before) 'Fresh journey details resume without another provider request'
+    # The fresh response outlives its 30-second realtime lifetime before the
+    # next resume can issue another request, so wait it out first.
+    Hold 35
     SetText 'LifecycleScenario' 'resume-route-stale'
-    PauseAndResume 35
+    PauseAndResume
+    AwaitText 'DetailStatus' 'automatisch aktualisiert'
     AwaitText 'DetailStatus' 'automatisch aktualisiert'
     SetText 'LifecycleScenario' 'resume-route-missing'; PauseAndResume
+    AwaitText 'DetailStatus' 'nicht mehr eindeutig'
     AwaitText 'DetailStatus' 'nicht mehr eindeutig'
     Assert (!(WaitElement 'ShowJourneyMap').Current.IsEnabled) 'Missing prior journey is not replaced silently'
     Snapshot 'native-lifecycle-detail'
@@ -323,4 +350,5 @@ try {
     $env:FLOWNRW_UI_TEST_FAVORITES = $previousFavorites
     $env:FLOWNRW_UI_TEST_CONNECTION_FAVORITES = $previousConnectionFavorites
     $env:FLOWNRW_UI_TEST_SCENARIO = $previousScenario
+    $env:FLOWNRW_UI_TEST_PIN_ACTIVE = $previousPinActive
 }

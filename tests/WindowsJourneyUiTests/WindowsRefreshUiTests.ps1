@@ -1,9 +1,9 @@
-﻿param([Parameter(Mandatory=$true)][string]$Exe, [string]$ScreenshotDirectory, [switch]$FavoriteTimersOnly)
+param([Parameter(Mandatory=$true)][string]$Exe, [string]$ScreenshotDirectory, [switch]$FavoriteTimersOnly)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 Add-Type -AssemblyName System.Windows.Forms
-Add-Type @"
+if (-not ('RefreshWindow' -as [type])) { Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public static class RefreshWindow {
@@ -11,7 +11,7 @@ public static class RefreshWindow {
  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int command);
 }
-"@
+"@ }
 $previousSettings = $env:FLOWNRW_UI_TEST_REFRESH_SETTINGS
 $previousFavorites = $env:FLOWNRW_UI_TEST_FAVORITES
 $previousConnectionFavorites = $env:FLOWNRW_UI_TEST_CONNECTION_FAVORITES

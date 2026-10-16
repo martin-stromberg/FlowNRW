@@ -85,6 +85,8 @@ public sealed class HomePage : ContentPage
             var fixture = Handler!.MauiContext!.Services.GetRequiredService<UiTestLocationServices>();
             var scenario = new Entry { AutomationId = "HomeScenario", BindingContext = fixture };
             scenario.SetBinding(Entry.TextProperty, nameof(fixture.Scenario)); layout.Children.Insert(0, scenario);
+            var lifecycleActive = new Entry { AutomationId = "LifecycleActive", BindingContext = fixture };
+            lifecycleActive.SetBinding(Entry.TextProperty, nameof(fixture.LifecycleActive)); layout.Children.Insert(0, lifecycleActive);
             var calls = new Label { AutomationId = "FavoriteCalls", BindingContext = fixture };
             calls.SetBinding(Label.TextProperty, nameof(fixture.DepartureCalls)); layout.Children.Insert(1, calls);
         };

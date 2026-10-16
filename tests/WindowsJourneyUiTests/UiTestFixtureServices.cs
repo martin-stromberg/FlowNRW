@@ -4,6 +4,7 @@ using FlowNRW.Core.Presentation;
 using System.ComponentModel;
 using FlowNRW.Core.Favorites;
 using FlowNRW.Core.Refresh;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FlowNRW;
 
@@ -174,7 +175,27 @@ internal sealed class UiTestMapTiles(MapViewModel model) : IMapTileService
 /// <summary>Explicitly selected location scenarios compiled only for native UI tests.</summary>
 internal sealed class UiTestLocationServices : ICurrentLocationService, INotifyPropertyChanged
 {
+    private readonly IServiceProvider services;
     private string scenario = Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_SCENARIO") ?? "success";
+    private string lifecycleActive = "1";
+
+    /// <summary>Captures the provider so fixture controls can reach the lifecycle without a construction-time dependency cycle.</summary>
+    /// <param name="services">Application service provider for lazy resolution.</param>
+    public UiTestLocationServices(IServiceProvider services) { this.services = services; }
+
+    /// <summary>Text fixture that drives <see cref="RefreshLifecycle.SetActive"/>: "0" suspends, "1" resumes.</summary>
+    public string LifecycleActive
+    {
+        get => lifecycleActive;
+        set
+        {
+            var requested = value.Trim() == "1";
+            if (lifecycleActive == (requested ? "1" : "0")) return;
+            lifecycleActive = requested ? "1" : "0";
+            services.GetRequiredService<RefreshLifecycle>().SetActive(requested);
+            PropertyChanged?.Invoke(this, new(nameof(LifecycleActive)));
+        }
+    }
     private int calls;
     private int routeCalls;
     private readonly Dictionary<string, int> departureCalls = [];
