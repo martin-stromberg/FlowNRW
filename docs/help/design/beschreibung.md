@@ -30,6 +30,10 @@ Abfahrten und Verbindungen zeigen ihren Status als Chip aus Symbol **plus** Text
 
 Die Statusentscheidung trifft `DeparturePresentation.Status` in FlowNRW.Core ausschließlich aus gelieferten Echtzeitfeldern (siehe [Fachliche Regeln](business-rules.md)). Die Karten (`DepartureCardView`, `JourneyCardView`, `JourneyTimelineView`, `TransitVisuals.Candidate`, Favoritenkarten in `HomePage.BuildFavoriteCard`) verwenden einheitliches Spacing (Kartenabstand 12, Innenabstand 16) und die Referenz-Typoskala (Titel 22–28, Text 17, Nebeninfo 15, Meta 13).
 
+### Seitentitel ohne Dublette
+
+Seiten wiederholen ihren `Title` — den Eintrag in der Navigationsleiste — nicht als große In-Page-Überschrift. Die ehemaligen Seitentitel „Verbindungen" (`SearchPage`), „Haltestellen" (`StopSearchPage`) und der Kartenname (`MapPage`: „Favoritenkarte"/„Haltestellenkarte"/„Verbindungsverlauf") sind entfernt; der Fenstertitel benennt die Ansicht allein. Unverändert bleiben Abschnittsüberschriften innerhalb von Karten und Bereichen („Haltestelle finden", „Wohin möchtest du fahren?", „Nächste Haltestellen", „Diagnose") sowie dynamische Inhaltstitel wie der Stationsname im Abfahrtsmonitor (`MonitorStop`), der die angezeigten Daten identifiziert.
+
 ### Token-Nachschärfung
 
 `Colors.xaml` wurde um `GroupStrong` (`#EEEDF3` hell / `#2C2C2E` dunkel) sowie die Semantikfarben `Success`/`Warning`/`Error` (`#006E28`/`#894D00`/`#BA1A1A`) samt kontrastgeprüften Dunkelvarianten (`#3ECF6B`/`#F0A840`/`#FF897D`, jeweils ≥4,5:1 auf den dunklen Karten-/Gruppenflächen) erweitert. Die C#-Fabriken in `TransitVisuals` lesen dieselben Werte über zentrale Konstanten. `Styles.xaml` setzt `FontFamily="Inter"` in allen impliziten Text- und Eingabe-Styles, stuft `Headline` auf 28 und `SubHeadline` auf 22 mit den Ink-Tokens um und gibt `ImageButton` einen 12er-Eckenradius auf `GroupStrong`-Fläche.

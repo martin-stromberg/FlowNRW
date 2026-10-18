@@ -32,7 +32,6 @@ public sealed class StopSearchPage : ContentPage
             layout.Children.Insert(0, scenario);
         };
 #endif
-        layout.Children.Add(TransitVisuals.Text("Haltestellen", 32, true));
         layout.Children.Add(TransitVisuals.Secondary("Suche eine Station oder finde Haltestellen in deiner Nähe."));
         var searchCard = new VerticalStackLayout { Spacing = 12 };
         layout.Children.Add(new Border { Padding = 16, Content = searchCard });
