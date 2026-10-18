@@ -26,7 +26,6 @@ public sealed class SearchPage : ContentPage
         this.connectionFavorites = connectionFavorites;
         this.model = model; BindingContext = model; Title = "Verbindung suchen";
         var content = new VerticalStackLayout { Padding = 16, Spacing = 12 };
-        content.Children.Add(TransitVisuals.Text("Verbindungen", 32, true));
         content.Children.Add(TransitVisuals.Secondary("Plane deine Fahrt mit Start, Ziel und Abfahrtszeit."));
 #if UI_TEST_FIXTURES
         Loaded += (_, _) =>

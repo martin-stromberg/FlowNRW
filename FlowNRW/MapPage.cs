@@ -37,7 +37,6 @@ public sealed class MapPage : ContentPage
         this.model = model; this.tiles = tiles; this.options = options;
         Title = model.Title;
         var layout = new VerticalStackLayout { Padding = 16, Spacing = 12 };
-        layout.Children.Add(TransitVisuals.Text(model.Title, 28, true));
         var mapState = new VerticalStackLayout { Spacing = 4, Padding = 16 };
         mapState.Children.Add(new Label { Text = model.Status.Replace(". Auswahl öffnet die Abfahrten.", "", StringComparison.Ordinal).Replace("Es wird kein Streckenverlauf erfunden.", "Für diese Verbindung ist kein Streckenverlauf verfügbar.", StringComparison.Ordinal), AutomationId = "MapDataStatus", FontSize = 17 });
         mapState.Children.Add(status);

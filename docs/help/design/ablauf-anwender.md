@@ -17,6 +17,7 @@ Keine. Das Design gilt appweit; helles/dunkles Erscheinungsbild folgt der System
    - „Keine Echtzeitdaten" bedeutet ausdrücklich, dass keine aktuelle Meldung vorliegt — nicht, dass die Fahrt pünktlich ist.
 5. **Favoriten:** Der Stern ist umrandet, solange die Haltestelle oder Verbindung nicht gespeichert ist, und gefüllt, sobald sie gespeichert ist. Auf der Startseite klappt der Chevron-Schalter rechts oben im Kartenkopf die Abfahrtsliste einer Favoritenkarte auf oder zu — ein erneutes Zuklappen ist ohne Scrollen erreichbar.
 6. **Datenhinweis lesen:** Erscheint am Zeilenende einer Favoritenkarte oder im Abfahrtsmonitor ein kleines `warning`-Symbol, liegt eine Anbieterwarnung, eine Ersatzquelle oder veraltete Daten vor. Ein Tipp auf das Symbol blendet Quelle, Datenstand und Provenienz ein oder aus; solange kein Symbol sichtbar ist, gibt es nichts Verborgenes.
+7. **Seitenanfang:** Der Name der Ansicht steht nur noch in der Kopfzeile neben dem Zurück-Schalter; eine zusätzliche große Überschrift darunter entfällt (z. B. auf der Favoritenkarte, der Verbindungssuche und der Haltestellensuche). Überschriften innerhalb von Karten und Bereichen bleiben erhalten.
 
 ## Ergebnis
 
