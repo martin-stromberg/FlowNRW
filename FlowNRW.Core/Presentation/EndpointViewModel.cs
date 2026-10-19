@@ -10,8 +10,7 @@ public sealed class EndpointViewModel : ObservableObject
     private readonly ICurrentLocationService? location;
     private CancellationTokenSource? request;
     private long revision;
-    private string text = "", latitude = "", longitude = "";
-    private bool coordinates;
+    private string text = "";
     private bool locating;
     /// <summary>Creates an endpoint with its own search service.</summary>
     /// <param name="service">Independent search scope.</param>
@@ -23,7 +22,7 @@ public sealed class EndpointViewModel : ObservableObject
         SearchCommand = new AsyncRelayCommand(SearchAsync, () => !IsBusy, _ => SetStatus("Suche fehlgeschlagen. Bitte erneut versuchen."));
         SelectCommand = new RelayCommand(value => { if (value is Address address) SelectAddress(address); });
         LocationCommand = new AsyncRelayCommand(UseCurrentLocationAsync, () => !IsBusy && location is not null,
-            _ => SetLocationStatus("Standort konnte nicht ermittelt werden."));
+            _ => SetStatus("Standort konnte nicht ermittelt werden."));
     }
     /// <summary>Reports changed endpoint identity.</summary>
     public event EventHandler? Changed;
@@ -39,55 +38,8 @@ public sealed class EndpointViewModel : ObservableObject
             Notify();
         }
     }
-    /// <summary>Latitude input.</summary>
-    public string Latitude
-    {
-        get => latitude;
-        set
-        {
-            if (latitude == value) return;
-            latitude = value;
-            Invalidate();
-            Notify();
-        }
-    }
-    /// <summary>Longitude input.</summary>
-    public string Longitude
-    {
-        get => longitude;
-        set
-        {
-            if (longitude == value) return;
-            longitude = value;
-            Invalidate();
-            Notify();
-        }
-    }
-    /// <summary>Whether coordinate input is active.</summary>
-    public bool IsCoordinateMode
-    {
-        get => coordinates;
-        set
-        {
-            if (coordinates == value) return;
-            coordinates = value;
-            Invalidate();
-            Notify();
-            Notify(nameof(IsTextMode));
-        }
-    }
-    /// <summary>Whether lookup input is active.</summary>
-    public bool IsTextMode => !IsCoordinateMode;
     /// <summary>Complete selected identity.</summary>
     public Address? SelectedAddress { get; private set; }
-    /// <summary>Readable selected identity.</summary>
-    public string Selection
-    {
-        get
-        {
-            return SelectedAddress is null ? "Noch kein Endpunkt ausgewählt." : "Ausgewählt: " + JourneyPresentation.DisplayAddress(SelectedAddress);
-        }
-    }
     /// <summary>Current candidates in provider order.</summary>
     public IReadOnlyList<Address> Matches { get; private set; } = [];
     /// <summary>Current provenance.</summary>
@@ -104,7 +56,7 @@ public sealed class EndpointViewModel : ObservableObject
     public bool IsBusy { get; private set; }
     /// <summary>Validation or provider status.</summary>
     public string Status { get; private set; } = "Adresse oder Haltestelle suchen und einen Treffer auswählen.";
-    /// <summary>Lookup or coordinate validation action.</summary>
+    /// <summary>Lookup action.</summary>
     public AsyncRelayCommand SearchCommand { get; }
     /// <summary>Candidate selection action.</summary>
     public RelayCommand SelectCommand { get; }
@@ -121,20 +73,11 @@ public sealed class EndpointViewModel : ObservableObject
     }
     /// <summary>Explicitly requests the current position.</summary>
     public AsyncRelayCommand LocationCommand { get; }
-    /// <summary>Readable location request state.</summary>
-    public string LocationStatus { get; private set; } = "Standort nur nach Aktion verwenden.";
     /// <summary>Resolves the current input.</summary>
     /// <returns>Lookup completion.</returns>
     public async Task SearchAsync()
     {
         Invalidate();
-        if (IsCoordinateMode)
-        {
-            if (CoordinateParser.TryParse(Latitude, Longitude, out var coordinate, out var error))
-                SelectAddress(new Address { Name = "Koordinate", Coordinate = coordinate });
-            else SetStatus(error);
-            return;
-        }
         if (string.IsNullOrWhiteSpace(Text) || Text.Trim().Length > maxLength) { SetStatus($"Bitte einen Suchtext mit 1 bis {maxLength} Zeichen eingeben."); return; }
         var version = revision;
         using var source = new CancellationTokenSource(); request = source;
@@ -155,7 +98,7 @@ public sealed class EndpointViewModel : ObservableObject
     /// <param name="address">Selected candidate.</param>
     public void SelectAddress(Address address)
     {
-        if (!IsCoordinateMode && !Matches.Contains(address) && address.Stop is null) return;
+        if (!Matches.Contains(address) && address.Stop is null) return;
         SetSelectedAddress(address, true);
     }
 
@@ -163,7 +106,7 @@ public sealed class EndpointViewModel : ObservableObject
     /// <param name="address">Resolved stop or coordinate.</param>
     public void SelectAddressKeepingMatches(Address address)
     {
-        if (!IsCoordinateMode && !Matches.Contains(address) && address.Stop is null) return;
+        if (!Matches.Contains(address) && address.Stop is null) return;
         SetSelectedAddress(address, false);
     }
 
@@ -174,11 +117,31 @@ public sealed class EndpointViewModel : ObservableObject
         CancelPending();
         SelectedAddress = address;
         text = address?.Name ?? "";
-        Notify(nameof(Text)); Notify(nameof(SelectedAddress)); Notify(nameof(Selection));
+        Notify(nameof(Text)); Notify(nameof(SelectedAddress));
         Matches = []; Result = null;
         Notify(nameof(Matches)); Notify(nameof(Result)); Notify(nameof(Metadata));
         SetStatus(address is null ? "Adresse oder Haltestelle suchen und einen Treffer auswählen." : "Endpunkt übernommen.");
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Resolves a map-picked coordinate into a readable address and accepts it as the endpoint.</summary>
+    /// <param name="coordinate">Picked WGS84 position.</param>
+    /// <returns>Resolution completion.</returns>
+    public async Task SelectCoordinateAsync(GeoCoordinate coordinate)
+    {
+        CancelPending();
+        var version = revision;
+        using var source = new CancellationTokenSource(); request = source;
+        SetBusy(true); SetStatus("Adresse wird ermittelt …");
+        try
+        {
+            var address = await ResolveCoordinateAsync(coordinate, "Koordinate", source.Token);
+            if (version != revision) return;
+            SetSelectedAddress(address);
+        }
+        catch (OperationCanceledException) { if (version == revision) SetStatus("Adressermittlung abgebrochen."); }
+        catch (Exception) { if (version == revision) SetStatus("Adresse konnte nicht ermittelt werden. Bitte erneut versuchen."); }
+        finally { if (version == revision) { request = null; SetBusy(false); } }
     }
 
     private void SetSelectedAddress(Address address, bool clearMatches)
@@ -186,13 +149,30 @@ public sealed class EndpointViewModel : ObservableObject
         CancelPending();
         text = address.Name;
         Notify(nameof(Text));
-        SelectedAddress = address; Notify(nameof(SelectedAddress)); Notify(nameof(Selection));
+        SelectedAddress = address; Notify(nameof(SelectedAddress));
         if (clearMatches)
         {
             Matches = []; Result = null;
             Notify(nameof(Matches)); Notify(nameof(Result)); Notify(nameof(Metadata));
         }
         SetStatus("Endpunkt übernommen."); Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private async Task<Address> ResolveCoordinateAsync(GeoCoordinate coordinate, string fallbackName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await service.NearbyAsync(coordinate, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            var nearest = result.ErrorCode is null
+                ? result.Items.Select(item => item.Stop).FirstOrDefault(stop => stop is not null && !string.IsNullOrWhiteSpace(stop.Name))
+                : null;
+            if (nearest is not null)
+                return new Address { Name = nearest.Name, Stop = nearest, Coordinate = nearest.Coordinate ?? coordinate };
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception) { }
+        return new Address { Name = fallbackName, Coordinate = coordinate };
     }
 
     private async Task UseCurrentLocationAsync()
@@ -202,25 +182,20 @@ public sealed class EndpointViewModel : ObservableObject
         var version = revision;
         using var source = new CancellationTokenSource(); request = source;
         locating = true;
-        SetBusy(true); SetLocationStatus("Standort wird ermittelt …");
+        SetBusy(true); SetStatus("Standort wird ermittelt …");
         try
         {
             var result = await location.GetCurrentAsync(source.Token);
             if (version != revision) return;
-            if (result.HasCurrentPosition)
-            {
-                SelectedAddress = new Address { Name = "Aktueller Standort", Coordinate = result.Coordinate };
-                Matches = []; Result = null;
-                Notify(nameof(Matches)); Notify(nameof(Result)); Notify(nameof(Metadata));
-                Notify(nameof(SelectedAddress)); Notify(nameof(Selection));
-                SetStatus("Endpunkt übernommen.");
-                SetLocationStatus("Aktueller Standort übernommen." + result.AccuracyDescription);
-                Changed?.Invoke(this, EventArgs.Empty);
-            }
-            else SetLocationStatus(result.FailureDescription);
+            if (!result.HasCurrentPosition) { SetStatus(result.FailureDescription); return; }
+            SetStatus("Adresse wird ermittelt …");
+            var address = await ResolveCoordinateAsync(result.Coordinate!, "Aktueller Standort", source.Token);
+            if (version != revision) return;
+            request = null; locating = false; SetBusy(false);
+            SetSelectedAddress(address);
         }
-        catch (OperationCanceledException) { if (version == revision) SetLocationStatus("Standortabfrage abgebrochen."); }
-        catch (Exception) { if (version == revision) SetLocationStatus("Standort konnte nicht ermittelt werden."); }
+        catch (OperationCanceledException) { if (version == revision) SetStatus("Standortabfrage abgebrochen."); }
+        catch (Exception) { if (version == revision) SetStatus("Standort konnte nicht ermittelt werden."); }
         finally { if (version == revision) { request = null; locating = false; SetBusy(false); } }
     }
     /// <summary>Cancels pending work while retaining completed state.</summary>
@@ -229,7 +204,7 @@ public sealed class EndpointViewModel : ObservableObject
         revision++;
         request?.Cancel();
         request = null;
-        if (IsBusy) { if (locating) SetLocationStatus("Standortabfrage abgebrochen."); else SetStatus("Suche abgebrochen."); }
+        if (IsBusy) { if (locating) SetStatus("Standortabfrage abgebrochen."); else SetStatus("Suche abgebrochen."); }
         locating = false;
         SetBusy(false);
         SearchCommand.InvalidateExecution();
@@ -238,11 +213,10 @@ public sealed class EndpointViewModel : ObservableObject
     private void Invalidate()
     {
         CancelPending(); SelectedAddress = null; Matches = []; Result = null;
-        Notify(nameof(SelectedAddress)); Notify(nameof(Selection)); Notify(nameof(Matches)); Notify(nameof(Result)); Notify(nameof(Metadata));
-        SetStatus(IsCoordinateMode ? "Breite und Länge eingeben und übernehmen." : "Adresse oder Haltestelle suchen und einen Treffer auswählen.");
+        Notify(nameof(SelectedAddress)); Notify(nameof(Matches)); Notify(nameof(Result)); Notify(nameof(Metadata));
+        SetStatus("Adresse oder Haltestelle suchen und einen Treffer auswählen.");
         Changed?.Invoke(this, EventArgs.Empty);
     }
-    private void SetLocationStatus(string value) { LocationStatus = value; Notify(nameof(LocationStatus)); }
     private void SetStatus(string value) { Status = value; Notify(nameof(Status)); }
     private void SetBusy(bool value) { IsBusy = value; Notify(nameof(IsBusy)); SearchCommand.Refresh(); LocationCommand.Refresh(); }
 }

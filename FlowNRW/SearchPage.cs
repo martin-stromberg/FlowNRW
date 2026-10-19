@@ -1,6 +1,7 @@
 using FlowNRW.Core.Presentation;
 using FlowNRW.Core.Refresh;
 using FlowNRW.Core.Favorites;
+using FlowNRW.Core.Maps;
 using FlowNRW.Core.Transit;
 using System.ComponentModel;
 
@@ -13,17 +14,23 @@ public sealed class SearchPage : ContentPage
     private readonly ForegroundState foreground;
     private readonly FavoriteHomeViewModel favorites;
     private readonly ConnectionFavoritesViewModel connectionFavorites;
+    private readonly IMapTileService tiles;
+    private readonly MapOptions mapOptions;
     /// <summary>Creates the native search view.</summary>
     /// <param name="model">Retained search session.</param>
     /// <param name="foreground">Shared active-window state.</param>
     /// <param name="favorites">Persisted favorite stops used for suggestions.</param>
     /// <param name="connectionFavorites">Explicitly saved reusable journey endpoint pairs.</param>
+    /// <param name="tiles">Bounded tile gateway for the modal position picker.</param>
+    /// <param name="mapOptions">Provider and projection limits for the picker map.</param>
     public SearchPage(JourneySearchViewModel model, ForegroundState foreground, FavoriteHomeViewModel favorites,
-        ConnectionFavoritesViewModel connectionFavorites)
+        ConnectionFavoritesViewModel connectionFavorites, IMapTileService tiles, MapOptions mapOptions)
     {
         this.foreground = foreground;
         this.favorites = favorites;
         this.connectionFavorites = connectionFavorites;
+        this.tiles = tiles;
+        this.mapOptions = mapOptions;
         this.model = model; BindingContext = model; Title = "Verbindung suchen";
         var content = new VerticalStackLayout { Padding = 16, Spacing = 12 };
         content.Children.Add(TransitVisuals.Secondary("Plane deine Fahrt mit Start, Ziel und Abfahrtszeit."));
@@ -107,29 +114,28 @@ public sealed class SearchPage : ContentPage
     protected override void OnDisappearing() { foreground.PropertyChanged -= ForegroundChanged; base.OnDisappearing(); CancelPending(); }
     private void ForegroundChanged(object? sender, PropertyChangedEventArgs args) { if (!foreground.IsActive) CancelPending(); }
     private void CancelPending() { model.Origin.CancelPending(); model.Destination.CancelPending(); model.CancelPending(); }
+    private async Task PickOnMapAsync(EndpointViewModel endpoint, string title)
+    {
+        var page = new LocationPickerPage(tiles, mapOptions, foreground, endpoint.SelectedAddress?.Coordinate, title);
+        await Navigation.PushModalAsync(page);
+        var coordinate = await page.Selection;
+        if (coordinate is not null) await endpoint.SelectCoordinateAsync(coordinate);
+    }
     private Border Endpoint(EndpointViewModel endpoint, string prefix, string title)
     {
         var layout = new VerticalStackLayout { Spacing = 8, BindingContext = endpoint };
         layout.Children.Add(TransitVisuals.Text(title, 17, true));
-        var toggle = new Switch { AutomationId = prefix + "CoordinateMode" }; toggle.SetBinding(Switch.IsToggledProperty, nameof(endpoint.IsCoordinateMode));
-        SemanticProperties.SetDescription(toggle, title + ": Koordinatenmodus");
-        var text = new Entry { Placeholder = title + ": Adresse oder Haltestelle", AutomationId = prefix + "Text" }; text.SetBinding(Entry.TextProperty, nameof(endpoint.Text)); text.SetBinding(IsVisibleProperty, nameof(endpoint.IsTextMode));
+        var text = new Entry { Placeholder = title + ": Adresse oder Haltestelle", AutomationId = prefix + "Text" }; text.SetBinding(Entry.TextProperty, nameof(endpoint.Text));
         var lookup = new Button { AutomationId = prefix + "Search", Command = endpoint.SearchCommand, HeightRequest = 48, WidthRequest = 48 };
         TransitIcons.SetIcon(lookup, TransitIcons.Search, title + " suchen");
         var locationButton = new Button { AutomationId = prefix + "Location", Command = endpoint.LocationCommand, HeightRequest = 48, WidthRequest = 48 };
         TransitIcons.SetIcon(locationButton, TransitIcons.MyLocation, title + " Mein Standort");
-        var inputRow = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto), new(GridLength.Auto)], ColumnSpacing = 8 };
-        inputRow.Add(text, 0); inputRow.Add(lookup, 1); inputRow.Add(locationButton, 2); layout.Children.Add(inputRow);
+        var pickCommand = new AsyncRelayCommand(() => PickOnMapAsync(endpoint, title), () => !endpoint.IsBusy, _ => Title = "Kartenauswahl konnte nicht geöffnet werden");
+        var pickButton = new Button { AutomationId = prefix + "MapPick", Command = pickCommand, HeightRequest = 48, WidthRequest = 48 };
+        TransitIcons.SetIcon(pickButton, TransitIcons.Map, title + ": Position auf Karte wählen");
+        var inputRow = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto), new(GridLength.Auto), new(GridLength.Auto)], ColumnSpacing = 8 };
+        inputRow.Add(text, 0); inputRow.Add(lookup, 1); inputRow.Add(locationButton, 2); inputRow.Add(pickButton, 3); layout.Children.Add(inputRow);
         SemanticProperties.SetDescription(text, title + ": Adresse oder Haltestelle");
-        var coordinates = new VerticalStackLayout { Spacing = 8 }; coordinates.SetBinding(IsVisibleProperty, nameof(endpoint.IsCoordinateMode));
-        coordinates.Children.Add(new Label { Text = "Breite (−90 bis 90)" });
-        var latitude = new Entry { Placeholder = "z. B. 51,4556", AutomationId = prefix + "Latitude", Keyboard = Keyboard.Numeric }; latitude.SetBinding(Entry.TextProperty, nameof(endpoint.Latitude)); coordinates.Children.Add(latitude);
-        coordinates.Children.Add(new Label { Text = "Länge (−180 bis 180)" });
-        var longitude = new Entry { Placeholder = "z. B. 7,0116", AutomationId = prefix + "Longitude", Keyboard = Keyboard.Numeric }; longitude.SetBinding(Entry.TextProperty, nameof(endpoint.Longitude)); coordinates.Children.Add(longitude); layout.Children.Add(coordinates);
-        var coordinateMode = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 12 };
-        coordinateMode.Add(TransitVisuals.Text("Koordinaten eingeben", 15), 0); coordinateMode.Add(toggle, 1); layout.Children.Add(coordinateMode);
-        endpoint.PropertyChanged += (_, args) => { if (args.PropertyName == nameof(endpoint.IsCoordinateMode)) TransitIcons.SetIcon(lookup, endpoint.IsCoordinateMode ? TransitIcons.Check : TransitIcons.Search, endpoint.IsCoordinateMode ? title + " Koordinaten übernehmen" : title + " suchen"); };
-        var locationStatus = new Label { AutomationId = prefix + "LocationStatus" }; locationStatus.SetBinding(Label.TextProperty, nameof(endpoint.LocationStatus)); layout.Children.Add(locationStatus);
         var busy = new ActivityIndicator { AutomationId = prefix + "Busy" }; busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(endpoint.IsBusy)); busy.SetBinding(IsVisibleProperty, nameof(endpoint.IsBusy)); layout.Children.Add(busy);
         var status = new Label { AutomationId = prefix + "Status" }; status.SetBinding(Label.TextProperty, nameof(endpoint.Status)); layout.Children.Add(status);
         var matches = new VerticalStackLayout { Spacing = 12, AutomationId = prefix + "Matches", IsVisible = endpoint.Matches.Count > 0 }; layout.Children.Add(matches);
@@ -145,11 +151,8 @@ public sealed class SearchPage : ContentPage
             }
             TransitVisuals.ApplyRoles(matches);
         };
-        var selection = new Label { AutomationId = prefix + "Selection", FontAttributes = FontAttributes.Bold }; selection.SetBinding(Label.TextProperty, nameof(endpoint.Selection)); layout.Children.Add(selection);
         var metadata = new Label { AutomationId = prefix + "Metadata" }; metadata.SetBinding(Label.TextProperty, nameof(endpoint.Metadata)); layout.Children.Add(metadata);
-        locationStatus.IsVisible = false;
         status.IsVisible = false;
-        selection.IsVisible = false;
         metadata.IsVisible = !string.IsNullOrWhiteSpace(endpoint.Metadata);
         var favoritesList = new VerticalStackLayout { AutomationId = prefix + "Favorites", Spacing = 4, IsVisible = false };
         layout.Children.Add(favoritesList);
@@ -165,16 +168,15 @@ public sealed class SearchPage : ContentPage
                 favorite.Command = new Command(() => { endpoint.SelectFavorite(card.Stop); favoritesList.IsVisible = false; });
                 favoritesList.Children.Add(favorite);
             }
-            favoritesList.IsVisible = matches.Length > 0 && text.IsFocused && endpoint.IsTextMode;
+            favoritesList.IsVisible = matches.Length > 0 && text.IsFocused;
         }
         text.Focused += async (_, _) => { await favorites.LoadAsync(); RenderFavorites(); };
         text.Unfocused += (_, _) => favoritesList.IsVisible = false;
         endpoint.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName == nameof(endpoint.Text)) RenderFavorites();
-            if (args.PropertyName == nameof(endpoint.LocationStatus)) locationStatus.IsVisible = !string.IsNullOrWhiteSpace(endpoint.LocationStatus);
+            if (args.PropertyName == nameof(endpoint.IsBusy)) pickCommand.Refresh();
             if (args.PropertyName == nameof(endpoint.Status)) status.IsVisible = !string.IsNullOrWhiteSpace(endpoint.Status);
-            if (args.PropertyName == nameof(endpoint.Selection)) selection.IsVisible = true;
             if (args.PropertyName == nameof(endpoint.Metadata)) metadata.IsVisible = !string.IsNullOrWhiteSpace(endpoint.Metadata);
         };
         return new Border { Padding = 8, Content = layout };

@@ -19,9 +19,8 @@ public sealed class LocationTests
     public async Task FailedPositionPreservesSelection(LocationStatus status)
     {
         var location = new ControlledLocation();
-        var endpoint = new EndpointViewModel(new ControlledSearchService(), 100, location)
-        { IsCoordinateMode = true, Latitude = "51", Longitude = "7" };
-        await endpoint.SearchAsync();
+        var endpoint = new EndpointViewModel(new ControlledSearchService(), 100, location);
+        endpoint.SetSelectedAddress(new Address { Name = "selected", Coordinate = new GeoCoordinate(51, 7) });
         var selected = endpoint.SelectedAddress;
         var task = endpoint.LocationCommand.ExecuteAsync();
         Assert.Same(selected, endpoint.SelectedAddress);
@@ -107,8 +106,8 @@ public sealed class LocationTests
         location.Pending[0].SetException(new InvalidOperationException("sensitive"));
         await Task.WhenAll(first, second);
         Assert.Null(origin.SelectedAddress);
-        Assert.Contains("Ungefähre", destination.LocationStatus);
-        Assert.DoesNotContain("sensitive", origin.LocationStatus);
+        Assert.Contains("übernommen", destination.Status);
+        Assert.DoesNotContain("sensitive", origin.Status);
         Assert.True(origin.LocationCommand.CanExecute(null));
     }
 
@@ -140,7 +139,7 @@ public sealed class LocationTests
             minutes.HasValue ? DateTimeOffset.UtcNow.AddMinutes(minutes.Value) : null));
         await task;
         Assert.Null(model.SelectedAddress);
-        Assert.Contains("Keine aktuelle Position", model.LocationStatus);
+        Assert.Contains("Keine aktuelle Position", model.Status);
     }
 
     /// <summary>Unknown distances are explicit and failed updates retain clearly labelled previous data.</summary>
@@ -246,7 +245,7 @@ public sealed class LocationTests
         var endpoint = new EndpointViewModel(new ControlledSearchService(), 100, location);
         var endpointTask = endpoint.LocationCommand.ExecuteAsync();
         location.Pending[0].SetException(new InvalidOperationException("private")); await endpointTask;
-        Assert.DoesNotContain("private", endpoint.LocationStatus);
+        Assert.DoesNotContain("private", endpoint.Status);
         Assert.True(endpoint.LocationCommand.CanExecute(null));
         var nearby = new ControlledNearby();
         var model = new StopMonitorViewModel(new ControlledSearchService(), new ControlledDepartureService(), new DepartureTestNavigation(), 100, location, nearby);
@@ -268,18 +267,17 @@ public sealed class LocationTests
         location.Pending[0].SetResult(new(LocationStatus.Success, new(51, 7), AccuracyMeters: 150, IsReducedAccuracy: true)); await task;
         Assert.Empty(model.Matches); Assert.Null(model.Result); Assert.Empty(model.Metadata);
         Assert.Contains("übernommen", model.Status);
-        Assert.Contains("150 m", model.LocationStatus);
-        Assert.Contains("Ungefähre", model.LocationStatus);
+        Assert.Equal("Aktueller Standort", model.Text);
+        Assert.Equal(new GeoCoordinate(51, 7), model.SelectedAddress?.Coordinate);
     }
 
-    /// <summary>Coordinate mode changes cancel an outstanding location lookup.</summary>
+    /// <summary>A map pick cancels an outstanding location lookup.</summary>
     [Fact]
-    public async Task CoordinateModeChangeRejectsLatePosition()
+    public async Task MapPickRejectsLatePosition()
     {
         var location = new ControlledLocation(); var model = new EndpointViewModel(new ControlledSearchService(), 100, location);
-        var task = model.LocationCommand.ExecuteAsync(); model.IsCoordinateMode = true;
+        var task = model.LocationCommand.ExecuteAsync(); await model.SelectCoordinateAsync(new GeoCoordinate(52, 13));
         Assert.True(location.Tokens[0].IsCancellationRequested);
-        model.Latitude = "52"; model.Longitude = "13"; await model.SearchAsync();
         location.Pending[0].SetResult(new(LocationStatus.Success, new(51, 7))); await task;
         Assert.Equal(new GeoCoordinate(52, 13), model.SelectedAddress?.Coordinate);
     }

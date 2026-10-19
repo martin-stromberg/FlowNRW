@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Exe, [string]$ScreenshotDirectory = 'docs/help/design/verification/matrix', [ValidateSet('light','dark')][string]$Theme='light', [int]$Width=430, [int]$Height=900, [ValidateSet(100,150)][int]$TextScale=100, [string]$Scenario='favorite-cache-seed', [switch]$HomeOnly, [switch]$ConnectionOnly)
+﻿param([Parameter(Mandatory)][string]$Exe, [string]$ScreenshotDirectory = 'docs/help/design/verification/matrix', [ValidateSet('light','dark')][string]$Theme='light', [int]$Width=430, [int]$Height=900, [ValidateSet(100,150)][int]$TextScale=100, [string]$Scenario='favorite-cache-seed', [switch]$HomeOnly, [switch]$ConnectionOnly)
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
@@ -179,7 +179,7 @@ public static class DesignWindow {
         throw 'Physical input cancelled: app is not the foreground window.'
     }
     function AssertTouchTarget([string]$id) {
-        if ($id -eq 'OriginCoordinateMode') {
+        if ($id -eq 'OriginMapPick') {
             $node = Wait $id
             for ($n=0; $n -lt 4 -and $node; $n++) {
                 Write-Output ('TARGET ' + $node.Current.AutomationId + ' ' + $node.Current.ClassName + ' ' + $node.Current.BoundingRectangle)
@@ -238,7 +238,7 @@ public static class DesignWindow {
         SelectTab 'Verbindungen'; Capture 'search-form' 'verbindungssuche'
         AssertTouchTarget 'OriginSearch'
         AssertTouchTarget 'OriginLocation'
-        AssertTouchTarget 'OriginCoordinateMode'
+        AssertTouchTarget 'OriginMapPick'
         AssertTouchTarget 'SearchJourneys'
         Click 'OriginSearch'; Status 'OriginStatus' 'Suchtext'; Capture 'search-invalid' 'verbindungssuche'
         # Windows PowerShell 5 may read a UTF-8 script without a BOM using the system code page.
@@ -260,7 +260,7 @@ public static class DesignWindow {
     }    Wait 'OpenHomeStops' | Out-Null
     if ($env:FLOWNRW_DESIGN_SEARCH_ONLY -eq '1') {
         SelectTab 'Verbindungen'
-        AssertTouchTarget 'OriginCoordinateMode'
+        AssertTouchTarget 'OriginMapPick'
         Capture 'search-form' 'verbindungssuche'
         return
     }
@@ -311,7 +311,7 @@ public static class DesignWindow {
     SelectTab 'Verbindungen'; Capture 'search-form' 'verbindungssuche'
     AssertTouchTarget 'OriginSearch'
     AssertTouchTarget 'OriginLocation'
-    AssertTouchTarget 'OriginCoordinateMode'
+    AssertTouchTarget 'OriginMapPick'
     AssertTouchTarget 'SearchJourneys'
     Write-Output 'STAGE search-invalid: invoking OriginSearch'
     Click 'OriginSearch'
