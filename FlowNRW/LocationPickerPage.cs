@@ -8,7 +8,7 @@ using System.ComponentModel;
 
 namespace FlowNRW;
 
-/// <summary>Modal OpenStreetMap position picker sharing the bounded tile bridge with the map page.</summary>
+/// <summary>OpenStreetMap position picker sharing the bounded tile bridge with the map page.</summary>
 public sealed class LocationPickerPage : ContentPage
 {
     private readonly MapOptions options;
@@ -43,18 +43,20 @@ public sealed class LocationPickerPage : ContentPage
         var mapState = new VerticalStackLayout { Spacing = 4, Padding = 16 };
         mapState.Children.Add(status);
         layout.Children.Add(new Border { Content = mapState });
-        SizeChanged += (_, _) => map.HeightRequest = Math.Max(320, Height * 0.55);
-        layout.Children.Add(map);
-        layout.Children.Add(new Label { Text = options.Attribution, AutomationId = "PickerAttribution", FontSize = 13 });
         apply = new Button { Text = "Übernehmen", AutomationId = "PickerApply", IsEnabled = picked is not null };
         SemanticProperties.SetDescription(apply, "Gewählte Position übernehmen");
         apply.Command = new RelayCommand(_ => _ = FinishAsync(picked));
         var cancel = new Button { Text = "Abbrechen", AutomationId = "PickerCancel" };
         SemanticProperties.SetDescription(cancel, "Positionsauswahl abbrechen");
         cancel.Command = new RelayCommand(_ => _ = FinishAsync(null));
-        var actions = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
-        actions.Add(cancel, 0); actions.Add(apply, 1);
+        var reload = TransitVisuals.SecondaryAction(TransitIcons.Refresh, "Karte neu laden", "PickerReload",
+            new AsyncRelayCommand(InitializeAsync, () => true, failure: _ => Fail("Karte nicht verfügbar. Die Position kann nicht gewählt werden.")));
+        var actions = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 8 };
+        actions.Add(cancel, 0); actions.Add(apply, 1); actions.Add(reload, 2);
         layout.Children.Add(actions);
+        SizeChanged += (_, _) => map.HeightRequest = Math.Max(320, Height * 0.55);
+        layout.Children.Add(map);
+        layout.Children.Add(new Label { Text = options.Attribution, AutomationId = "PickerAttribution", FontSize = 13 });
         map.RawMessageReceived += MessageReceived;
         Content = TransitVisuals.Page(layout);
     }
@@ -99,14 +101,20 @@ public sealed class LocationPickerPage : ContentPage
 
     private async Task CheckStartupAsync(CancellationToken token)
     {
-        try { await Task.Delay(TimeSpan.FromSeconds(15), token); if (!ready) status.Text = "Karte nicht verfügbar. Die Position kann nicht gewählt werden."; }
+        try { await Task.Delay(TimeSpan.FromSeconds(15), token); if (!ready) Fail("Karte nicht verfügbar. Die Position kann nicht gewählt werden."); }
         catch (OperationCanceledException) { }
     }
 
     private async Task InitializeSafelyAsync()
     {
         try { await InitializeAsync(); }
-        catch (Exception) { status.Text = "Karte nicht verfügbar. Die Position kann nicht gewählt werden."; }
+        catch (Exception) { Fail("Karte nicht verfügbar. Die Position kann nicht gewählt werden."); }
+    }
+
+    private void Fail(string message)
+    {
+        status.Text = message;
+        apply.IsEnabled = false;
     }
 
     private async Task InitializeAsync()
@@ -118,6 +126,7 @@ public sealed class LocationPickerPage : ContentPage
         var generation = ++loadId;
         bridge.CancelAll();
         loadSettled = false;
+        apply.IsEnabled = picked is not null;
         status.Text = "Basiskarte wird geladen …";
         var center = picked ?? new GeoCoordinate(51.4556, 7.0116);
         var payload = new JsonObject
@@ -145,7 +154,7 @@ public sealed class LocationPickerPage : ContentPage
         {
             await Task.Delay(TimeSpan.FromSeconds(30), token);
             if (loadSettled || generation != loadId || current != session || !foreground.IsActive) return;
-            status.Text = "Basiskarte konnte nicht geladen werden. Die Position kann nicht gewählt werden.";
+            Fail("Basiskarte konnte nicht geladen werden. Die Position kann nicht gewählt werden.");
             bridge.CancelAll();
         }
         catch (OperationCanceledException) { }
@@ -157,7 +166,7 @@ public sealed class LocationPickerPage : ContentPage
     private async Task FinishAsync(GeoCoordinate? coordinate)
     {
         completion.TrySetResult(coordinate);
-        await Navigation.PopModalAsync();
+        await Navigation.PopAsync();
     }
 
     private async void MessageReceived(object? sender, HybridWebViewRawMessageReceivedEventArgs args)
@@ -183,12 +192,17 @@ public sealed class LocationPickerPage : ContentPage
             {
                 if (!root.TryGetProperty("loadId", out var generation) || generation.ValueKind != JsonValueKind.Number || generation.GetInt32() != loadId) return;
                 loadSettled = true;
-                status.Text = type == "loaded" ? "Position auf der Karte antippen." : "Basiskarte fehlt oder ist veraltet. Die Position kann nicht zuverlässig gewählt werden.";
+                if (type == "loaded")
+                {
+                    status.Text = "Position auf der Karte antippen.";
+                    apply.IsEnabled = picked is not null;
+                }
+                else Fail("Basiskarte fehlt oder ist veraltet. Die Position kann nicht zuverlässig gewählt werden.");
                 return;
             }
             if (type is "tile" or "cancel") await bridge.HandleAsync(root, session, SendAsync, token);
         }
         catch (OperationCanceledException) { }
-        catch (Exception) { if (!token.IsCancellationRequested) status.Text = "Kartenabruf fehlgeschlagen. Bitte erneut laden."; }
+        catch (Exception) { if (!token.IsCancellationRequested) Fail("Kartenabruf fehlgeschlagen. Bitte erneut laden."); }
     }
 }

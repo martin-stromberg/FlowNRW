@@ -13,7 +13,7 @@ Wählen Sie Start und Ziel manuell. Eine Standortfreigabe ist dafür nicht erfor
 
 ## Position auf der Karte wählen
 
-Drücken Sie für Start oder Ziel die Karten-Schaltfläche neben dem Eingabefeld. Ein modales Fenster mit einer OpenStreetMap-Karte öffnet sich. Tippen Sie die gewünschte Position an; der gesetzte Punkt lässt sich durch erneutes Antippen korrigieren. Mit „Übernehmen“ wird die Position in eine Adresse umgewandelt und der ermittelte Ortsname erscheint im Eingabefeld. „Abbrechen“ schließt die Karte ohne Übernahme.
+Drücken Sie für Start oder Ziel die Karten-Schaltfläche neben dem Eingabefeld. Eine Kartenansicht mit einer OpenStreetMap-Karte öffnet sich. Tippen Sie die gewünschte Position an; der gesetzte Punkt lässt sich durch erneutes Antippen korrigieren. Mit „Übernehmen“ wird die Position in eine Adresse umgewandelt und der ermittelte Ortsname erscheint im Eingabefeld. „Abbrechen“ oder die Zurück-Navigation schließt die Karte ohne Übernahme. Kann die Basiskarte nicht geladen werden, ist „Übernehmen“ deaktiviert; über die Schaltfläche „Karte neu laden“ startet der Abruf erneut.
 
 ## Aktuellen Standort verwenden
 
