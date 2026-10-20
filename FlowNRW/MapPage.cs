@@ -11,17 +11,15 @@ namespace FlowNRW;
 public sealed class MapPage : ContentPage
 {
     private readonly MapViewModel model;
-    private readonly IMapTileService tiles;
     private readonly MapOptions options;
     private readonly ForegroundState foreground;
     private readonly HybridWebView map = new() { HybridRoot = "map", DefaultFile = "index.html", HeightRequest = 430, AutomationId = "MapCanvas" };
     private readonly Label status = new() { Text = "Karte wird geladen …", AutomationId = "MapStatus", FontSize = 15 };
+    private readonly MapTileBridge bridge;
     private CancellationTokenSource? lifetime;
     private bool ready;
     private bool loadSettled;
     private int loadId;
-    private int pending;
-    private readonly Dictionary<int, CancellationTokenSource> tileRequests = [];
 #if UI_TEST_FIXTURES
     private readonly Label viewport = new() { AutomationId = "MapViewport" };
 #endif
@@ -34,7 +32,8 @@ public sealed class MapPage : ContentPage
     public MapPage(MapViewModel model, IMapTileService tiles, MapOptions options, ForegroundState foreground)
     {
         this.foreground = foreground;
-        this.model = model; this.tiles = tiles; this.options = options;
+        this.model = model; this.options = options;
+        bridge = new MapTileBridge(tiles);
         Title = model.Title;
         var layout = new VerticalStackLayout { Padding = 16, Spacing = 12 };
         var mapState = new VerticalStackLayout { Spacing = 4, Padding = 16 };
@@ -140,7 +139,7 @@ public sealed class MapPage : ContentPage
         var token = lifetime.Token;
         var session = model.Session;
         var generation = ++loadId;
-        CancelTileRequests();
+        bridge.CancelAll();
         loadSettled = false;
         status.Text = "Basiskarte wird geladen …";
         var markers = new JsonArray();
@@ -172,22 +171,12 @@ public sealed class MapPage : ContentPage
         {
             await Task.Delay(TimeSpan.FromSeconds(30), token);
             if (loadSettled || generation != loadId || session != model.Session || !foreground.IsActive) return;
-            Core.Diagnostics.AppLog.Write("map", SessionTag(session) + ": no loaded/failed within 30 s, pending=" + pending);
+            Core.Diagnostics.AppLog.Write("map", SessionTag(session) + ": no loaded/failed within 30 s, pending=" + bridge.Pending);
             status.Text = "Basiskarte konnte nicht geladen werden. Haltestellenliste und Zurück bleiben nutzbar.";
-            CancelTileRequests();
+            bridge.CancelAll();
         }
         catch (OperationCanceledException) { }
         catch (Exception error) { Core.Diagnostics.AppLog.Write("map", SessionTag(session) + ": load watchdog failed: " + error.GetType().Name); }
-    }
-
-    private void CancelTileRequests()
-    {
-        foreach (var request in tileRequests.Values)
-        {
-            try { request.Cancel(); }
-            catch (Exception) { }
-        }
-        tileRequests.Clear();
     }
 
     private static JsonArray Points(IEnumerable<FlowNRW.Core.Transit.GeoCoordinate> points)
@@ -223,35 +212,15 @@ public sealed class MapPage : ContentPage
                     return;
                 }
                 loadSettled = true;
-                Core.Diagnostics.AppLog.Write("map", SessionTag(model.Session) + ": " + type + " pending=" + pending);
+                Core.Diagnostics.AppLog.Write("map", SessionTag(model.Session) + ": " + type + " pending=" + bridge.Pending);
                 status.Text = type == "loaded" ? "Basiskarte geladen." : "Basiskarte fehlt oder ist veraltet. Haltestellen und gelieferte Verläufe bleiben nutzbar.";
                 return;
             }
-            if (type == "cancel") { if (tileRequests.TryGetValue(root.GetProperty("id").GetInt32(), out var previous)) previous.Cancel(); return; }
-            if (type != "tile") return;
-            var id = root.GetProperty("id").GetInt32();
-            var z = root.GetProperty("z").GetInt32(); var x = root.GetProperty("x").GetInt32(); var y = root.GetProperty("y").GetInt32();
-            if (pending >= 64 || tileRequests.ContainsKey(id))
+            if (type is "tile" or "cancel")
             {
-                // A dropped request is a real failure for this tile: answering with
-                // error:true lets the JS layer finish it on the error path and report
-                // 'failed' instead of announcing 'loaded' for a map whose tiles are
-                // permanently missing (a saturated 'pending' means hung requests).
-                Core.Diagnostics.AppLog.Write("map", SessionTag(model.Session) + ": tile dropped id=" + id + " pending=" + pending);
-                await SendAsync(new JsonObject { ["type"] = "tile", ["session"] = model.Session, ["id"] = id, ["data"] = "", ["error"] = true });
-                return;
+                await bridge.HandleAsync(root, model.Session, SendAsync, token,
+                    message => Core.Diagnostics.AppLog.Write("map", SessionTag(model.Session) + ": " + message));
             }
-            pending++;
-            using var tileLifetime = CancellationTokenSource.CreateLinkedTokenSource(token);
-            tileRequests[id] = tileLifetime;
-            try
-            {
-                var tile = await tiles.GetAsync(z, x, y, tileLifetime.Token);
-                if (tile.Error) Core.Diagnostics.AppLog.Write("map", SessionTag(model.Session) + ": tile error id=" + id + " stale=" + tile.Stale);
-                if (!tileLifetime.IsCancellationRequested)
-                    await SendAsync(new JsonObject { ["type"] = "tile", ["session"] = model.Session, ["id"] = id, ["data"] = tile.Data, ["error"] = tile.Error });
-            }
-            finally { pending--; tileRequests.Remove(id); }
         }
         catch (OperationCanceledException) { }
         catch (Exception) { if (!token.IsCancellationRequested) status.Text = "Kartenabruf fehlgeschlagen. Bitte erneut laden oder die Liste verwenden."; }

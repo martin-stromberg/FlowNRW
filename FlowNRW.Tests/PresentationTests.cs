@@ -3,36 +3,6 @@ using FlowNRW.Core.Transit;
 
 namespace FlowNRW.Tests;
 
-/// <summary>Coordinate input boundaries.</summary>
-public sealed class CoordinateParserTests
-{
-    /// <summary>Accepts both decimal spellings and bounds.</summary>
-    /// <param name="lat">Latitude.</param>
-    /// <param name="lon">Longitude.</param>
-    [Theory]
-    [InlineData("51,45", "7.01")]
-    [InlineData("-90", "180")]
-    [InlineData("90", "-180")]
-    public void ParsesValidCoordinates(string lat, string lon)
-    {
-        Assert.True(CoordinateParser.TryParse(lat, lon, out _, out _));
-    }
-    /// <summary>Rejects malformed and nonfinite coordinates.</summary>
-    /// <param name="lat">Latitude.</param>
-    /// <param name="lon">Longitude.</param>
-    [Theory]
-    [InlineData("", "7")]
-    [InlineData("91", "7")]
-    [InlineData("51", "181")]
-    [InlineData("NaN", "7")]
-    [InlineData("51", "Infinity")]
-    [InlineData("51,1.2", "7")]
-    public void RejectsInvalidCoordinates(string lat, string lon)
-    {
-        Assert.False(CoordinateParser.TryParse(lat, lon, out _, out _));
-    }
-}
-
 /// <summary>Endpoint identity and asynchronous state.</summary>
 public sealed class EndpointViewModelTests
 {
@@ -69,18 +39,44 @@ public sealed class EndpointViewModelTests
         a.Pending[0].SetResult(new()); b.Pending[0].SetResult(new() { Source = "b", IsStale = true, IsFallback = true, Warnings = ["timeout"] }); await Task.WhenAll(first, second);
         Assert.Contains("Keine Treffer", destination.Status); Assert.Contains("Veralteter Cache", destination.Metadata); Assert.Contains("Fallback", destination.Metadata);
     }
-    /// <summary>The selection shows the cleaned name and coordinates but never the technical identity.</summary>
+    /// <summary>The selected place name is carried by the text field without the technical identity.</summary>
     [Fact]
-    public async Task Selection_OmitsTechnicalIdentityKeepsCoordinates()
+    public async Task Selection_NameGoesIntoTextField()
     {
         var service = new ControlledSearchService(); var model = new EndpointViewModel(service, 100) { Text = "Essen" };
         var task = model.SearchAsync();
         var address = new Address { Name = "Essen, Essen Hbf", Coordinate = new GeoCoordinate(51.45, 7.0116), Stop = new Stop { Id = "1", Source = "efa", Dhid = "de:05113:1" } };
         service.Pending[0].SetResult(new() { Items = [address] }); await task; model.SelectAddress(address);
-        Assert.Contains("Essen Hbf", model.Selection);
-        Assert.Contains("51.45", model.Selection);
-        Assert.DoesNotContain("efa", model.Selection);
-        Assert.DoesNotContain("de:05113", model.Selection);
+        Assert.Equal("Essen, Essen Hbf", model.Text);
+        Assert.DoesNotContain("efa", model.Text);
+        Assert.DoesNotContain("de:05113", model.Text);
+    }
+    /// <summary>A map-picked coordinate resolves to the nearest provider address.</summary>
+    [Fact]
+    public async Task MapPick_ResolvesToNearbyAddress()
+    {
+        var service = new ControlledSearchService(); var model = new EndpointViewModel(service, 100);
+        var stop = new Stop { Id = "1", Source = "efa", Name = "Essen Hbf", Coordinate = new GeoCoordinate(51.45, 7.01) };
+        service.NearbyHandler = (_, _) => Task.FromResult(new ProviderResult<NearbyStopResult> { Items = [new() { Stop = stop, DistanceMeters = 42 }] });
+        var coordinate = new GeoCoordinate(51.455, 7.011);
+        await model.SelectCoordinateAsync(coordinate);
+        Assert.Same(stop, model.SelectedAddress?.Stop);
+        Assert.Equal("Essen Hbf", model.Text);
+        Assert.Contains("übernommen", model.Status);
+        Assert.Single(service.NearbyCentres);
+        Assert.Same(coordinate, service.NearbyCentres[0]);
+    }
+    /// <summary>An unresolvable map pick still yields a usable coordinate endpoint.</summary>
+    [Fact]
+    public async Task MapPick_FallsBackToCoordinateWithoutNearby()
+    {
+        var service = new ControlledSearchService(); var model = new EndpointViewModel(service, 100);
+        var coordinate = new GeoCoordinate(51.455, 7.011);
+        await model.SelectCoordinateAsync(coordinate);
+        Assert.Null(model.SelectedAddress?.Stop);
+        Assert.Same(coordinate, model.SelectedAddress?.Coordinate);
+        Assert.Equal("Koordinate", model.Text);
+        Assert.False(model.IsBusy);
     }
     /// <summary>Validation, errors and cancellation remain recoverable.</summary>
     [Fact]
@@ -92,8 +88,8 @@ public sealed class EndpointViewModelTests
         Assert.Contains("fehlgeschlagen", model.Status); Assert.False(model.IsBusy);
         task = model.SearchAsync(); model.CancelPending(); service.Pending[1].SetException(new OperationCanceledException()); await task;
         Assert.Contains("abgebrochen", model.Status);
-        model.IsCoordinateMode = true; model.Latitude = "51,4"; model.Longitude = "7.0"; await model.SearchAsync(); Assert.NotNull(model.SelectedAddress?.Coordinate);
-        model.Longitude = "999"; await model.SearchAsync(); Assert.Null(model.SelectedAddress); Assert.Contains("Länge", model.Status);
+        var coordinate = new GeoCoordinate(51.4, 7.0); await model.SelectCoordinateAsync(coordinate);
+        Assert.Same(coordinate, model.SelectedAddress?.Coordinate);
     }
 }
 
@@ -111,8 +107,8 @@ public sealed class JourneySearchViewModelTests
     [Fact]
     public async Task EndpointChangeInvalidatesRouteAndIgnoresOldRoute()
     {
-        var service = new ControlledRoutingService(); var nav = new RecordingNavigation(); var model = Create(service, nav); await Select(model);
-        var old = model.SearchCommand.ExecuteAsync(); model.Origin.Latitude = "52"; await model.Origin.SearchAsync();
+        var service = new ControlledRoutingService(); var nav = new RecordingNavigation(); var model = Create(service, nav); Select(model);
+        var old = model.SearchCommand.ExecuteAsync(); model.Origin.SetSelectedAddress(new Address { Name = "changed" });
         Assert.True(model.SearchCommand.CanExecute(null)); var current = model.SearchCommand.ExecuteAsync();
         var journey = new Journey { Id = "new" }; service.Pending[1].SetResult(new() { Items = [journey], Source = "new" }); await current;
         service.Pending[0].SetResult(new() { Items = [new Journey { Id = "old" }], Source = "old" }); await old;
@@ -122,7 +118,7 @@ public sealed class JourneySearchViewModelTests
     [Fact]
     public async Task SendsSelectedArrivalTime()
     {
-        var service = new ControlledRoutingService(); var model = Create(service, new RecordingNavigation()); await Select(model);
+        var service = new ControlledRoutingService(); var model = Create(service, new RecordingNavigation()); Select(model);
         var selected = new DateTime(2026, 10, 3).AddHours(18).AddMinutes(30);
         model.UseCurrentTime = false; model.SelectedDate = selected.Date; model.SelectedTime = selected.TimeOfDay; model.ArriveBy = true;
         var task = model.SearchAsync(); service.Pending[0].SetResult(new() { Items = [] }); await task;
@@ -132,18 +128,18 @@ public sealed class JourneySearchViewModelTests
     [Fact]
     public async Task PreservesContextThroughNavigation()
     {
-        var service = new ControlledRoutingService(); var nav = new RecordingNavigation(); var model = Create(service, nav); await Select(model);
+        var service = new ControlledRoutingService(); var nav = new RecordingNavigation(); var model = Create(service, nav); Select(model);
         var origin = model.Origin.SelectedAddress; var task = model.SearchAsync(); var journey = new Journey { Id = "1" };
         service.Pending[0].SetResult(new() { Items = [journey] }); await task; model.CancelPending(); model.Origin.CancelPending();
         await new ResultsViewModel(model).OpenJourneyAsync(journey);
         Assert.Same(origin, model.Origin.SelectedAddress); Assert.Same(journey, model.SelectedJourney); Assert.Equal(1, nav.Details);
         Assert.Contains("Umstiege", new JourneyDetailViewModel(model).Details);
-        model.Destination.Longitude = "8"; Assert.Null(model.SelectedJourney); Assert.Empty(model.Journeys);
+        model.Destination.Text = "8"; Assert.Null(model.SelectedJourney); Assert.Empty(model.Journeys);
     }
     private static JourneySearchViewModel Create(ControlledRoutingService service, RecordingNavigation nav) => new(new(new ControlledSearchService(), 100), new(new ControlledSearchService(), 100), service, nav);
-    private static async Task Select(JourneySearchViewModel model)
+    private static void Select(JourneySearchViewModel model)
     {
-        foreach (var endpoint in new[] { model.Origin, model.Destination }) { endpoint.IsCoordinateMode = true; endpoint.Latitude = "51"; endpoint.Longitude = "7"; await endpoint.SearchAsync(); }
+        foreach (var endpoint in new[] { model.Origin, model.Destination }) endpoint.SetSelectedAddress(new Address { Name = "endpoint", Coordinate = new GeoCoordinate(51, 7) });
     }
 }
 
@@ -263,8 +259,14 @@ internal sealed class ControlledSearchService : IStopSearchService
 {
     internal List<TaskCompletionSource<ProviderResult<Address>>> Pending { get; } = [];
     internal List<CancellationToken> Tokens { get; } = [];
+    internal List<GeoCoordinate> NearbyCentres { get; } = [];
+    internal Func<GeoCoordinate, CancellationToken, Task<ProviderResult<NearbyStopResult>>>? NearbyHandler { get; set; }
     public Task<ProviderResult<Address>> SearchAsync(string text, CancellationToken cancellationToken = default) { var source = new TaskCompletionSource<ProviderResult<Address>>(); Pending.Add(source); Tokens.Add(cancellationToken); return source.Task; }
-    public Task<ProviderResult<NearbyStopResult>> NearbyAsync(GeoCoordinate coordinate, CancellationToken cancellationToken = default) => Task.FromResult(new ProviderResult<NearbyStopResult>());
+    public Task<ProviderResult<NearbyStopResult>> NearbyAsync(GeoCoordinate coordinate, CancellationToken cancellationToken = default)
+    {
+        NearbyCentres.Add(coordinate);
+        return NearbyHandler is { } handler ? handler(coordinate, cancellationToken) : Task.FromResult(new ProviderResult<NearbyStopResult>());
+    }
 }
 internal sealed class ControlledRoutingService : IRoutingService
 {

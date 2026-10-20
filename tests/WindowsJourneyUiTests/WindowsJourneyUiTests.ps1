@@ -73,6 +73,8 @@ try {
         Start-Sleep -Milliseconds 150
     }
     function SetText([string]$id, [string]$value) { (Wait $id).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($value); Start-Sleep -Milliseconds 100 }
+    function EntryValue([string]$id) { return (Wait $id).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value }
+    function EntryContains([string]$id, [string]$pattern) { Assert ((EntryValue $id) -match $pattern) "$id value contains $pattern" }
     function Name([string]$id) { return (Wait $id).Current.Name }
     function Assert([bool]$value, [string]$message) { if (!$value) { throw $message }; Write-Output "PASS $message" }
     function MarkerY([double]$latitude) {
@@ -353,14 +355,14 @@ public static class FavoriteKeyboard {
         Click 'OriginLocation'
         $resolved = $false
         for ($attempt = 0; $attempt -lt 180; $attempt++) {
-            $state = Name 'OriginLocationStatus'
+            $state = Name 'OriginStatus'
             if ($state -notmatch 'wird ermittelt') { $resolved = $true; break }
             Start-Sleep -Milliseconds 500
         }
         if (!$resolved) { throw 'OS location probe did not finish; permission dialog or operating-system response requires inspection without logging private UI content' }
-        $success = (Name 'OriginLocationStatus') -match 'übernommen'
+        $success = (Name 'OriginStatus') -match 'übernommen'
         if ($success) {
-            Assert ((Name 'OriginSelection') -match 'Aktueller Standort') 'OS location accepted as endpoint (coordinates omitted)'
+            Assert ((EntryValue 'OriginText').Length -gt 0) 'OS location accepted as endpoint (coordinates omitted)'
             Click 'OpenStopSearch'; Click 'FindNearbyStops'
             for ($attempt = 0; $attempt -lt 180 -and $null -eq (Find 'StopMatch0'); $attempt++) {
                 $busy = Find 'NearbyBusy'
@@ -423,7 +425,7 @@ public static class LocationPointer {
         function Locate([string]$prefix, [string]$scenario = 'success') {
             SetText 'LocationScenario' $scenario
             Click ($prefix + 'Location')
-            Status ($prefix + 'LocationStatus') 'übernommen'
+            Status ($prefix + 'Status') 'übernommen'
         }
         function Nearby([string]$scenario = 'success') {
             SetText 'NearbyScenario' $scenario
@@ -446,41 +448,41 @@ public static class LocationPointer {
         SelectEndpoint 'Origin' 'Manual Start'; SelectEndpoint 'Destination' 'Manual Ziel'
         LocationRoundTrip; Assert ([int](Name 'LocationCalls') -eq $locationBaseline) 'Manual route and navigation request no location'
         Write-Output 'PASS manual route and navigation do not request location'
-        Locate 'Origin'; Contains 'OriginSelection' 'Aktueller Standort'; LocationRoundTrip
+        Locate 'Origin'; EntryContains 'OriginText' 'Umgebung Süd'; LocationRoundTrip
         SelectEndpoint 'Origin' 'Manual start for located destination'
-        Locate 'Destination'; Contains 'DestinationSelection' 'Aktueller Standort'; LocationRoundTrip
+        Locate 'Destination'; EntryContains 'DestinationText' 'Umgebung Süd'; LocationRoundTrip
         SelectEndpoint 'Destination' 'Manual destination for location failures'
         Assert ([int](Name 'LocationCalls') -eq ($locationBaseline + 2)) 'Two explicit location actions issue exactly two location calls'
-        Locate 'Origin' 'reduced'; Contains 'OriginLocationStatus' 'ungefähr|Genauigkeit|ungenau'
+        Locate 'Origin' 'reduced'; EntryContains 'OriginText' 'Umgebung Süd'
         foreach ($failure in @(
             @('denied', 'nicht erlaubt'), @('disabled', 'deaktiviert'), @('unsupported', 'nicht unterstützt'),
             @('timeout', 'zu lange'), @('unavailable', 'Keine aktuelle Position'), @('error', 'nicht ermittelt')
         )) {
-            $retained = Name 'OriginSelection'
-            SetText 'LocationScenario' $failure[0]; Click 'OriginLocation'; Status 'OriginLocationStatus' $failure[1]
-            Assert ((Name 'OriginSelection') -eq $retained) ('Failed location retains completed endpoint: ' + $failure[0])
+            $retained = EntryValue 'OriginText'
+            SetText 'LocationScenario' $failure[0]; Click 'OriginLocation'; Status 'OriginStatus' $failure[1]
+            Assert ((EntryValue 'OriginText') -eq $retained) ('Failed location retains completed endpoint: ' + $failure[0])
             Assert ((Wait 'OriginLocation').Current.IsEnabled) ('Location retry enabled: ' + $failure[0])
             SelectEndpoint 'Origin' ('Manual after ' + $failure[0]); LocationRoundTrip
         }
         Locate 'Origin'
-        SetText 'LocationScenario' 'denied'; Click 'OriginLocation'; Status 'OriginLocationStatus' 'nicht erlaubt'
+        SetText 'LocationScenario' 'denied'; Click 'OriginLocation'; Status 'OriginStatus' 'nicht erlaubt'
         SelectEndpoint 'Origin' 'After revoked permission'; LocationRoundTrip
         Write-Output 'PASS fixture permission revocation, failure states, retained selection and manual recovery'
-        SetText 'LocationScenario' 'slow'; Click 'OriginLocation'; Status 'OriginLocationStatus' 'wird ermittelt'
+        SetText 'LocationScenario' 'slow'; Click 'OriginLocation'; Status 'OriginStatus' 'wird ermittelt'
         SelectEndpoint 'Origin' 'Newest manual endpoint'
         Start-Sleep -Seconds 6
-        Contains 'OriginSelection' 'Newest manual endpoint'
-        SetText 'LocationScenario' 'slow'; Click 'DestinationLocation'; Status 'DestinationLocationStatus' 'wird ermittelt'
+        EntryContains 'OriginText' 'Newest manual endpoint'
+        SetText 'LocationScenario' 'slow'; Click 'DestinationLocation'; Status 'DestinationStatus' 'wird ermittelt'
         Click 'OpenStopSearch'; SelectTab 'Verbindungen'
         Start-Sleep -Seconds 6
-        Assert ((Name 'DestinationLocationStatus') -notmatch 'wird ermittelt') 'Page exit cancels pending location state'
+        Assert ((Name 'DestinationStatus') -notmatch 'wird ermittelt') 'Page exit cancels pending location state'
         SetText 'DestinationText' 'After back'; SelectEndpoint 'Destination' 'After back'
         Locate 'Destination'; LocationRoundTrip
         Write-Output 'PASS late endpoint responses and page exit do not overwrite new input'
         $bounds = $script:window.Current.BoundingRectangle
         $transform = $script:window.GetCurrentPattern([System.Windows.Automation.TransformPattern]::Pattern)
         $transform.Resize(430,900)
-        SetText 'LocationScenario' 'success'; LocationKeyboard 'OriginLocation'; Status 'OriginLocationStatus' 'übernommen'
+        SetText 'LocationScenario' 'success'; LocationKeyboard 'OriginLocation'; Status 'OriginStatus' 'übernommen'
         AssertNarrowAction 'OriginLocation' 'Location action fits narrow viewport'
         Snapshot 'native-location-narrow'
         $transform.Resize($bounds.Width,$bounds.Height)
@@ -714,7 +716,33 @@ public static class MapPointer {
     } elseif ($Inspect) {
         $script:window.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { '{0}|{1}|{2}' -f $_.Current.AutomationId, $_.Current.ControlType.ProgrammaticName, $_.Current.Name }
     } else {
-        function Toggle([string]$id) { (Wait $id).GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle(); Start-Sleep -Milliseconds 150 }
+        Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class PickPointer {
+ [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+ [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+ [DllImport("user32.dll")] public static extern bool SetCursorPos(int x,int y);
+ [DllImport("user32.dll")] public static extern void mouse_event(uint flags,uint dx,uint dy,uint data,UIntPtr info);
+}
+"@
+        function PickerClick([double]$x,[double]$y) {
+            $handle=[IntPtr]$script:window.Current.NativeWindowHandle
+            [PickPointer]::SetForegroundWindow($handle) | Out-Null
+            Start-Sleep -Milliseconds 200
+            if ([PickPointer]::GetForegroundWindow() -ne $handle) { $script:window.SetFocus(); Start-Sleep -Milliseconds 300 }
+            if ([PickPointer]::GetForegroundWindow() -ne $handle) { throw 'Own picker window must be foreground' }
+            $rect=(Wait 'PickerMapCanvas').Current.BoundingRectangle
+            [PickPointer]::SetCursorPos([int]($rect.Left+$rect.Width*$x),[int]($rect.Top+$rect.Height*$y)) | Out-Null
+            [PickPointer]::mouse_event(2,0,0,0,[UIntPtr]::Zero); [PickPointer]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
+            Start-Sleep -Milliseconds 500
+        }
+        function MapPick([string]$prefix) {
+            Click ($prefix + 'MapPick'); Status 'PickerStatus' 'antippen'
+            PickerClick 0.5 0.5
+            Click 'PickerApply'
+            Status ($prefix + 'Status') 'übernommen'
+        }
         function RoundTrip {
             Click 'SearchJourneys'; Wait 'Journey0' | Out-Null; Back; Wait 'OriginText' | Out-Null
         }
@@ -723,11 +751,11 @@ public static class MapPointer {
         SetText 'OriginText' 'unselected'; Assert (!(Wait 'SearchJourneys').Current.IsEnabled) 'Validation: unselected text cannot route'
         SetText 'OriginText' 'Adresse Essen'; Click 'OriginSearch'
         Assert ($null -ne (Wait 'OriginMatch1')) 'AddressEndpoints: ambiguous candidates rendered'
-        Click 'OriginMatch1'; Contains 'OriginSelection' 'Umgebung'
+        Click 'OriginMatch1'; EntryContains 'OriginText' 'Umgebung'
         SelectEndpoint 'Destination' 'Adresse Berlin'
-        Contains 'DestinationSelection' 'Adresse Berlin'
+        EntryContains 'DestinationText' 'Adresse Berlin'
         Assert ($null -eq (Find 'OriginMetadata')) 'Endpoint selection does not expose provider metadata'
-        $selectedOrigin = Name 'OriginSelection'; $selectedDestination = Name 'DestinationSelection'
+        $selectedOrigin = EntryValue 'OriginText'; $selectedDestination = EntryValue 'DestinationText'
         Click 'SearchJourneys'; Contains 'RoutingStatus' 'geladen'
         $first = Name 'Journey0'; $second = Name 'Journey1'
         Assert ($first -match '23:55' -and $second -match '00:55') 'ResultsAndDetails: ordered results and midnight offset'
@@ -746,29 +774,28 @@ public static class MapPointer {
         Contains 'JourneyDetailSection1' '23:58'; Contains 'JourneyDetailSection2' 'Umstieg.*10 Min'; Contains 'JourneyDetailSection3' '300 m'
         Snapshot 'native-details'
         Back; Assert ((Name 'Journey0') -eq $first) 'BackNavigation: result preserved'
-        Back; Assert ((Name 'OriginSelection') -eq $selectedOrigin -and (Name 'DestinationSelection') -eq $selectedDestination) 'BackNavigation: endpoints preserved'
+        Back; Assert ((EntryValue 'OriginText') -eq $selectedOrigin -and (EntryValue 'DestinationText') -eq $selectedDestination) 'BackNavigation: endpoints preserved'
         SetText 'OriginText' 'Essen Hbf'; Assert (!(Wait 'SearchJourneys').Current.IsEnabled) 'BackNavigation: input invalidates old route'
         Assert ((Name 'RoutingMetadata') -eq '') 'BackNavigation: old route metadata cleared'
         SelectEndpoint 'Origin' 'Essen Hbf'; SelectEndpoint 'Destination' 'Berlin Hbf'
-        Contains 'OriginSelection' 'Essen Hbf'; Contains 'DestinationSelection' 'Berlin Hbf'
-        Assert ((Name 'OriginSelection') -notmatch 'de:') 'OriginSelection omits the technical stop identity'
-        Assert ((Name 'DestinationSelection') -notmatch 'de:') 'DestinationSelection omits the technical stop identity'
+        EntryContains 'OriginText' 'Essen Hbf'; EntryContains 'DestinationText' 'Berlin Hbf'
+        Assert ((EntryValue 'OriginText') -notmatch 'de:') 'OriginText omits the technical stop identity'
+        Assert ((EntryValue 'DestinationText') -notmatch 'de:') 'DestinationText omits the technical stop identity'
         RoundTrip; Write-Output 'PASS StopEndpoints'
-        Toggle 'OriginCoordinateMode'; Click 'OriginSearch'; Contains 'OriginStatus' 'Breite|Länge'
-        SetText 'OriginLatitude' '91'; SetText 'OriginLongitude' '7'; Click 'OriginSearch'; Contains 'OriginStatus' 'Breite'
-        Assert (!(Wait 'SearchJourneys').Current.IsEnabled) 'Validation: invalid coordinate cannot route'
-        SetText 'OriginLatitude' '51,4556'; SetText 'OriginLongitude' '7.0116'; Click 'OriginSearch'
-        Toggle 'DestinationCoordinateMode'; SetText 'DestinationLatitude' '52.52'; SetText 'DestinationLongitude' '13,405'; Click 'DestinationSearch'
-        Contains 'OriginSelection' '51.4556'; Contains 'DestinationSelection' '13.405'
-        # Both coordinate commands publish their endpoint bindings asynchronously.
+        # The map modal resolves the picked position through the nearby provider,
+        # so the resulting entry name is the resolved fixture stop.
+        MapPick 'Origin'; EntryContains 'OriginText' 'Umgebung Süd'
+        MapPick 'Destination'; EntryContains 'DestinationText' 'Umgebung Süd'
+        Assert ($null -eq (Find 'OriginCoordinateMode')) 'Coordinate mode switch removed'
+        # The pick resolution publishes its endpoint bindings asynchronously.
         Start-Sleep -Milliseconds 750
         Click 'SearchJourneys'; Wait 'Journey0' | Out-Null; Back
-        Toggle 'OriginCoordinateMode'; Toggle 'DestinationCoordinateMode'; Write-Output 'PASS CoordinateEndpoints and Validation recovery'
+        Write-Output 'PASS MapPickEndpoints'
         SetText 'OriginText' 'slow old'; Click 'OriginSearch'; Contains 'OriginStatus' 'geladen'
         SetText 'DestinationText' 'Parallel Ziel'; Click 'DestinationSearch'
         SelectEndpoint 'Origin' 'Newest Start'; Click 'DestinationMatch0'
         Start-Sleep -Seconds 6
-        Contains 'OriginSelection' 'Newest Start'; Assert ($null -eq (Find 'OriginMatch0')) 'Selected origin closes its candidate list'; Contains 'DestinationSelection' 'Parallel Ziel'
+        EntryContains 'OriginText' 'Newest Start'; Assert ($null -eq (Find 'OriginMatch0')) 'Selected origin closes its candidate list'; EntryContains 'DestinationText' 'Parallel Ziel'
         Write-Output 'PASS LatestInputWins and independent endpoint requests'
         foreach ($query in @('empty', 'error')) {
             SetText 'OriginText' $query; Click 'OriginSearch'; Status 'OriginStatus' 'Keine Treffer|fehlgeschlagen'

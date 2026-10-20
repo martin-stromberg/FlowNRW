@@ -59,7 +59,7 @@ public sealed class JourneyResumeTests_Selection
     {
         var fixture = await CreateAsync();
         var task = fixture.Model.RefreshIfStaleAsync(new(new()));
-        fixture.Model.Origin.Latitude = "52";
+        fixture.Model.Origin.Text = "changed";
         await task.WaitAsync(TimeSpan.FromSeconds(2));
         fixture.Service.Pending[1].SetResult(new() { Items = [Journey("late")] });
         Assert.Null(fixture.Model.Result);
@@ -73,7 +73,7 @@ public sealed class JourneyResumeTests_Selection
         var navigation = new RecordingNavigation();
         var model = new JourneySearchViewModel(new(new ControlledSearchService(), 100), new(new ControlledSearchService(), 100), service, navigation);
         foreach (var endpoint in new[] { model.Origin, model.Destination })
-        { endpoint.IsCoordinateMode = true; endpoint.Latitude = "51"; endpoint.Longitude = "7"; await endpoint.SearchAsync(); }
+        { endpoint.SetSelectedAddress(new Address { Name = "endpoint", Coordinate = new GeoCoordinate(51, 7) }); }
         var search = model.SearchAsync();
         var journey = Journey("one");
         service.Pending[0].SetResult(new() { Items = [journey], RetrievedAt = DateTimeOffset.UtcNow.AddMinutes(-2) });

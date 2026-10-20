@@ -1,7 +1,7 @@
 /* Local rendering only. Network requests are exclusively validated by the native tile gateway. */
 'use strict';
 const TILE_TIMEOUT=15000,WATCHDOG_INTERVAL=15000;
-let map, layer, session, loadId=0, serial=0, failed=false, queue=[], active=0, resetting=false, loadDone=false, lastProgress=0, watchdog=null;
+let map, layer, session, loadId=0, serial=0, failed=false, queue=[], active=0, resetting=false, loadDone=false, lastProgress=0, watchdog=null, pickMarker=null;
 const waiting=new Map();
 const send=data=>window.HybridWebView.SendRawMessage(JSON.stringify(data));
 function progress(){lastProgress=Date.now();}
@@ -33,7 +33,7 @@ window.receiveMap=function(data){
  if(data.type!=='init')return;
  resetting=true;clearWatchdog();if(map)map.remove();
  for(const item of waiting.values())clearTimeout(item.timer);
- session=data.session;loadId=data.loadId;failed=false;loadDone=false;queue=[];waiting.clear();active=0;resetting=false;
+ session=data.session;loadId=data.loadId;failed=false;loadDone=false;queue=[];waiting.clear();active=0;resetting=false;pickMarker=null;
  // Layer handlers, timers and queued sends of this generation carry sess/gen as
  // fixed closure values: a late event from a layer discarded by the next init can
  // neither report the newer loadId nor disarm the fresh watchdog installed below.
@@ -58,6 +58,11 @@ window.receiveMap=function(data){
  const colors=['#1754a1','#a43b00','#00735c','#792ba0'];
  data.segments.forEach((segment,index)=>{L.polyline(segment.points,{color:colors[index%colors.length],weight:5,dashArray:segment.label==='Fußweg'?'6 8':null}).bindTooltip(pointText(segment.label)).addTo(map);bounds.push(...segment.points);});
  for(const point of data.endpoints){L.circleMarker(point,{radius:5,color:'#222',fillColor:'#fff',fillOpacity:1}).addTo(map);bounds.push(point);}
- if(bounds.length)map.fitBounds(bounds,{padding:[35,35],maxZoom:15});else map.setView([51.1657,10.4515],6);
+ if(data.picker){
+  const drop=position=>{if(pickMarker)pickMarker.setLatLng(position);else pickMarker=L.marker(position,{icon:L.divIcon({className:'pick',html:'',iconSize:[24,24],iconAnchor:[12,12]}),keyboard:false,interactive:false}).addTo(map);};
+  map.on('click',event=>{drop(event.latlng);send({type:'pick',session:sess,lat:event.latlng.lat,lon:event.latlng.lng});});
+  if(data.picked)drop(data.picked);
+ }
+ if(data.center)map.setView(data.center,data.zoom||15);else if(bounds.length)map.fitBounds(bounds,{padding:[35,35],maxZoom:15});else map.setView([51.1657,10.4515],6);
 };
 window.addEventListener('load',()=>send({type:'ready'}));
