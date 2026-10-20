@@ -117,7 +117,7 @@ public sealed class SearchPage : ContentPage
     private async Task PickOnMapAsync(EndpointViewModel endpoint, string title)
     {
         var page = new LocationPickerPage(tiles, mapOptions, foreground, endpoint.SelectedAddress?.Coordinate, title);
-        await Navigation.PushModalAsync(page);
+        await Navigation.PushAsync(page);
         var coordinate = await page.Selection;
         if (coordinate is not null) await endpoint.SelectCoordinateAsync(coordinate);
     }
