@@ -19,6 +19,7 @@ public sealed class MapPage : ContentPage
     private CancellationTokenSource? lifetime;
     private bool ready;
     private bool loadSettled;
+    private bool initAcknowledged;
     private int loadId;
 #if UI_TEST_FIXTURES
     private readonly Label viewport = new() { AutomationId = "MapViewport" };
@@ -141,6 +142,7 @@ public sealed class MapPage : ContentPage
         var generation = ++loadId;
         bridge.CancelAll();
         loadSettled = false;
+        initAcknowledged = false;
         status.Text = "Basiskarte wird geladen …";
         var markers = new JsonArray();
         foreach (var station in model.Stations.Where(station => station.Position is not null))
@@ -149,7 +151,7 @@ public sealed class MapPage : ContentPage
         foreach (var segment in model.Segments)
             segments.Add(new JsonObject { ["label"] = segment.Label, ["points"] = Points(segment.Points) });
         Core.Diagnostics.AppLog.Write("map", SessionTag(session) + ": init load=" + generation + " markers=" + markers.Count + " segments=" + segments.Count);
-        await SendAsync(new JsonObject
+        var payload = new JsonObject
         {
             ["type"] = "init",
             ["session"] = session,
@@ -159,8 +161,35 @@ public sealed class MapPage : ContentPage
             ["endpoints"] = Points(model.Endpoints),
             ["minZoom"] = options.MinZoom,
             ["maxZoom"] = options.MaxZoom
-        });
+        };
+        _ = DeliverInitAsync(payload, session, generation, token);
         _ = WatchLoadAsync(session, generation, token);
+    }
+
+    /// <summary>Sends init over the raw-message channel and resends it while the page stays silent.</summary>
+    /// <remarks>
+    /// iOS wraps <see cref="HybridWebView.EvaluateJavaScriptAsync"/> scripts in a catch-all
+    /// <c>eval</c> layer that reports every failure as <c>null</c>: a rejected or mangled init
+    /// was invisible, so the bridge stayed mute until the 30-second watchdog. The raw-message
+    /// channel avoids that wrapper, and the init acknowledgement bounds the remaining risk.
+    /// </remarks>
+    private async Task DeliverInitAsync(JsonObject payload, string session, int generation, CancellationToken token)
+    {
+        try
+        {
+            for (var attempt = 1; attempt <= 3; attempt++)
+            {
+                if (attempt > 1) Core.Diagnostics.AppLog.Write("map", SessionTag(session) + ": init not acknowledged, resending");
+                await SendAsync(payload);
+                await Task.Delay(TimeSpan.FromSeconds(4), token);
+                if (initAcknowledged || generation != loadId || session != model.Session || !foreground.IsActive) return;
+            }
+            Core.Diagnostics.AppLog.Write("map", SessionTag(session) + ": init unacknowledged");
+            loadSettled = true;
+            status.Text = "Basiskarte konnte nicht geladen werden. Haltestellenliste und Zurück bleiben nutzbar.";
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception error) { Core.Diagnostics.AppLog.Write("map", SessionTag(session) + ": init delivery failed: " + error.GetType().Name); }
     }
 
     private static string SessionTag(string session) => session.Length <= 8 ? session : session[..8];
@@ -186,7 +215,11 @@ public sealed class MapPage : ContentPage
         return array;
     }
 
-    private Task SendAsync(JsonObject payload) => map.EvaluateJavaScriptAsync("window.receiveMap(" + payload.ToJsonString() + ")");
+    private Task SendAsync(JsonObject payload)
+    {
+        map.SendRawMessage(payload.ToJsonString());
+        return Task.CompletedTask;
+    }
 
     private async void MessageReceived(object? sender, HybridWebViewRawMessageReceivedEventArgs args)
     {
@@ -200,6 +233,12 @@ public sealed class MapPage : ContentPage
             if (type == "ready") { ready = true; Core.Diagnostics.AppLog.Write("map", "ready"); await InitializeAsync(); return; }
             if (token.IsCancellationRequested || !foreground.IsActive) return;
             if (root.GetProperty("session").GetString() != model.Session) return;
+            if (type == "initack")
+            {
+                if (root.TryGetProperty("loadId", out var acked) && acked.ValueKind == JsonValueKind.Number && acked.GetInt32() == loadId)
+                    initAcknowledged = true;
+                return;
+            }
 #if UI_TEST_FIXTURES
             if (type == "view") { viewport.Text = root.GetProperty("lat").GetRawText() + ";" + root.GetProperty("lon").GetRawText() + ";" + root.GetProperty("zoom").GetRawText(); return; }
 #endif

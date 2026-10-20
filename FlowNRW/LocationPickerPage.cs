@@ -21,6 +21,7 @@ public sealed class LocationPickerPage : ContentPage
     private CancellationTokenSource? lifetime;
     private bool ready;
     private bool loadSettled;
+    private bool initAcknowledged;
     private int loadId;
     private string session = "";
     private GeoCoordinate? picked;
@@ -126,6 +127,7 @@ public sealed class LocationPickerPage : ContentPage
         var generation = ++loadId;
         bridge.CancelAll();
         loadSettled = false;
+        initAcknowledged = false;
         apply.IsEnabled = picked is not null;
         status.Text = "Basiskarte wird geladen …";
         var center = picked ?? new GeoCoordinate(51.4556, 7.0116);
@@ -144,8 +146,28 @@ public sealed class LocationPickerPage : ContentPage
             ["maxZoom"] = options.MaxZoom
         };
         if (picked is not null) payload["picked"] = new JsonArray(picked.Latitude, picked.Longitude);
-        await SendAsync(payload);
+        _ = DeliverInitAsync(payload, session, generation, token);
         _ = WatchLoadAsync(session, generation, token);
+    }
+
+    /// <summary>Sends init over the raw-message channel and resends it while the page stays silent.</summary>
+    /// <remarks>See <see cref="MapPage.DeliverInitAsync"/>: the iOS eval wrapper hid delivery failures.</remarks>
+    private async Task DeliverInitAsync(JsonObject payload, string current, int generation, CancellationToken token)
+    {
+        try
+        {
+            for (var attempt = 0; attempt < 3; attempt++)
+            {
+                await SendAsync(payload);
+                await Task.Delay(TimeSpan.FromSeconds(4), token);
+                if (initAcknowledged || generation != loadId || current != session || !foreground.IsActive) return;
+            }
+            if (initAcknowledged || generation != loadId || current != session || !foreground.IsActive) return;
+            loadSettled = true;
+            Fail("Basiskarte konnte nicht geladen werden. Die Position kann nicht gewählt werden.");
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception) { }
     }
 
     private async Task WatchLoadAsync(string current, int generation, CancellationToken token)
@@ -161,7 +183,11 @@ public sealed class LocationPickerPage : ContentPage
         catch (Exception) { }
     }
 
-    private Task SendAsync(JsonObject payload) => map.EvaluateJavaScriptAsync("window.receiveMap(" + payload.ToJsonString() + ")");
+    private Task SendAsync(JsonObject payload)
+    {
+        map.SendRawMessage(payload.ToJsonString());
+        return Task.CompletedTask;
+    }
 
     private async Task FinishAsync(GeoCoordinate? coordinate)
     {
@@ -181,6 +207,12 @@ public sealed class LocationPickerPage : ContentPage
             if (type == "ready") { ready = true; await InitializeSafelyAsync(); return; }
             if (token.IsCancellationRequested || !foreground.IsActive) return;
             if (root.GetProperty("session").GetString() != session) return;
+            if (type == "initack")
+            {
+                if (root.TryGetProperty("loadId", out var acked) && acked.ValueKind == JsonValueKind.Number && acked.GetInt32() == loadId)
+                    initAcknowledged = true;
+                return;
+            }
             if (type == "pick")
             {
                 picked = new GeoCoordinate(root.GetProperty("lat").GetDouble(), root.GetProperty("lon").GetDouble());

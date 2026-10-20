@@ -3,7 +3,7 @@
 const TILE_TIMEOUT=15000,WATCHDOG_INTERVAL=15000;
 let map, layer, session, loadId=0, serial=0, failed=false, queue=[], active=0, resetting=false, loadDone=false, lastProgress=0, watchdog=null, pickMarker=null;
 const waiting=new Map();
-const send=data=>window.HybridWebView.SendRawMessage(JSON.stringify(data));
+const send=data=>{try{window.HybridWebView.SendRawMessage(JSON.stringify(data));}catch(error){/* A broken bridge cannot report itself; the native watchdog bounds every wait. */}};
 function progress(){lastProgress=Date.now();}
 function clearWatchdog(){if(watchdog){clearInterval(watchdog);watchdog=null;}}
 function announceFailed(sess,gen){if(failed||gen!==loadId)return;failed=true;clearWatchdog();send({type:'failed',session:sess,loadId:gen});}
@@ -31,6 +31,7 @@ window.receiveMap=function(data){
   pump();return;
  }
  if(data.type!=='init')return;
+ send({type:'initack',session:data.session,loadId:data.loadId});
  resetting=true;clearWatchdog();if(map)map.remove();
  for(const item of waiting.values())clearTimeout(item.timer);
  session=data.session;loadId=data.loadId;failed=false;loadDone=false;queue=[];waiting.clear();active=0;resetting=false;pickMarker=null;
@@ -65,4 +66,5 @@ window.receiveMap=function(data){
  }
  if(data.center)map.setView(data.center,data.zoom||15);else if(bounds.length)map.fitBounds(bounds,{padding:[35,35],maxZoom:15});else map.setView([51.1657,10.4515],6);
 };
+window.addEventListener('HybridWebViewMessageReceived',event=>{const message=event.detail&&event.detail.message;if(typeof message==='string')window.receiveMap(JSON.parse(message));});
 window.addEventListener('load',()=>send({type:'ready'}));

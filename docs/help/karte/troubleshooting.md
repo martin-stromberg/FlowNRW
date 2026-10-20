@@ -8,6 +8,7 @@ Das war der unter iOS gemeldete Befund. Der Ladepfad ist jetzt doppelt abgesiche
 
 - **Kachel-Fortschritt (15 s, `map.js`):** Meldet eine einzelne Kachel 15 Sekunden lang keinen Fortschritt (keine Antwort, kein Entladen, keine neue Anfrageaktivität), wird sie mit `cancel` am nativen Gateway abgebrochen und als Kachelfehler beendet. Jeder tatsächliche Fortschritt verlängert die Frist — langsame, aber laufende Ladevorgänge bleiben unberührt.
 - **Gesamtlauf (15 s Stillstand, `map.js`):** Ohne jeglichen Kachelfortschritt oder ausbleibendes `load`-Ereignis meldet die Webseite einmalig `failed`.
+- **Init-Quittung (`map.js`, `MapPage`):** Die Webseite bestätigt jede `init`-Zustellung sofort mit `initack`. Bleibt die Quittung aus, wird `init` bis zu zweimal wiederholt; danach gilt die Zustellung als fehlgeschlagen und der Fehlerzustand tritt ohne weiteres Warten ein.
 - **Nativer Watchdog (30 s, `MapPage`):** Trifft nach `init` weder `loaded` noch `failed` ein, wechselt der Status zu „Basiskarte konnte nicht geladen werden. Haltestellenliste und Zurück bleiben nutzbar." und offene Kachelanfragen werden abgebrochen.
 - **Verworfene Kachelanfragen:** Überschreitet die ausstehende Zahl 64 oder kommt eine doppelte Kennung, wird die Anfrage ausdrücklich als Kachelfehler beantwortet statt still verworfen — die Webseite wartet nicht ewig auf eine nie kommende Antwort.
 - **Verspätete Meldungen:** `loaded`/`failed` ohne die aktuelle Lade-Generation (`loadId`) werden ignoriert; ein erneutes Laden oder eine neue Sitzung kann den Status nicht nachträglich verfälschen.
@@ -24,7 +25,7 @@ Der native 30-Sekunden-Watchdog hat ohne `loaded`-/`failed`-Meldung zugeschlagen
 
 ## Diagnose über das AppLog-Protokoll
 
-`MapPage` schreibt den Ladeweg in das optionale Diagnoseprotokoll `AppLog`: `init` mit Generation und Marker-/Segmentzahl, `ready`, `loaded`/`failed` mit ausstehender Kachelzahl, ignorierte verspätete Meldungen (`ignored stale`), Kachelfehler (`tile error`), verworfene Anfragen (`tile dropped`) und den Watchdog-Eintrag (`no loaded/failed within 30 s`).
+`MapPage` schreibt den Ladeweg in das optionale Diagnoseprotokoll `AppLog`: `init` mit Generation und Marker-/Segmentzahl, `ready`, Wiederholungen einer nicht quittierten `init`-Zustellung (`init not acknowledged, resending`) und deren Scheitern (`init unacknowledged`), `loaded`/`failed` mit ausstehender Kachelzahl, ignorierte verspätete Meldungen (`ignored stale`), Kachelfehler (`tile error`), verworfene Anfragen (`tile dropped`) und den Watchdog-Eintrag (`no loaded/failed within 30 s`).
 
 1. In der App über **Aktualisierung einstellen** die Seite **Automatische Aktualisierung** öffnen und dort im Abschnitt **Diagnose** den Schalter **Protokollierung** einschalten.
 2. Den Kartenfehler reproduzieren.
