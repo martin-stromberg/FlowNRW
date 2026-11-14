@@ -26,33 +26,40 @@ Keine.
 | Komponente / Bereich | Gewählter Ansatz | Begründung |
 |----------------------|------------------|------------|
 | Anzahl Workflow-Dateien | Drei separate Dateien | Akzeptanzkriterium „Für jede Prüfung existiert eine separate GitHub Action"; unabhängige Zeitpläne und Fehlerisolierung |
-| Issue-Erzeugung | `gh`-CLI mit `GH_TOKEN: ${{ github.token }}` in `pwsh`-Steps | Entspricht dem etablierten Muster aus `staging-to-main-promotion.yml`/`sync-staging-with-main.yml`; keine neue Abhängigkeit |
+| Issue-Erzeugung | `gh`-CLI mit `GH_TOKEN` (per `gh-token`-Input übergeben) in `pwsh`-Steps | Entspricht dem etablierten Muster aus `staging-to-main-promotion.yml`/`sync-staging-with-main.yml`; keine neue Abhängigkeit |
+| Geteilte Logik | Eine Composite Action `.github/actions/create-review-issue` mit Inputs (`label`, `title-prefix`, `title-date-format`, `body-file`, `gh-token`) | Repo-Konvention: gemeinsame Logik existiert nur einmal (vgl. Kommentar in `security-scan.yml` zu `.github/actions/security-scan`); die drei Workflows unterscheiden sich nur in Zeitplan und Inputs |
+| Issue-Body-Ablage | Je Typ eine Markdown-Datei unter `.github/review-bodies/`, Referenz per `--body-file` | pwsh-Here-Strings sind in YAML-Blöcken wegen Einrückungsregeln fehleranfällig; Dateien sind sauber editierbar und zählen zur Repo-Dokumentation. Erfordert `actions/checkout`-Step und `contents: read` |
 | Duplikat-Erkennung | Typ-Label (`automated-review-*`) als primäres Kriterium, Titel-Präfix-Suche als Fallback | Label überlebt Titeländerungen; Titel-Suche fängt manuell/ohne Label angelegte Vorgänger ab; beides auf dem vorhandenen `gh ... list --state open`-Muster aufbauend |
 | Runner | `ubuntu-latest` | Reine GitHub-API-Automatisierung, kein Build nötig — wie Promotion-/Backmerge-Workflows |
 | `concurrency` | Eine Gruppe je Workflow, `cancel-in-progress: false` | Kein Lauf darf verworfen werden (sonst könnte ein Zyklus ausfallen) — gleiche Begründung wie bei den Automations-Workflows |
-| Berechtigungen | `issues: write` auf Workflow-Ebene | Minimale nötige Berechtigung; kein Checkout erforderlich |
+| Berechtigungen | `contents: read`, `issues: write` auf Workflow-Ebene | Minimale nötige Berechtigungen; `contents: read` für den Checkout von Composite Action und Body-Datei |
 | Cron-Zeitpunkte | Monatlich `0 5 1 * *`; wöchentlich `0 5 * * 1` (Mo); jährlich `0 5 1 1 *` | „Erster Tag des Monats"/„wöchentlich"/„1. Januar" wörtlich; 05:00 UTC versetzt zum bestehenden Security-Scan (Mo 04:00 UTC) |
 | Issue-Titel | Stabiler deutscher Präfix plus Zeitraum-Suffix (`– YYYY-MM` / `– YYYY-MM-DD` / `– YYYY`) | Aussagekräftig und pro Zyklus eindeutig; der Präfix bleibt für die Duplikat-Suche stabil |
-| Issue-Body | Wörtlich aus der Anforderung als pwsh-Here-String im Workflow | Vollständig im Repo dokumentiert, keine externe Datei nötig |
+| Issue-Body | Wörtlich aus der Anforderung als Markdown-Datei unter `.github/review-bodies/` | Vollständig im Repo dokumentiert; vermeidet pwsh-Here-String-Quoting in YAML |
 
 ## Programmabläufe
 
 ### Zyklische Issue-Erzeugung (alle drei Workflows identisch aufgebaut)
 
 1. Cron-Trigger (oder manueller Dispatch) startet den Job auf `ubuntu-latest`.
-2. Step „Ensure label exists": `gh label create <typ-label> --force` legt das
+2. `actions/checkout` stellt Repo-Dateien bereit (Composite Action und
+   Body-Datei müssen auf dem Runner liegen).
+3. Die Composite Action `create-review-issue` wird mit den typ-spezifischen
+   Inputs aufgerufen.
+4. Step „Ensure label exists": `gh label create <typ-label> --force` legt das
    Typ-Label idempotent an.
-3. Step „Create issue": `gh issue list --state open --label <typ-label>` liefert
+5. Step „Create issue": `gh issue list --state open --label <typ-label>` liefert
    offene Issues desselben Typs; ist das Ergebnis leer, wird zusätzlich
    `gh issue list --state open --search 'in:title "<präfix>"'` geprüft.
-4. Bei Treffer: Hinweis ins Log („bereits vorhanden"), Workflow endet ohne
+6. Bei Treffer: Hinweis ins Log („bereits vorhanden"), Workflow endet ohne
    Änderung. Bei keinem Treffer: `gh issue create --title "<präfix> – <zeitraum>"
-   --label <typ-label> --body <prüfauftrag>` erzeugt das Issue.
-5. Sichtbare Wirkung: offenes Issue mit `@softwarewerkstatt`-Erwähnung im Body.
+   --label <typ-label> --body-file <body-datei>` erzeugt das Issue.
+7. Sichtbare Wirkung: offenes Issue mit `@softwarewerkstatt`-Erwähnung im Body.
 
 Beteiligte Komponenten: Workflow-Dateien `review-architecture-security.yml`,
-`review-nuget-weekly.yml`, `review-compliance-yearly.yml`; GitHub Issues API via
-`gh`.
+`review-nuget-weekly.yml`, `review-compliance-yearly.yml`; Composite Action
+`.github/actions/create-review-issue`; Body-Dateien unter
+`.github/review-bodies/`; GitHub Issues API via `gh`.
 
 ## Neue Klassen
 
@@ -65,6 +72,10 @@ Neue Dateien:
 | `.github/workflows/review-architecture-security.yml` | Monatliches Architektur- und Sicherheitsreview (`0 5 1 * *`), Label `automated-review-architecture`, Titel-Präfix `Architektur- und Sicherheitsreview` |
 | `.github/workflows/review-nuget-weekly.yml` | Wöchentliche NuGet-Prüfung (`0 5 * * 1`), Label `automated-review-nuget`, Titel-Präfix `NuGet-Prüfung` |
 | `.github/workflows/review-compliance-yearly.yml` | Jährliches Compliance- und Copyright-Review (`0 5 1 1 *`), Label `automated-review-compliance`, Titel-Präfix `Compliance- und Copyright-Review` |
+| `.github/actions/create-review-issue/action.yml` | Geteilte Composite Action: Label-Anlage, Duplikat-Prüfung, Issue-Erzeugung |
+| `.github/review-bodies/architecture-security.md` | Issue-Body Architektur/Sicherheit (wörtlich aus Anforderung) |
+| `.github/review-bodies/nuget-weekly.md` | Issue-Body NuGet-Prüfung (wörtlich aus Anforderung) |
+| `.github/review-bodies/compliance-yearly.md` | Issue-Body Compliance-Review (wörtlich aus Anforderung) |
 
 ## Änderungen an bestehenden Klassen
 

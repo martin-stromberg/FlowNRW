@@ -44,14 +44,50 @@ Tags: stabile Releases `vX.Y.Z`, Release Candidates `vX.Y.Z-rc.N`. Die Version i
 | `release.yml` | Push auf `main`, Tag `v*.*.*` | Stabiles Release inkl. Asset-Reparatur |
 | `sync-staging-with-main.yml` | Push auf `main` | PR `main` → `staging` (Label `automated-backmerge`) |
 | `security-scan.yml` | wöchentlich Mo 04:00 UTC, manuell | NuGet-Vulnerability-Scan der Solution |
+| `review-architecture-security.yml` | monatlich am 1., 05:00 UTC, manuell | Issue für das Architektur- und Sicherheitsreview (Label `automated-review-architecture`) |
+| `review-nuget-weekly.yml` | wöchentlich Mo 05:00 UTC, manuell | Issue für die NuGet-Paketprüfung (Label `automated-review-nuget`) |
+| `review-compliance-yearly.yml` | jährlich am 1. Januar, 05:00 UTC, manuell | Issue für das Compliance- und Copyright-Review (Label `automated-review-compliance`) |
 
 Composite Actions (`.github/actions/`):
 
 - `setup-maui-workload`: `dotnet workload install maui-windows` (Windows-Runner).
+- `create-review-issue`: Legt das Typ-Label an, prüft auf offene Issues desselben
+  Typs (Label, Fallback Titel-Präfix) und erzeugt das Review-Issue nur, wenn
+  keines offen ist (siehe unten).
 - `security-scan`: `dotnet list package --vulnerable --include-transitive`, schlägt bei Funden fehl.
 - `build-and-package`: Publish `FlowNRW/FlowNRW.csproj` (win-x64, self-contained, unpackaged,
   `-p:Version`), ZIP `FlowNRW-v<version>-win-x64.zip`, `release-metadata.json` im Publish-Output,
   `update.json` via `scripts/generate-update-manifest.mjs`.
+
+## Geplante Review-Issues (Issue #20)
+
+Drei Zeitplan-Workflows erzeugen wiederkehrende Review-Issues, die
+`@softwarewerkstatt` erwähnen und damit die automatische Analyse anstoßen:
+
+| Workflow | Zeitplan (UTC) | Typ-Label | Issue-Titel |
+| --- | --- | --- | --- |
+| `review-architecture-security.yml` | `0 5 1 * *` (monatlich am 1.) | `automated-review-architecture` | `Architektur- und Sicherheitsreview – <JJJJ-MM>` |
+| `review-nuget-weekly.yml` | `0 5 * * 1` (montags) | `automated-review-nuget` | `NuGet-Prüfung – <JJJJ-MM-TT>` |
+| `review-compliance-yearly.yml` | `0 5 1 1 *` (1. Januar) | `automated-review-compliance` | `Compliance- und Copyright-Review – <JJJJ>` |
+
+Gemeinsame Logik liegt in der Composite Action `.github/actions/create-review-issue`:
+
+1. `gh label create <typ-label> --force` legt das Typ-Label idempotent an.
+2. `gh issue list --state open --label <typ-label>` sucht offene Issues desselben
+   Typs; ist das Ergebnis leer, greift die Fallback-Suche
+   `gh issue list --state open --search 'in:title "<präfix>"'` — so werden auch
+   Issues erkannt, denen das Label fehlt.
+3. Nur bei leerem Ergebnis legt `gh issue create` ein neues Issue mit dem
+   Typ-Label und dem Body aus `.github/review-bodies/` an. Andernfalls endet der
+   Lauf mit einem Log-Hinweis — es entstehen keine Duplikate aus dem
+   vorherigen Zyklus.
+
+Die Issue-Texte stehen wörtlich in `.github/review-bodies/` und können dort
+angepasst werden. Alle drei Workflows lassen sich zusätzlich manuell über
+`workflow_dispatch` starten. Wichtig: `schedule` und `workflow_dispatch`
+funktionieren erst, wenn die Workflow-Dateien auf dem Default-Branch (`main`)
+vorhanden sind — die Automatisierung wird also erst mit der Promotion
+`staging` → `main` aktiv.
 
 ## Quality Gates (pr-staging-ci.yml / staging-ci.yml)
 
