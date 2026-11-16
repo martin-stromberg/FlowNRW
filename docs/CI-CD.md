@@ -47,6 +47,7 @@ Tags: stabile Releases `vX.Y.Z`, Release Candidates `vX.Y.Z-rc.N`. Die Version i
 | `review-architecture-security.yml` | monatlich am 1., 05:00 UTC, manuell | Issue für das Architektur- und Sicherheitsreview (Label `automated-review-architecture`) |
 | `review-nuget-weekly.yml` | wöchentlich Mo 05:00 UTC, manuell | Issue für die NuGet-Paketprüfung (Label `automated-review-nuget`) |
 | `review-compliance-yearly.yml` | jährlich am 1. Januar, 05:00 UTC, manuell | Issue für das Compliance- und Copyright-Review (Label `automated-review-compliance`) |
+| `pages.yml` | Push auf `main` (`site/**`), manuell | Deploy der Projektseite nach GitHub Pages |
 
 Composite Actions (`.github/actions/`):
 
@@ -128,6 +129,43 @@ Die MAUI-App selbst kann nur auf Windows gebaut werden; Tests laufen ausschließ
      sein; kein Direct Push.
 5. Dependabot (`.github/dependabot.yml`) öffnet wöchentliche PRs gegen `staging` für NuGet,
    npm und GitHub Actions.
+6. Pages-Quelle für die Projektseite: Settings → Pages → „Build and deployment" → Source auf
+   „GitHub Actions" stellen. Alternativ per CLI:
+   `gh api -X POST repos/martin-stromberg/FlowNRW/pages -f build_type=workflow`.
+   Der `GITHUB_TOKEN` der Workflows kann diesen Schritt nicht automatisieren
+   (Repository-Administration); er ist einmalig manuell auszuführen, bevor
+   `pages.yml` erstmals deployt.
+
+## Projektseite (GitHub Pages)
+
+Die statische Projektseite unter `https://martin-stromberg.github.io/FlowNRW/`
+präsentiert FlowNRW (Zweck, zentrale Features, Screenshots, Release- und
+Dokumentationsverweise). Sie ist buildfrei — reines HTML/CSS/JS ohne Generator
+und ohne externe Abhängigkeiten.
+
+- **Quellordner:** `site/` im Repository-Root (Seitenquellen `index.html`,
+  `styles.css`, `theme.js`; Assets unter `site/assets/` — Icon, Fonts,
+  Screenshots). Interne Referenzen sind relativ (`./assets/…`), damit der
+  Base-Pfad `/FlowNRW/` funktioniert.
+- **Deploy:** `pages.yml` läuft auf Push nach `main`, wenn sich `site/**` oder
+  der Workflow selbst geändert hat, und per `workflow_dispatch`. Die Schritte
+  sind `actions/checkout` → `actions/configure-pages` →
+  `actions/upload-pages-artifact` (Pfad `site`) → `actions/deploy-pages`;
+  ein Smoke-Step prüft per `curl` die ausgelieferte `page_url` auf HTTP 200 und
+  den Marker „FlowNRW". Das `github-pages`-Environment wird beim ersten Lauf
+  automatisch angelegt.
+- **Update-Weg:** Änderungen unter `site/` auf einem Feature-Branch → PR gegen
+  `staging` → Promotion-PR → Merge nach `main` → automatischer Redeploy unter
+  derselben URL. Pushes auf `main` ohne `site/`-Änderung lösen keinen Redeploy
+  aus; manuell jederzeit über Actions → „Deploy Project Site to GitHub Pages" →
+  „Run workflow".
+- **Screenshots:** kuratierter Satz unter `site/assets/screenshots/`. Quelle ist
+  die jeweils aktuelle Verifikationsmatrix unter
+  `docs/help/design/verification/icon-matrix/` (Aufnahmen z. B. über
+  `tests/WindowsJourneyUiTests/WindowsDesignUiTests.ps1` erneuern, dann
+  präsentationsfähige Motive ohne Fixture-/Fehler-/Leerzustände auswählen und
+  unter sprechenden Namen kopieren). `native-*.png` und Bilder mit sichtbaren
+  Test-/Fixture-Feldern nicht verwenden.
 
 ## Fehlersuche
 
@@ -142,3 +180,7 @@ Die MAUI-App selbst kann nur auf Windows gebaut werden; Tests laufen ausschließ
   auslösen; `resolve-release-version.mjs` lädt fehlende Assets zum bestehenden Tag nach.
 - **MAUI-Build in CI schlägt beim Workload-Install fehl:** `setup-maui-workload/action.yml`
   prüfen; das Workload muss zur `dotnet-version` (`10.0.x`) passen.
+- **`pages.yml` schlägt bei „Configure Pages" mit „Get Pages site failed … Not Found" fehl:**
+  Die Pages-Quelle steht nicht auf „GitHub Actions" — Punkt 6 der einmaligen
+  Repo-Einrichtung ausführen, danach den Workflow per `workflow_dispatch`
+  erneut starten. Es wird kein halbfertiger Stand veröffentlicht.

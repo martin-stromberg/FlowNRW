@@ -5,6 +5,7 @@
 [![PR CI für Staging](https://img.shields.io/github/actions/workflow/status/martin-stromberg/FlowNRW/pr-staging-ci.yml?label=PR%20CI%20f%C3%BCr%20Staging)](https://github.com/martin-stromberg/FlowNRW/actions/workflows/pr-staging-ci.yml)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![Lizenz](https://img.shields.io/badge/Lizenz-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
+[![Projektseite](https://img.shields.io/badge/Projektseite-martin--stromberg.github.io%2FFlowNRW-0058BC)](https://martin-stromberg.github.io/FlowNRW/)
 
 FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahrten mit bevorzugten NRW-Echtzeitdaten. Die manuelle Verbindungssuche führt von Start-/Zielwahl über Ergebnisse zu Verbindungsdetails. Native iOS-Abnahme steht beim Nutzer aus.
 
@@ -37,6 +38,7 @@ FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahr
 | `.githooks/` | Lokale Git-Hooks (Branch-Schutz, XML-Doc-, Stub- und Format-Checks) |
 | `scripts/` | Node-Skripte für Release-Version und Update-Manifest (`update.json`) |
 | `docs/` | Projektdokumentation (u. a. [CI-CD.md](docs/CI-CD.md)) |
+| `site/` | Statische GitHub-Page (Präsentationsseite), Deploy via `pages.yml` |
 
 Die Version wird zentral in `Directory.Build.props` gepflegt (`0.0.1`) und in CI über
 `-p:Version=X.Y.Z[-rc.N]` überschrieben (semantic-release, Conventional Commits).
