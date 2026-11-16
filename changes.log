@@ -1,3 +1,8 @@
+## 2026-11-14 — Automatisierte Review-Issues
+
+- Drei zeitgesteuerte GitHub-Actions-Workflows erzeugen wiederkehrende Review-Issues mit `@softwarewerkstatt`-Erwähnung: monatliches Architektur- und Sicherheitsreview (1. des Monats), wöchentliche NuGet-Prüfung (montags) und jährliches Compliance- und Copyright-Review (1. Januar).
+- Die geteilte Composite Action `.github/actions/create-review-issue` legt das Typ-Label an und verhindert Duplikate: Existiert bereits ein offenes Issue desselben Typs (Label oder Titel-Präfix), wird kein neues Issue erstellt. Die Issue-Texte liegen unter `.github/review-bodies/`.
+
 ## 2026-10-15 — iOS-Nutzungsfeedback
 
 - Haltestellennamen werden für die Anzeige bereinigt: Ein führender Ortsname, der am Anfang des Rests wörtlich wiederholt wird („Münster (Westf), Münster (Westf) Hbf"), entfällt, sodass nur noch „Münster (Westf) Hbf" steht — in allen Trefferlisten, der Auswahlzeile, der Kartenliste, Verbindungsdetails, der Zeitachse sowie den Monitor- und Favoritentiteln. Die technische Identität (Quelle, Id, DHID) und gespeicherte Namen bleiben unverändert.

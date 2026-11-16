@@ -1,0 +1,58 @@
+name: Create review issue
+
+# Shared logic for the scheduled review workflows (issue #20): makes sure the
+# type label exists, checks for an already open issue of the same review type
+# (label first, title-prefix search as fallback) and only then creates the new
+# issue. Keeping this in one place means the three cron workflows only differ
+# in their schedule and their inputs instead of duplicating the gh calls.
+
+inputs:
+  label:
+    description: Label marking this review type; primary key for duplicate detection.
+    required: true
+  title-prefix:
+    description: Stable issue title prefix; used for the fallback duplicate search.
+    required: true
+  title-date-format:
+    description: ".NET format string applied to the current UTC date and appended to the title (e.g. 'yyyy-MM')."
+    required: true
+  body-file:
+    description: Issue body markdown file, relative to the repository root.
+    required: true
+  gh-token:
+    description: GitHub token used for gh CLI calls (pass github.token).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Ensure review label exists
+      env:
+        GH_TOKEN: ${{ inputs.gh-token }}
+      run: gh label create "${{ inputs.label }}" --color "5319E7" --description "Automatically created review issue" --force
+      shell: pwsh
+
+    - name: Create review issue unless one is already open
+      env:
+        GH_TOKEN: ${{ inputs.gh-token }}
+      run: |
+        $label = "${{ inputs.label }}"
+        $titlePrefix = "${{ inputs.title-prefix }}"
+        $title = "$titlePrefix – " + (Get-Date).ToUniversalTime().ToString("${{ inputs.title-date-format }}")
+
+        # pwsh does not stop on non-zero exit codes - a failed lookup must never
+        # fall through to issue creation, or duplicates would slip in.
+        $existing = @(gh issue list --state open --label $label --json number | ConvertFrom-Json)
+        if ($LASTEXITCODE -ne 0) { throw "gh issue list (label) failed" }
+        if ($existing.Count -eq 0) {
+          $existing = @(gh issue list --state open --search ('in:title "{0}"' -f $titlePrefix) --json number | ConvertFrom-Json)
+          if ($LASTEXITCODE -ne 0) { throw "gh issue list (title) failed" }
+        }
+
+        if ($existing.Count -gt 0) {
+          Write-Host "An open issue of this review type already exists (#$($existing[0].number)) - skipping creation."
+        } else {
+          gh issue create --title $title --label $label --body-file "${{ inputs.body-file }}"
+          if ($LASTEXITCODE -ne 0) { throw "gh issue create failed" }
+        }
+      shell: pwsh

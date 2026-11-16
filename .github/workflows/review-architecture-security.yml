@@ -1,0 +1,43 @@
+name: Monthly Architecture and Security Review
+
+# Creates the monthly architecture and security review issue requested in issue
+# #20. The shared composite action .github/actions/create-review-issue skips
+# creation while an open issue of the same type (label
+# `automated-review-architecture`, fallback: title-prefix search) still exists,
+# so at most one open review issue is present at any time.
+#
+# Note: `schedule` and `workflow_dispatch` only work once this file exists on
+# the default branch (main); until then the workflow stays inactive.
+
+"on":
+  schedule:
+    # First day of each month at 05:00 UTC (one hour after the weekly security
+    # scan to spread runner load).
+    - cron: '0 5 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: review-architecture-security
+  cancel-in-progress: false
+
+jobs:
+  create-issue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Create architecture and security review issue
+        uses: ./.github/actions/create-review-issue
+        with:
+          label: automated-review-architecture
+          title-prefix: Architektur- und Sicherheitsreview
+          title-date-format: yyyy-MM
+          body-file: .github/review-bodies/architecture-security.md
+          gh-token: ${{ github.token }}

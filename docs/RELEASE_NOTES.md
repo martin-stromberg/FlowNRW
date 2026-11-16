@@ -6,6 +6,7 @@
 
 ## What's New
 
+- Scheduled GitHub Actions now open recurring review issues for @softwarewerkstatt: monthly architecture/security review, weekly NuGet check and yearly compliance review, each skipped while a previous open issue of the same type exists.
 - Native FlowNRW design integration with persistent departures, connections and stops areas, structured departure and journey cards, accessible map/list alternatives, light/dark semantic surfaces and Windows visual regression evidence. A first real-device iOS pass is accepted by the user; sporadic departure fetch errors remain under observation via the diagnostic protocol.
 - Opt-in diagnostic protocol in settings: HTTP calls, monitor outcomes and lifecycle events are recorded locally and can be sent to the maintainer by e-mail ("Protokoll senden").
 - Journey details show plain local times with "Vortag"/"Folgetag" day markers instead of technical UTC offsets; transfers render between the affected legs.
@@ -37,6 +38,7 @@
 
 ## Neuerungen
 
+- Zeitgesteuerte GitHub Actions legen wiederkehrende Review-Issues für @softwarewerkstatt an: monatliches Architektur-/Sicherheitsreview, wöchentliche NuGet-Prüfung und jährliches Compliance-Review — jeweils nur, wenn kein offenes Issue desselben Typs existiert.
 - Veraltete sichtbare Abfahrten und Verbindungen bei Wiederaufnahme ohne Seitensprung erneuern; begrenzte opportunistische iOS-Favoritenaktualisierung, gemeinsam mit der Automatik abschaltbar. Erste iOS-Geräteprüfung vom Nutzer abgenommen; sporadische Abfahrtsfehler bleiben über das Diagnoseprotokoll beobachtbar.
 - Optionales Diagnoseprotokoll in den Einstellungen: HTTP-Aufrufe, Monitorergebnisse und Lifecycle-Ereignisse werden lokal aufgezeichnet und können per E-Mail an den Maintainer gesendet werden („Protokoll senden").
 - Verbindungsdetails zeigen lokale Zeiten mit „Vortag"/„Folgetag"-Markierung statt UTC-Offsets; Umstiege erscheinen zwischen den betroffenen Fahrtabschnitten.
