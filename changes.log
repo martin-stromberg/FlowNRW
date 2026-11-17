@@ -1,3 +1,10 @@
+## 2026-11-16 — Statische Projektseite für GitHub Pages
+
+- Neue buildfreie Projektseite unter `site/` (HTML/CSS/JS, `lang="de"`): präsentiert Zweck, zentrale Features, kuratierte Screenshots und Verweise auf Release, Repository und Dokumentation. Helle und dunkle Darstellung über `prefers-color-scheme` mit manuellem Umschalter (`localStorage`); Farb- und Typo-Tokens sind aus dem App-Designsystem (`Colors.xaml`, Inter/JetBrains Mono) gespiegelt.
+- Deploy-Workflow `.github/workflows/pages.yml` liefert `site/` per GitHub-Actions-Deployment (`configure-pages` → `upload-pages-artifact` → `deploy-pages`) nach `https://martin-stromberg.github.io/FlowNRW/` aus — ausgelöst durch Push auf `main` mit `site/**`-Änderung oder manuell; ein Smoke-Step prüft die ausgelieferte URL.
+- Auf der Seite wird iOS als Zielplattform mit Status „In Entwicklung" genannt; der Release-Verweis bleibt die plattformneutrale Release-Übersicht `releases`.
+- Einmalige Voraussetzung (dokumentiert in `docs/CI-CD.md`): Pages-Quelle in den Repo-Einstellungen auf „GitHub Actions" stellen.
+
 ## 2026-11-14 — Automatisierte Review-Issues
 
 - Drei zeitgesteuerte GitHub-Actions-Workflows erzeugen wiederkehrende Review-Issues mit `@softwarewerkstatt`-Erwähnung: monatliches Architektur- und Sicherheitsreview (1. des Monats), wöchentliche NuGet-Prüfung (montags) und jährliches Compliance- und Copyright-Review (1. Januar).

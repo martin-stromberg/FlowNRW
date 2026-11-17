@@ -1,0 +1,64 @@
+name: Deploy Project Site to GitHub Pages
+
+# Deploys the static project site from site/ to GitHub Pages. The site presents
+# FlowNRW (purpose, features, curated screenshots, release and documentation
+# links) at https://martin-stromberg.github.io/FlowNRW/.
+#
+# Prerequisite (one-time, documented in docs/CI-CD.md): the repository Pages
+# source must be set to "GitHub Actions" (Settings -> Pages -> Build and
+# deployment). GITHUB_TOKEN cannot perform this repository-administration step.
+# The github-pages environment is created automatically on the first run.
+#
+# Deploys happen only from main, reached through the usual promotion chain
+# (feature branch -> staging -> promotion PR -> main). Pushes without changes
+# under site/ do not redeploy; use workflow_dispatch for a manual redeploy.
+
+"on":
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+      - name: Smoke-check deployed page
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          html="$(curl --fail --retry 5 --retry-delay 10 --retry-all-errors -sS "$PAGE_URL")"
+          echo "$html" | grep -q "FlowNRW"
+          echo "Deployed page at $PAGE_URL responds with HTTP 200 and contains the FlowNRW marker."
+        shell: bash
