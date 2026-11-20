@@ -136,6 +136,15 @@ public sealed class JourneySearchViewModelTests
         Assert.Contains("Umstiege", new JourneyDetailViewModel(model).Details);
         model.Destination.Text = "8"; Assert.Null(model.SelectedJourney); Assert.Empty(model.Journeys);
     }
+    /// <summary>Without a selection the detail placeholder never echoes the session status.</summary>
+    [Fact]
+    public async Task DetailsWithoutSelectionShowsPlaceholderNotStatus()
+    {
+        var service = new ControlledRoutingService(); var model = Create(service, new RecordingNavigation()); Select(model);
+        var task = model.SearchAsync(); service.Pending[0].SetResult(new() { Items = [] }); await task;
+        var details = new JourneyDetailViewModel(model).Details;
+        Assert.Equal("Keine Verbindung ausgewählt.", details); Assert.NotEqual(model.Status, details);
+    }
     private static JourneySearchViewModel Create(ControlledRoutingService service, RecordingNavigation nav) => new(new(new ControlledSearchService(), 100), new(new ControlledSearchService(), 100), service, nav);
     private static void Select(JourneySearchViewModel model)
     {

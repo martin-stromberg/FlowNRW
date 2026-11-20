@@ -1,3 +1,8 @@
+## 2026-11-19 — Verbindungsdetail behält Auswahl nach Aktualisierung
+
+- Die Wiedererkennung der gewählten Verbindung nach einer automatischen Aktualisierung nutzt jetzt denselben Zuordnungsalgorithmus wie die Provider-Zusammenführung (`RealtimeConsolidator.SameJourney`): Verbindungen mit Fußwegabschnitten oder Endpunkten ohne Fahrt-/Haltestellenkennung (z. B. Adressziele) bleiben ausgewählt, statt fälschlich „nicht mehr eindeutig bestätigt" zu melden. Nicht eindeutig zuordenbare oder strukturell abweichende Verbindungen heben die Auswahl weiterhin konservativ auf.
+- Die Statusmeldung auf der Verbindungsdetailseite erscheint nicht mehr doppelt: Ohne Auswahl zeigt der Detailbereich den Platzhalter „Keine Verbindung ausgewählt.", die Statuszeile bleibt alleiniger Ort der Meldung.
+
 ## 2026-11-16 — Statische Projektseite für GitHub Pages
 
 - Neue buildfreie Projektseite unter `site/` (HTML/CSS/JS, `lang="de"`): präsentiert Zweck, zentrale Features, kuratierte Screenshots und Verweise auf Release, Repository und Dokumentation. Helle und dunkle Darstellung über `prefers-color-scheme` mit manuellem Umschalter (`localStorage`); Farb- und Typo-Tokens sind aus dem App-Designsystem (`Colors.xaml`, Inter/JetBrains Mono) gespiegelt.

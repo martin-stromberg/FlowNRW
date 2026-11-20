@@ -178,14 +178,14 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
     }
 
     private IReadOnlyList<Journey> MergeJourneys(IReadOnlyList<Journey> primary, IReadOnlyList<Journey> secondary) =>
-        primary.Select(journey => EnrichJourney(journey, primary, secondary)).Concat(Unmatched(primary, secondary, SameJourney))
+        primary.Select(journey => EnrichJourney(journey, primary, secondary)).Concat(Unmatched(primary, secondary, RealtimeConsolidator.SameJourney))
             .OrderBy(item => item.Legs.FirstOrDefault()?.Departure.Realtime.ActualTime ?? item.Legs.FirstOrDefault()?.Departure.PlannedTime ?? DateTimeOffset.MaxValue)
             .Take(maxResults + 1).ToArray();
 
     private Journey EnrichJourney(Journey journey, IReadOnlyList<Journey> primary, IReadOnlyList<Journey> secondary)
     {
-        var matches = secondary.Where(candidate => SameJourney(journey, candidate)).ToArray();
-        if (matches.Length != 1 || primary.Count(candidate => SameJourney(candidate, matches[0])) != 1)
+        var matches = secondary.Where(candidate => RealtimeConsolidator.SameJourney(journey, candidate)).ToArray();
+        if (matches.Length != 1 || primary.Count(candidate => RealtimeConsolidator.SameJourney(candidate, matches[0])) != 1)
             return journey;
         return journey with
         {
@@ -209,23 +209,6 @@ public sealed class ProviderOrchestrator : IProviderOrchestrator
                 yield return candidate;
         }
     }
-
-    private static bool SameJourney(Journey left, Journey right)
-    {
-        if (left.Legs.Count == 0 || left.Legs.Count != right.Legs.Count) return false;
-        return left.Legs.Zip(right.Legs).All(pair =>
-        {
-            if ((pair.First.Walking is null) != (pair.Second.Walking is null)) return false;
-            if (pair.First.Walking is null)
-                return RealtimeConsolidator.Matches(pair.First.Departure.Identity, pair.Second.Departure.Identity) &&
-                    RealtimeConsolidator.Matches(pair.First.Arrival.Identity, pair.Second.Arrival.Identity);
-            return SameWalkingEvent(pair.First.Departure, pair.Second.Departure) && SameWalkingEvent(pair.First.Arrival, pair.Second.Arrival);
-        });
-    }
-
-    private static bool SameWalkingEvent(StopEvent left, StopEvent right) =>
-        left.PlannedTime is { } leftTime && right.PlannedTime is { } rightTime && (leftTime - rightTime).Duration() <= TimeSpan.FromSeconds(60) &&
-        RealtimeConsolidator.SameStop(left.Identity.Stop, right.Identity.Stop);
 
     private sealed class Pending<T>
     {
