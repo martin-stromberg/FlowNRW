@@ -21,6 +21,34 @@ public sealed class JourneyResumeTests_Selection
         Assert.Equal(1, fixture.Navigation.Details);
     }
 
+    /// <summary>A journey with a walking leg without trip identity stays selected.</summary>
+    [Fact]
+    public async Task RefreshIfStale_JourneyWithWalkingLeg_KeepsSelection()
+    {
+        var fixture = await CreateAsync(WalkingJourney);
+        var replacement = WalkingJourney() with { Id = "renewed" };
+        var task = fixture.Model.RefreshIfStaleAsync(new(new()));
+        fixture.Service.Pending[1].SetResult(new() { Items = [replacement] });
+        await task;
+        Assert.Same(replacement, fixture.Model.SelectedJourney);
+        Assert.Contains("automatisch aktualisiert", fixture.Model.Status);
+    }
+
+    /// <summary>A leg that stops being a walk cannot keep the previous selection.</summary>
+    [Fact]
+    public async Task RefreshIfStale_WalkingLegTurnedTransit_ClearsSelection()
+    {
+        var fixture = await CreateAsync(WalkingJourney);
+        var replacement = WalkingJourney();
+        replacement = replacement with
+        { Legs = [replacement.Legs[0], replacement.Legs[1] with { Walking = null, Line = new Line { Name = "Bus 10" } }] };
+        var task = fixture.Model.RefreshIfStaleAsync(new(new()));
+        fixture.Service.Pending[1].SetResult(new() { Items = [replacement] });
+        await task;
+        Assert.Null(fixture.Model.SelectedJourney);
+        Assert.Contains("nicht mehr eindeutig", fixture.Model.Status);
+    }
+
     /// <summary>Missing and ambiguous matches cannot silently become the selected trip.</summary>
     /// <param name="duplicate">Whether the response has duplicate matching identities.</param>
     [Theory]
@@ -67,7 +95,7 @@ public sealed class JourneyResumeTests_Selection
         Assert.False(fixture.Model.IsBusy);
     }
 
-    private static async Task<(JourneySearchViewModel Model, ControlledRoutingService Service, RecordingNavigation Navigation)> CreateAsync()
+    private static async Task<(JourneySearchViewModel Model, ControlledRoutingService Service, RecordingNavigation Navigation)> CreateAsync(Func<Journey>? journey = null)
     {
         var service = new ControlledRoutingService();
         var navigation = new RecordingNavigation();
@@ -75,18 +103,34 @@ public sealed class JourneyResumeTests_Selection
         foreach (var endpoint in new[] { model.Origin, model.Destination })
         { endpoint.SetSelectedAddress(new Address { Name = "endpoint", Coordinate = new GeoCoordinate(51, 7) }); }
         var search = model.SearchAsync();
-        var journey = Journey("one");
-        service.Pending[0].SetResult(new() { Items = [journey], RetrievedAt = DateTimeOffset.UtcNow.AddMinutes(-2) });
+        var selected = journey?.Invoke() ?? Journey("one");
+        service.Pending[0].SetResult(new() { Items = [selected], RetrievedAt = DateTimeOffset.UtcNow.AddMinutes(-2) });
         await search;
-        await model.OpenJourneyAsync(journey);
+        await model.OpenJourneyAsync(selected);
         return (model, service, navigation);
     }
 
     private static Journey Journey(string id)
     {
         var time = new DateTimeOffset(2026, 9, 25, 12, 0, 0, TimeSpan.Zero);
-        return new() { Legs = [new() { Departure = Event("a", time), Arrival = Event("b", time.AddMinutes(10)) }] };
-        StopEvent Event(string stop, DateTimeOffset planned) => new()
-        { Identity = new() { Source = "fixture", TripId = id, PlannedTime = planned, Stop = new() { Id = stop, Source = "fixture" } } };
+        return new() { Legs = [new() { Departure = Event(id, "a", time), Arrival = Event(id, "b", time.AddMinutes(10)) }] };
     }
+
+    private static Journey WalkingJourney()
+    {
+        var time = new DateTimeOffset(2026, 9, 25, 12, 0, 0, TimeSpan.Zero);
+        return new()
+        {
+            Legs =
+            [
+                new() { Departure = Event("walk-trip", "a", time), Arrival = Event("walk-trip", "b", time.AddMinutes(10)) },
+                new() { Departure = Walk("Umstieg", time.AddMinutes(10)), Arrival = Walk("Adresse", time.AddMinutes(15)), Walking = new() { Duration = TimeSpan.FromMinutes(5) } }
+            ]
+        };
+        static StopEvent Walk(string name, DateTimeOffset planned) => new()
+        { PlannedTime = planned, Identity = new() { Source = "fixture", PlannedTime = planned, Stop = new() { Name = name, Coordinate = new GeoCoordinate(51.45, 7.01) } } };
+    }
+
+    private static StopEvent Event(string trip, string stop, DateTimeOffset planned) => new()
+    { Identity = new() { Source = "fixture", TripId = trip, PlannedTime = planned, Stop = new() { Id = stop, Source = "fixture" } } };
 }

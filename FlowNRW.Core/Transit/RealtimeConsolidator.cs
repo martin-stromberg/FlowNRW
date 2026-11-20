@@ -51,6 +51,23 @@ public sealed class RealtimeConsolidator : IRealtimeConsolidator
         return Math.Sqrt(dx * dx + dy * dy) <= 100;
     }
 
+    internal static bool SameJourney(Journey left, Journey right)
+    {
+        if (left.Legs.Count == 0 || left.Legs.Count != right.Legs.Count) return false;
+        return left.Legs.Zip(right.Legs).All(pair =>
+        {
+            if ((pair.First.Walking is null) != (pair.Second.Walking is null)) return false;
+            if (pair.First.Walking is null)
+                return Matches(pair.First.Departure.Identity, pair.Second.Departure.Identity) &&
+                    Matches(pair.First.Arrival.Identity, pair.Second.Arrival.Identity);
+            return SameWalkingEvent(pair.First.Departure, pair.Second.Departure) && SameWalkingEvent(pair.First.Arrival, pair.Second.Arrival);
+        });
+    }
+
+    private static bool SameWalkingEvent(StopEvent left, StopEvent right) =>
+        left.PlannedTime is { } leftTime && right.PlannedTime is { } rightTime && (leftTime - rightTime).Duration() <= TimeSpan.FromSeconds(60) &&
+        SameStop(left.Identity.Stop, right.Identity.Stop);
+
     private static bool Present(string? value) => !string.IsNullOrWhiteSpace(value);
     private static bool Equal(string? left, string? right) => Present(left) && Present(right) && Normalize(left!) == Normalize(right!);
     private static string Normalize(string value) => string.Join(' ', value.Trim().ToUpperInvariant().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));

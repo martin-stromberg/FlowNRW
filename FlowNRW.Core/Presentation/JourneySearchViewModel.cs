@@ -185,8 +185,8 @@ public sealed class JourneySearchViewModel : ObservableObject
                 SetStatus("Aktualisierung fehlgeschlagen. Letzte bekannte Verbindungen werden angezeigt; bitte Datenstand beachten.");
                 return;
             }
-            var matches = selected is null ? [] : result.Items.Where(item => SameJourney(selected, item)).ToArray();
-            SelectedJourney = matches.Length == 1 && previous.Items.Count(item => SameJourney(item, matches[0])) == 1 ? matches[0] : null;
+            var matches = selected is null ? [] : result.Items.Where(item => RealtimeConsolidator.SameJourney(selected, item)).ToArray();
+            SelectedJourney = matches.Length == 1 && previous.Items.Count(item => RealtimeConsolidator.SameJourney(item, matches[0])) == 1 ? matches[0] : null;
             Result = result;
             SetStatus(selected is not null && SelectedJourney is null
                 ? "Die gewählte Verbindung ist nicht mehr eindeutig bestätigt. Bitte in der Ergebnisliste neu auswählen."
@@ -201,20 +201,6 @@ public sealed class JourneySearchViewModel : ObservableObject
         }
     }
 
-    private static bool SameJourney(Journey left, Journey right) => left.Legs.Count > 0 && left.Legs.Count == right.Legs.Count
-        && left.Legs.Zip(right.Legs).All(pair => SameEvent(pair.First.Departure, pair.Second.Departure)
-            && SameEvent(pair.First.Arrival, pair.Second.Arrival));
-
-    private static bool SameEvent(StopEvent left, StopEvent right)
-    {
-        var first = left.Identity;
-        var second = right.Identity;
-        return !string.IsNullOrWhiteSpace(first.Source) && first.Source == second.Source
-            && !string.IsNullOrWhiteSpace(first.TripId) && first.TripId == second.TripId
-            && !string.IsNullOrWhiteSpace(first.Stop.Source) && first.Stop.Source == second.Stop.Source
-            && !string.IsNullOrWhiteSpace(first.Stop.Id) && first.Stop.Id == second.Stop.Id
-            && first.PlannedTime is not null && first.PlannedTime == second.PlannedTime;
-    }
     /// <summary>Cancels only unfinished work.</summary>
     public void CancelPending()
     {

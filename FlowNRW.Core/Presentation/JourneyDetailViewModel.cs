@@ -18,7 +18,7 @@ public sealed class JourneyDetailViewModel : ObservableObject
         get
         {
             return Session.SelectedJourney is null
-                ? (string.IsNullOrWhiteSpace(Session.Status) ? "Keine Verbindung ausgewählt." : Session.Status)
+                ? "Keine Verbindung ausgewählt."
                 : JourneyPresentation.Detail(Session.SelectedJourney);
         }
     }
