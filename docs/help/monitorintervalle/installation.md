@@ -2,7 +2,7 @@
 
 ## Technische Konfiguration
 
-Es sind keine neuen Pakete oder Server nötig. `MauiProgram` registriert Einstellung, Frischeprüfung und Lebenszykluskoordination. Reguläre Builds speichern `refresh-settings.json` in `FileSystem.AppDataDirectory`. Inhalt ist ausschließlich eine Zahl: `0`, `30`, `60`, `120` oder `300`. Die Datei wird über die sichtbare Einstellung geändert; keine manuelle Migration ist erforderlich. Das iOS-Target enthält `UIBackgroundModes=fetch` und `BGTaskSchedulerPermittedIdentifiers=de.martinstromberg.flownrw.refresh`; eine dauerhafte Standortberechtigung wird nicht angefordert.
+Es sind keine neuen Pakete oder Server nötig. `MauiProgram` registriert Einstellung, Frischeprüfung und Lebenszykluskoordination. Reguläre Builds speichern `refresh-settings.json` in `FileSystem.AppDataDirectory`. Inhalt ist ausschließlich eine Zahl: `0`, `30`, `60`, `120` oder `300`. Die Datei wird über die sichtbare Einstellung geändert; keine manuelle Migration ist erforderlich. Das iOS-Target enthält `UIBackgroundModes=fetch` und `BGTaskSchedulerPermittedIdentifiers=de.martinstromberg.flow.refresh`; eine dauerhafte Standortberechtigung wird nicht angefordert.
 
 Nur der `UiTest`-Build verwendet `FLOWNRW_UI_TEST_REFRESH_SETTINGS` oder ersatzweise `FileSystem.CacheDirectory/UiTest/refresh-settings.json`. Dieser isolierte Pfad darf für Testneustarts wiederverwendet werden. Release-Einstellungen und Favoritendateien nicht für Tests löschen. Test-Fehlersteuerungen gehören ausschließlich zum Fixture-Build. Produktive Intervalle werden durch die Fixtures nicht beschleunigt.
 

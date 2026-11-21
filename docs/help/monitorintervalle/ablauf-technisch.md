@@ -30,7 +30,7 @@ Windows-Fensterdeaktivierung ist ein tatsächlicher Zustandswechsel, auch wenn d
 
 ## Begrenzte iOS-Hintergrundarbeit
 
-`IosBackgroundRefresh.Register` registriert `de.martinstromberg.flownrw.refresh` vor Abschluss von `FinishedLaunching`. `Info.plist` enthält diese Kennung und den Hintergrundmodus `fetch`. Beim Eintritt in den Hintergrund wird eine bestehende Anfrage derselben Kennung ersetzt; `EarliestBeginDate` liegt 15 Minuten später. Das ist weder ein Takt noch eine Ausführungsgarantie.
+`IosBackgroundRefresh.Register` registriert `de.martinstromberg.flow.refresh` vor Abschluss von `FinishedLaunching`. `Info.plist` enthält diese Kennung und den Hintergrundmodus `fetch`. Beim Eintritt in den Hintergrund (`SceneDelegate.DidEnterBackground` auf Scene-Ebene) wird eine bestehende Anfrage derselben Kennung ersetzt; `EarliestBeginDate` liegt 15 Minuten später. Das ist weder ein Takt noch eine Ausführungsgarantie.
 
 Der Callback läuft auf dem UI-Kontext. `RefreshLifecycle.RunBackgroundAsync` erlaubt nur einen Lauf bei inaktiver App, lädt die gespeicherte Einstellung und erneuert bei eingeschalteter Automatik veraltete Favoriten in Vierergruppen. Die bestehende Obergrenze von 100 Favoriten bleibt erhalten. Der komplette Lauf ist auf 20 Sekunden begrenzt; OS-Expiration und erneute Aktivierung brechen früher ab. `WaitAsync` und Revisionsprüfungen verhindern, dass nicht kooperative Provider den Abschluss blockieren oder verspätet neue Daten überschreiben. Der Adapter meldet den Abschluss einmal und plant eine spätere Anfrage.
 
