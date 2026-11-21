@@ -98,10 +98,17 @@ dem iOS-27-SDK erzeugt sein):
 - Die Ausgabe von `dotnet workload list` wird nicht nur geloggt,
   sondern für `RESOLVED_MAUI` geparst: Sie steuert die harte
   `>= 10.0.110`-Prüfung (`::error::`/Abbruch, gilt für Pin und
-  Band-Default gleichermaßen) sowie die MAUI-Pack-Bereinigung —
+  Band-Default gleichermaßen) sowie die Pack-Bereinigung —
   vorinstallierte `Microsoft.iOS.Sdk.net10.0_*`-/`Microsoft.Maui.*`-Packs
-  anderer Version werden entfernt (TPV-Resolution), bei MAUI exakt
-  die aufgelöste Version behalten.
+  anderer Version werden entfernt, damit die TPV-Resolution nicht ein
+  neueres Pack vor dem gepinnten Manifest wählt. Gelöscht wird nur auf
+  Version-Verzeichnis-Ebene: Das `maui`-Manifest verlangt z. B.
+  `Microsoft.Maui.Sdk` gleichzeitig in `10.0.110` (net10) und `9.0.120`
+  (net9) sowie `Microsoft.Maui.Templates.net9` — bei MAUI bleiben daher
+  Companion-Packs anderer Major-Linien und Pack-Ordner ohne die
+  aufgelöste Version unangetastet. Anschließend wird verifiziert, dass
+  der iOS-Pin und `Microsoft.Maui.Sdk/$RESOLVED_MAUI` noch vorhanden
+  sind.
 
 ## Geplante Review-Issues (Issue #20)
 
