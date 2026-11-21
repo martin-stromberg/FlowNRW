@@ -25,7 +25,7 @@ FlowNRW ist eine C#/.NET-MAUI-Anwendung für bundesweite Verbindungen und Abfahr
 - Interaktive Haltestellenkarte mit nativer Listenalternative und gelieferten Verbindungsverläufen; Kachel-Timeouts und ein Lade-Watchdog begrenzen den Kartenaufbau, sodass „Basiskarte wird geladen …" nicht hängen bleibt. [Bedienung und Kartenkonfiguration](docs/help/karte/beschreibung.md).
 - Expliziter aktueller Standort als Start/Ziel und nahe Haltestellen in Liste/Karte; Fehler erhalten die manuelle Nutzung. Nahe Haltestellen zeigen die Entfernung (Anbieterwert oder gekennzeichnete Luftlinie) statt interner Kennungen. [Bedienung und iOS-Prüfung](docs/help/standort/index.md). Native Windows-Fixtures und echter Windows-Standortversuch erfolgreich.
 - Modernes Design: Aktionsbuttons, Statuszeilen und die drei Tab-Symbole nutzen die Icon-Font Material Symbols Rounded (FILL0/FILL1, opsz 24) statt Unicode-Textglyphen; UI-Schrift ist Inter (SIL OFL), prominente Abfahrtszeiten JetBrains Mono (OFL). Status wie Ausfall, Verspätung und „Keine Echtzeitdaten" erscheinen als Chips aus Symbol plus Text. Seiten tragen ihren Titel nur in der Navigationsleiste — redundante In-Page-Überschriften sind entfernt. [Design-Dokumentation](docs/help/design/index.md).
-- iOS-Einstieg und Zielplattform vorhanden; [Visual-Studio-/iOS-Einrichtung und manuelle Prüfliste](docs/help/verbindungssuche/installation.md).
+- iOS-Einstieg und Zielplattform vorhanden; iOS-Pakete werden auf Basis des iOS-27-SDK (Xcode 27.2, Apple-Anforderung ITMS-90725) gebaut. [Visual-Studio-/iOS-Einrichtung, Werkzeugkette und manuelle Prüfliste](docs/help/verbindungssuche/installation.md).
 
 ## Projektstruktur
 
@@ -51,6 +51,7 @@ Die Version wird zentral in `Directory.Build.props` gepflegt (`0.0.1`) und in CI
 - Visual Studio 2026 mit ".NET Multi-platform App UI development" **oder** VS Code mit der
   .NET-MAUI-Extension
 - Node.js 22 (nur für die Release-Skripte / `npm run test:release-version`)
+- Für iOS-Entwicklung/-Auslieferung zusätzlich: Mac mit Release-**Xcode ≥ 27** (kein Beta), `Microsoft.iOS.Sdk` 27.x und `Microsoft.NET.Sdk.Maui` ≥ `10.0.110` auf dem .NET-SDK-Band `10.0.1xx` — Details in [Installation](docs/help/verbindungssuche/installation.md) und [iOS-Deployment](scripts/iOS-Deployment.md)
 
 Die fachliche Provider- und Cachekonfiguration mit sicheren Standardwerten ist in [Installation und Konfiguration](docs/help/fahrplanauskunft/installation.md) beschrieben.
 
@@ -137,7 +138,7 @@ Die historische [Verifikation der Verbindungssuche vom 16.09.2026](docs/help/ver
 
 ## CI/CD
 
-Die vorhandene GitHub-Actions-Konfiguration behält Windows-Build/Release sowie Core-Tests und Coverage bei. Eine iOS-CI- oder iOS-Deployment-Pipeline wird in diesem Projektabschnitt nicht eingeführt.
+Die vorhandene GitHub-Actions-Konfiguration behält Windows-Build/Release sowie Core-Tests und Coverage bei. Bei einer neuen Release-Version auf `staging` baut der Job `package-ios` zusätzlich eine signierte iOS-IPA auf dem `xcode-27`-Runner-Image (gepinnt: Xcode 27.2, `Microsoft.iOS.Sdk` `27.2.10000`, `Microsoft.NET.Sdk.Maui` `10.0.110`) und lädt sie zu TestFlight hoch — nur wenn `IOS_SIGNING_ENABLED=true` gesetzt ist. Details in [docs/CI-CD.md](docs/CI-CD.md).
 
 ## Roadmap
 

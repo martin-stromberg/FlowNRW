@@ -19,9 +19,9 @@ Ein regulärer Debug-/Releasebuild verwendet echte Fahrplandienste. Providerzugr
 
 ## iOS-Basis
 
-Das Projekt wählt auf macOS automatisch `net10.0-ios`; unter Windows aktiviert `EnableIos=true` dieses Ziel anstelle des Windows-Ziels. Die Mindestversion ist iOS 15.0. AppDelegate, Program und Info.plist sind vorhanden. Native iOS-Builds, Simulator-/Gerätestarts und Signierung wurden hier nicht ausgeführt; die Abnahme übernimmt der Nutzer.
+Das Projekt wählt auf macOS automatisch `net10.0-ios`; unter Windows aktiviert `EnableIos=true` dieses Ziel anstelle des Windows-Ziels. Die Mindestversion ist iOS 15.0. `AppDelegate`, `SceneDelegate` (UIScene-Lebenszyklus, u. a. `DidEnterBackground` für die Hintergrundplanung), `Program` und `Info.plist` sind vorhanden; die Plist deklariert `UIApplicationSceneManifest` sowie `CFBundleLocalizations` (en/de), und `PrivacyInfo.xcprivacy` liegt als `BundleResource` im Bundle-Root. Native iOS-Builds, Simulator-/Gerätestarts und Signierung wurden hier nicht ausgeführt; die Abnahme übernimmt der Nutzer.
 
-Für native iOS-Entwicklung sind ein Mac mit zur installierten .NET-iOS-Workload passendem Xcode, Simulator bzw. Gerät und bei Geräteausführung passende Apple-Signierung erforderlich. Auf Windows Visual Studio mit dem Mac verbinden; `EnableIos=true` beim Projektladen übergeben, etwa aus einer PowerShell, aus der Visual Studio anschließend gestartet wird:
+Für native iOS-Entwicklung sind ein Mac mit zur installierten .NET-iOS-Workload passendem Xcode, Simulator bzw. Gerät und bei Geräteausführung passende Apple-Signierung erforderlich. Für auslieferungsfähige Builds (App Store Connect) verlangt Apple seit der Meldung ITMS-90725 ein Binary auf Basis des iOS-27-SDKs; die geltende Werkzeugkette ist deshalb: **Release-Xcode ≥ 27** (kein Beta) auf dem Mac installiert und per `sudo xcode-select -s` aktiv, **`Microsoft.iOS.Sdk` 27.x**, **`Microsoft.NET.Sdk.Maui` ≥ `10.0.110`** (Pflicht wegen der UIScene-Lifecycle-Adoption) auf dem .NET-SDK-Band **`10.0.1xx`**. Referenzpaarung ist das CI-Pinning `Xcode_27.2` / `27.2.10000` / `10.0.110` in `.github/actions/package-ios/action.yml`; Einzelheiten stehen in [iOS-Deployment](../../../scripts/iOS-Deployment.md) und [CI-CD](../../CI-CD.md). Auf Windows Visual Studio mit dem Mac verbinden; `EnableIos=true` beim Projektladen übergeben, etwa aus einer PowerShell, aus der Visual Studio anschließend gestartet wird:
 
 ```powershell
 $env:EnableIos = 'true'
@@ -38,7 +38,7 @@ dotnet build FlowNRW/FlowNRW.csproj -c Debug -f net10.0-ios -p:EnableIos=true -p
 
 Den installierten Simulator über die lokale Entwicklungsumgebung auswählen und starten. Intel-Macs benötigen den passenden Simulator-Runtime-Identifier. Für Geräte das Ziel `ios-arm64` und lokale Signierungsdaten verwenden. Diese Befehle sind Einrichtungshinweise, kein bestandener iOS-Nachweis.
 
-Für den wiederholbaren Geräte-Deploy steht zusätzlich [`scripts/iOS-Deployment.ps1`](../../../scripts/iOS-Deployment.ps1) mit der zugehörigen [Anleitung](../../../scripts/iOS-Deployment.md) bereit. Das Skript baut auf dem Mac und kann die signierte App mit `xcrun devicectl` auf ein angegebenes Gerät installieren und starten. Von Windows aus kann derselbe Ablauf über SSH auf einem vorbereiteten Mac angestoßen werden.
+Für den wiederholbaren Geräte-Deploy steht zusätzlich [`scripts/iOS-Deployment.ps1`](../../../scripts/iOS-Deployment.ps1) mit der zugehörigen [Anleitung](../../../scripts/iOS-Deployment.md) bereit. Das Skript baut auf dem Mac und kann die signierte App mit `xcrun devicectl` auf ein angegebenes Gerät installieren und starten. Von Windows aus kann derselbe Ablauf über SSH auf einem vorbereiteten Mac angestoßen werden. Vor dem Build prüft `Assert-MacToolchain` die oben genannte iOS-27-Werkzeugkette — für `store` mit hartem Abbruch, für `build`/`simulator`/`device` als Warnung (Opt-out `-SkipToolchainCheck`).
 
 ## iOS-Prüfliste für den Nutzer
 

@@ -42,6 +42,49 @@ eine `.ipa` via `dotnet publish -p:ArchiveOnBuild=true`.
 Wenn das Skript direkt auf einem Mac lauft, funktionieren alle Aktionen
 (außer Pair-to-Mac-Parameter natuerlich nicht noetig).
 
+## Werkzeugvoraussetzungen (iOS 27 / Xcode 27)
+
+Apple verlangt fuer Uploads an App Store Connect ein Binary, das mit dem
+iOS-27-SDK (Release-Xcode >= 27) gebaut wurde (Meldung ITMS-90725). Fuer
+Auslieferungen via Pair-to-Mac bzw. direkt auf dem Mac gilt daher auf dem
+Build-Mac:
+
+- **Xcode >= 27 (Release, kein Beta)**, installiert und per
+  `sudo xcode-select -s /Applications/Xcode_27.x.app` aktiv. Beta-Builds
+  lehnt der App Store ab.
+- **`Microsoft.iOS.Sdk` 27.x** sowie **MAUI >= SR 11 (`10.0.110`)** —
+  letzteres wegen der von Apple ab Xcode 27 erzwungenen
+  UIScene-Lifecycle-Adoption (sonst Start-Crash).
+- Referenzpaarung ist das CI-Pinning in `.github/actions/package-ios/action.yml`:
+  `Xcode_27.2` / `Microsoft.iOS.Sdk` `27.2.10000` / `Microsoft.NET.Sdk.Maui`
+  `10.0.110` auf dem .NET-SDK-Band `10.0.1xx` (`global.json`-Pin `10.0.100` —
+  die iOS-/MAUI-Workload-Manifeste werden ausschliesslich auf der
+  Manifest-Linie `10.0.100` publiziert).
+
+Bereitstellungswege auf dem Build-Mac:
+
+1. **Xcode:** ueber die Apple-Developer-Downloads oder den Mac App Store
+   installieren und per `sudo xcode-select -s` aktivieren (kann nicht
+   gepairt werden — zwingend eine Mac-Installation).
+2. **.NET-/Workload-Seite:** Visual Studio auf Windows aktualisieren —
+   Pair-to-Mac provisioniert das passende SDK-Band (`10.0.1xx`), die
+   iOS-Workload 27.x und MAUI in den Remote-Cache
+   (`_DotNetRootRemoteDirectory`). Alternativ eine Standalone-.NET-
+   Installation (`10.0.1xx`) auf dem Mac plus
+   `dotnet workload install maui-ios`.
+
+Die Funktion `Assert-MacToolchain` im Skript prueft diesen Zustand vor
+jedem Build (`xcode-select -p`, `xcodebuild -version`, `xcrun --sdk
+iphoneos --show-sdk-version` sowie die installierten
+`Microsoft.iOS.Sdk.net10.0_*`-/`Microsoft.Maui.*`-Packversionen):
+
+- **`store`:** harter Abbruch bei Verstoss — **vor** dem
+  Buildnummer-Bump, damit keine `CFBundleVersion` verbrannt wird.
+- **`build` / `simulator` / `device`:** nur eine Warnung.
+- **`upload` / `list`:** keine Pruefung (kein Build).
+- Opt-out fuer alle Faelle: `-SkipToolchainCheck` (z. B. wenn der Check
+  wegen SSH-Problemen legitime lokale Builds blockieren wuerde).
+
 ## App Store / TestFlight (`store` und `upload`)
 
 ### Voraussetzungen
@@ -78,7 +121,9 @@ Wenn das Skript direkt auf einem Mac lauft, funktionieren alle Aktionen
 
 1. `Assert-StorePrerequisites` prueft alle Parameter, die Existenz der
    `.p8`-Datei (ausserhalb Repo) und dass `CodesignKey` kein
-   Development-Zertifikat ist.
+   Development-Zertifikat ist. Danach erzwingt `Assert-MacToolchain` die
+   iOS-27-Werkzeugkette auf dem Mac (siehe oben) — ein Abbruch hier
+   verbrennt keine `CFBundleVersion`.
 2. `ApplicationVersion` im csproj wird um 1 erhoeht (Apple akzeptiert jede
    `CFBundleVersion` nur einmal). Opt-out: `-NoBumpBuildNumber`.
 3. `dotnet publish -c Release -p:ArchiveOnBuild=true` mit

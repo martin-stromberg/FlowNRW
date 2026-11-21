@@ -257,7 +257,10 @@ jobs:
     name: package-ios
     needs: [detect-backmerge, version]
     if: needs.detect-backmerge.outputs.is_backmerge != 'true' && needs.version.outputs.changed == 'true' && vars.IOS_SIGNING_ENABLED == 'true'
-    runs-on: macos-latest
+    # macos-latest (macos-26) enthaelt ausschliesslich Xcode 26.x - das
+    # separate xcode-27-Image (GA seit 2026-10-15) traegt die Release-
+    # Versionen Xcode 27.0/27.1/27.2, die die Action explizit selektiert.
+    runs-on: xcode-27
     timeout-minutes: 45
     steps:
       - name: Checkout

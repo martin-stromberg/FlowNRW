@@ -28,7 +28,7 @@
 		<!-- Versions: $(Version) is defined in Directory.Build.props and overridden by CI via -p:Version.
 		     The Windows app manifest only accepts numeric X.Y.Z, so any pre-release suffix (e.g. "-rc.1") is stripped here. -->
 		<ApplicationDisplayVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(Version)', '-.*$', ''))</ApplicationDisplayVersion>
-		<ApplicationVersion>1</ApplicationVersion>
+		<ApplicationVersion>9</ApplicationVersion>
 
 		<!-- Unpackaged Windows app (plain .exe in a ZIP, no MSIX signing required), see https://aka.ms/MauiTemplateUnpackaged -->
 	</PropertyGroup>
@@ -51,6 +51,9 @@
 	  <CodesignProvision>VS: WildCard Development</CodesignProvision>
 	  <ProvisioningType>automatic</ProvisioningType>
 	</PropertyGroup>
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+	  <BundleResource Include="Platforms\iOS\PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<!-- App Icon -->

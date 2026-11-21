@@ -16,6 +16,8 @@ Feature-Branch
     ├→ staging-ci.yml "Pre-Release"
     │    ├→ dieselben Checks wie im PR
     │    ├→ version:   semantic-release --dry-run → X.Y.Z, RC-Nummer → vX.Y.Z-rc.N
+    │    ├→ package-ios: iOS-RC bauen + TestFlight-Upload
+    │    │   (nur wenn IOS_SIGNING_ENABLED=true)
     │    └→ prerelease: build-and-package → GitHub-Prerelease mit ZIP + update.json
     ├→ staging-to-main-promotion.yml (nach erfolgreichem Pre-Release)
     │    └→ Draft-PR staging → main, falls main hinter staging liegt
@@ -39,7 +41,7 @@ Tags: stabile Releases `vX.Y.Z`, Release Candidates `vX.Y.Z-rc.N`. Die Version i
 | --- | --- | --- |
 | `verify-pr-source.yml` | PR gegen `main` | Bricht ab, wenn der Quellbranch nicht `staging` ist |
 | `pr-staging-ci.yml` | PR gegen `staging` | Quality Gates (siehe unten); Back-Merge-PRs aus `main` werden erkannt und übersprungen |
-| `staging-ci.yml` ("Pre-Release") | Push auf `staging` | Quality Gates + RC-Prerelease |
+| `staging-ci.yml` ("Pre-Release") | Push auf `staging` | Quality Gates + RC-Prerelease + iOS-Paketierung (Job `package-ios`, nur wenn `IOS_SIGNING_ENABLED=true`) |
 | `staging-to-main-promotion.yml` | `workflow_run` von "Pre-Release" | Draft-PR `staging` → `main` (Label `automated-promotion`) |
 | `release.yml` | Push auf `main`, Tag `v*.*.*` | Stabiles Release inkl. Asset-Reparatur |
 | `sync-staging-with-main.yml` | Push auf `main` | PR `main` → `staging` (Label `automated-backmerge`) |
@@ -59,6 +61,47 @@ Composite Actions (`.github/actions/`):
 - `build-and-package`: Publish `FlowNRW/FlowNRW.csproj` (win-x64, self-contained, unpackaged,
   `-p:Version`), ZIP `FlowNRW-v<version>-win-x64.zip`, `release-metadata.json` im Publish-Output,
   `update.json` via `scripts/generate-update-manifest.mjs`.
+- `package-ios`: iOS-Paketierung für `net10.0-ios` — SDK-Band- und
+  Xcode-Pinning (siehe unten), `dotnet publish` mit Distribution-Signing,
+  `.ipa`-Sammlung und TestFlight-Upload via `iTMSTransporter`.
+
+### iOS-Paketierung (Job `package-ios`)
+
+Der Job `package-ios` in `staging-ci.yml` läuft nur, wenn der `version`-Job
+eine neue RC-Version ermittelt hat und die Repo-Variable
+`IOS_SIGNING_ENABLED=true` gesetzt ist. Er läuft auf dem Runner-Label
+`xcode-27` (`macos-latest`/`macos-26` enthält ausschließlich Xcode 26.x)
+und ruft die Composite Action `package-ios` mit den `IOS_*`-Secrets auf;
+das Ergebnis `release-ios.ipa` hängt der `prerelease`-Job ans
+GitHub-Prerelease.
+
+SDK-/Xcode-Pinning in der Action (Apple ITMS-90725 — Builds müssen mit
+dem iOS-27-SDK erzeugt sein):
+
+- `Select Xcode`: `sudo xcode-select -s /Applications/Xcode_27.2.app` —
+  der Image-Default driftet mit Image-Updates; schlägt die Auswahl fehl,
+  bricht der Job ab statt still gegen ein älteres SDK zu bauen.
+- `Setup .NET` + `global.json`-Pin: SDK-Band `10.0.1xx` (`global.json`
+  `10.0.100`, `rollForward: latestPatch`) — iOS-Workload-Manifeste
+  werden ausschließlich als `manifest-10.0.100` veröffentlicht; ein
+  Rollback-Pin ist daher nur unter Band `10.0.1xx` auflösbar.
+- Input `ios-workload-version` (Default `27.2.10000`) und Input
+  `maui-workload-version` (Default `10.0.110` — zugleich das Pflicht-
+  Minimum wegen der UIScene-Lifecycle-Adoption ab Xcode 27; die
+  MAUI-Manifest-Linie `10.0.100` endet bei `10.0.110`) werden per
+  Rollback-File gepinnt; `dotnet workload install` läuft mit
+  `--skip-manifest-update`.
+- Das Update läuft dreistufig: scheitert das kombinierte
+  Rollback-Update (iOS + MAUI), folgt ein kombinierter Retry
+  (transiente NuGet-Fehler) und danach ein iOS-only-Update — MAUI
+  fällt dann auf den Band-Default zurück.
+- Die Ausgabe von `dotnet workload list` wird nicht nur geloggt,
+  sondern für `RESOLVED_MAUI` geparst: Sie steuert die harte
+  `>= 10.0.110`-Prüfung (`::error::`/Abbruch, gilt für Pin und
+  Band-Default gleichermaßen) sowie die MAUI-Pack-Bereinigung —
+  vorinstallierte `Microsoft.iOS.Sdk.net10.0_*`-/`Microsoft.Maui.*`-Packs
+  anderer Version werden entfernt (TPV-Resolution), bei MAUI exakt
+  die aufgelöste Version behalten.
 
 ## Geplante Review-Issues (Issue #20)
 

@@ -17,6 +17,11 @@
         list      -> Verfuegbare Simulatoren/Geraete anzeigen (nur macOS)
         menu      -> Interaktives Menue
 
+    Werkzeugvoraussetzung auf dem Build-Mac (Apple ITMS-90725):
+        Release-Xcode >= 27 aktiv (xcode-select), Microsoft.iOS.Sdk 27.x
+        und MAUI >= 10.0.110 installiert. Das Skript prueft das vor dem
+        Build (Abbruch bei 'store', Warnung sonst; Opt-out -SkipToolchainCheck).
+
     Windows mit Pair-to-Mac:
         -ServerAddress, -ServerUser, -ServerPassword setzen (oder Umgebungsvariablen)
         -_DotNetRootRemoteDirectory ist fuer VS 2022:
@@ -75,6 +80,8 @@ param(
     [Parameter(HelpMessage = "Bei 'device' via SSH: App-Output (--console) nach dem Start streamen (Ctrl+C zum Loesen).")]
     [switch]$Console,
     [switch]$NoBumpBuildNumber,
+    [Parameter(HelpMessage = "Ueberspringt die Werkzeugketten-Pruefung auf dem Mac (Xcode >= 27, iOS-Workload 27.x, MAUI >= 10.0.110).")]
+    [switch]$SkipToolchainCheck,
     [string]$LogDir = "logs",
 
     [switch]$NoPrompt
@@ -92,6 +99,10 @@ $runningOnMacOS = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatf
 # /Users/<user>/Library/Caches/maui/PairToMac/SDKs/dotnet/
 if ($runningOnWindows -and $ServerUser -and -not $DotNetRootRemoteDirectory) {
     $DotNetRootRemoteDirectory = "/Users/$ServerUser/Library/Caches/maui/PairToMac/SDKs/dotnet/"
+}
+if ($runningOnWindows -and $DotNetRootRemoteDirectory -and -not $DotNetRootRemoteDirectory.EndsWith('/')) {
+    # Xamarin-Targets haengen 'packs' direkt an den Remote-Root - trailing Slash ist Pflicht.
+    $DotNetRootRemoteDirectory += '/'
 }
 
 function Get-RuntimeIdentifier {
@@ -545,6 +556,158 @@ function Assert-TransporterAvailable {
     exit 1
 }
 
+function Get-ToolchainCheckScript {
+    # Liefert Bash-Code, der die Werkzeugkette auf dem Mac als KEY:value-Zeilen
+    # ausgibt: aktives Xcode (Developer-Dir, Versionsstring, Major, Beta-
+    # Erkennung ueber Versionsstring und Developer-Dir-Pfad - Beta-Xcodes
+    # heissen Xcode-beta.app, der Versionsstring meldet kein 'beta'), die
+    # iphoneos-SDK-Version sowie die installierten
+    # Microsoft.iOS.Sdk.net10.0_*- und Microsoft.Maui.*-Packversionen unter dem
+    # effektiven Remote-.NET-Root (_DotNetRootRemoteDirectory, Pair-to-Mac-
+    # Cache) und den Standalone-Installationsorten. Eine Packliste, die nicht
+    # ermittelt werden kann (kein packs/-Verzeichnis gefunden), meldet
+    # PACK_SEARCH:0 - die Auswertung in Assert-MacToolchain behandelt das
+    # nur als Warnung, weil die Pfade je nach Installation variieren.
+    $remoteRoot = ""
+    if ($DotNetRootRemoteDirectory) { $remoteRoot = $DotNetRootRemoteDirectory -replace "'", "'\''" }
+    return @"
+DEVDIR=`$(xcode-select -p 2>/dev/null || true)
+echo "XCODE_DIR:`$DEVDIR"
+XVB=`$(xcodebuild -version 2>/dev/null || true)
+XV=`$(printf '%s\n' "`$XVB" | head -1)
+echo "XCODE_VERSION:`$XV"
+XMAJ=`$(printf '%s' "`$XV" | sed -n 's/^Xcode \([0-9][0-9]*\).*/\1/p')
+echo "XCODE_MAJOR:`$XMAJ"
+if printf '%s' "`$XVB `$DEVDIR" | grep -qi 'beta'; then echo "XCODE_BETA:1"; else echo "XCODE_BETA:0"; fi
+SDKV=`$(xcrun --sdk iphoneos --show-sdk-version 2>/dev/null || true)
+echo "IOS_SDK_VERSION:`$SDKV"
+echo "IOS_SDK_MAJOR:`${SDKV%%.*}"
+PACK_SEARCH=0
+IOS27=""
+IOS_ALL=""
+MAUI_ALL=""
+for ROOT in '$remoteRoot' /usr/local/share/dotnet "`$HOME/.dotnet"; do
+    [ -n "`$ROOT" ] || continue
+    PACKS="`$ROOT/packs"
+    [ -d "`$PACKS" ] || continue
+    PACK_SEARCH=1
+    for D in "`$PACKS"/Microsoft.iOS.Sdk.net10.0_*/*/; do
+        [ -d "`$D" ] || continue
+        G=`$(basename "`$(dirname "`$D")")
+        V=`$(basename "`$D")
+        IOS_ALL="`${IOS_ALL:+`$IOS_ALL,}`$G/`$V"
+        case "`$G" in
+            Microsoft.iOS.Sdk.net10.0_27.*) IOS27="`${IOS27:+`$IOS27,}`$V" ;;
+        esac
+    done
+    for D in "`$PACKS"/Microsoft.Maui.*/*/; do
+        [ -d "`$D" ] || continue
+        G=`$(basename "`$(dirname "`$D")")
+        V=`$(basename "`$D")
+        MAUI_ALL="`${MAUI_ALL:+`$MAUI_ALL,}`$G/`$V"
+    done
+done
+echo "PACK_SEARCH:`$PACK_SEARCH"
+echo "IOS27_PACKS:`$IOS27"
+echo "IOS_PACKS:`$IOS_ALL"
+echo "MAUI_PACKS:`$MAUI_ALL"
+"@
+}
+
+function Assert-MacToolchain {
+    # Erzwingt die iOS-27-Werkzeugvoraussetzungen auf dem Build-Mac:
+    # Release-Xcode >= 27 (kein Beta), iphoneos-SDK >= 27 sowie eine
+    # Microsoft.iOS.Sdk-27.x-Packversion und MAUI >= 10.0.110 (UIScene-
+    # Lifecycle-Pflicht ab Xcode 27). -Strict bricht hart ab ('store' erzeugt
+    # Store-Artefakte), sonst wird nur gewarnt.
+    param([switch]$Strict)
+
+    if ($SkipToolchainCheck) {
+        Write-Host "Werkzeugketten-Pruefung uebersprungen (-SkipToolchainCheck)." -ForegroundColor Gray
+        return
+    }
+
+    $lines = @(Invoke-MacCapture -Script (Get-ToolchainCheckScript))
+    if (-not $runningOnMacOS -and $LASTEXITCODE -eq 255) {
+        $sshMsg = "SSH-Verbindung zu ${ServerUser}@${ServerAddress} fehlgeschlagen - Werkzeugketten-Pruefung konnte nicht ausgefuehrt werden."
+        if ($Strict) {
+            Write-Host "Fehler: $sshMsg" -ForegroundColor Red
+            Write-Host "Schluesselbasiertes SSH pruefen oder die Pruefung mit -SkipToolchainCheck abschalten." -ForegroundColor Yellow
+            exit 1
+        }
+        Write-Host "Warnung: $sshMsg" -ForegroundColor Yellow
+        return
+    }
+
+    $kv = @{}
+    foreach ($l in $lines) {
+        $i = "$l".IndexOf(':')
+        if ($i -gt 0) { $kv[$l.Substring(0, $i)] = $l.Substring($i + 1) }
+    }
+
+    Write-Host "Mac-Werkzeugkette:" -ForegroundColor Cyan
+    Write-Host "  Xcode:      $($kv['XCODE_VERSION'])  ($($kv['XCODE_DIR']))" -ForegroundColor Gray
+    Write-Host "  iOS-SDK:    $($kv['IOS_SDK_VERSION'])" -ForegroundColor Gray
+    Write-Host "  iOS-Packs:  $(if ($kv['IOS_PACKS']) { $kv['IOS_PACKS'] } else { '(keine gefunden)' })" -ForegroundColor Gray
+    Write-Host "  MAUI-Packs: $(if ($kv['MAUI_PACKS']) { $kv['MAUI_PACKS'] } else { '(keine gefunden)' })" -ForegroundColor Gray
+
+    $violations = @()
+    $xcodeMajor = 0
+    [void][int]::TryParse($kv['XCODE_MAJOR'], [ref]$xcodeMajor)
+    if ($xcodeMajor -lt 27) {
+        $violations += "Aktives Xcode ist < 27 (gefunden: '$($kv['XCODE_VERSION'])')"
+    }
+    if ($kv['XCODE_BETA'] -eq '1') {
+        $violations += "Aktives Xcode ist eine Beta-Version ('$($kv['XCODE_VERSION'])') - der App Store lehnt Beta-Builds ab"
+    }
+    $sdkMajor = 0
+    [void][int]::TryParse($kv['IOS_SDK_MAJOR'], [ref]$sdkMajor)
+    if ($sdkMajor -lt 27) {
+        $violations += "iphoneos-SDK < 27 (gefunden: '$($kv['IOS_SDK_VERSION'])')"
+    }
+    if ($kv['PACK_SEARCH'] -eq '1') {
+        if (-not $kv['IOS27_PACKS']) {
+            $violations += "Keine Microsoft.iOS.Sdk.net10.0_27.*-Packversion installiert (gefunden: $($kv['IOS_PACKS']))"
+        }
+        $mauiOk = $false
+        foreach ($entry in @($kv['MAUI_PACKS'] -split ',' | Where-Object { $_ })) {
+            $v = ($entry -split '/')[-1]
+            $parsed = $null
+            if ([version]::TryParse($v, [ref]$parsed) -and $parsed -ge [version]'10.0.110') { $mauiOk = $true; break }
+        }
+        if (-not $mauiOk) {
+            $violations += "Kein MAUI-Pack >= 10.0.110 installiert (UIScene-Lifecycle-Pflicht ab Xcode 27; gefunden: $($kv['MAUI_PACKS']))"
+        }
+    }
+    else {
+        Write-Host "Warnung: Kein .NET-packs-Verzeichnis auf dem Mac gefunden - Workload-Packs konnten nicht geprueft werden." -ForegroundColor Yellow
+    }
+
+    if ($violations.Count -eq 0) {
+        Write-Host "Werkzeugketten-Pruefung bestanden (iOS 27 / Xcode 27)." -ForegroundColor Green
+        return
+    }
+
+    $hints = @(
+        "Behebung:",
+        "  1) Release-Xcode >= 27 auf dem Mac installieren und aktivieren:",
+        "       sudo xcode-select -s /Applications/Xcode_27.x.app",
+        "  2) .NET-SDK-Band 10.0.1xx + iOS-Workload 27.x + MAUI >= 10.0.110 bereitstellen:",
+        "       - Visual Studio auf Windows aktualisieren (Pair-to-Mac provisioniert den Remote-Cache), oder",
+        "       - auf dem Mac: Standalone-.NET 10.0.1xx + 'dotnet workload install maui-ios'",
+        "  3) Alternativ die Pruefung fuer diesen Lauf umgehen: -SkipToolchainCheck"
+    )
+    if ($Strict) {
+        Write-Host "Fehler: Die Mac-Werkzeugkette erfuellt die iOS-27-Anforderungen nicht:" -ForegroundColor Red
+        foreach ($v in $violations) { Write-Host "  - $v" -ForegroundColor Red }
+        foreach ($h in $hints) { Write-Host $h -ForegroundColor Yellow }
+        exit 1
+    }
+    Write-Host "Warnung: Die Mac-Werkzeugkette erfuellt die iOS-27-Anforderungen (noch) nicht:" -ForegroundColor Yellow
+    foreach ($v in $violations) { Write-Host "  - $v" -ForegroundColor Yellow }
+    Write-Host "Ein 'store'-Lauf wuerde an dieser Stelle abbrechen. Details: scripts/iOS-Deployment.md" -ForegroundColor Yellow
+}
+
 function Update-BuildNumber {
     $csprojPath = $projectPath
     $content = [System.IO.File]::ReadAllText($csprojPath)
@@ -780,6 +943,9 @@ function Invoke-Store {
     Assert-StorePrerequisites -Action "store"
     Assert-CodesigningForAction -Action "store"
     Assert-TransporterAvailable
+    # Vor Update-BuildNumber: ein Toolchain-Abbruch darf keinen
+    # CFBundleVersion-Bump verbrennen.
+    Assert-MacToolchain -Strict
     if (-not $NoBumpBuildNumber) { Update-BuildNumber }
     Invoke-Build
     $ipa = Get-LatestIpa
@@ -844,6 +1010,7 @@ function Invoke-Build {
 
     $rspLines = New-Object System.Collections.Generic.List[string]
     Add-PropertyLine -List $rspLines -Name "RuntimeIdentifier" -Value $rid
+    Add-PropertyLine -List $rspLines -Name "EnableIos" -Value "true"
 
     if ($runningOnWindows) {
         Add-PropertyLine -List $rspLines -Name "ServerAddress" -Value $ServerAddress
@@ -1001,6 +1168,7 @@ function Invoke-Run {
 
     $rspLines = New-Object System.Collections.Generic.List[string]
     Add-PropertyLine -List $rspLines -Name "RuntimeIdentifier" -Value $rid
+    Add-PropertyLine -List $rspLines -Name "EnableIos" -Value "true"
 
     if ($runningOnWindows) {
         Add-PropertyLine -List $rspLines -Name "ServerAddress" -Value $ServerAddress
@@ -1096,6 +1264,7 @@ function Invoke-DeviceViaSsh {
 
     $rspLines = New-Object System.Collections.Generic.List[string]
     Add-PropertyLine -List $rspLines -Name "RuntimeIdentifier" -Value $rid
+    Add-PropertyLine -List $rspLines -Name "EnableIos" -Value "true"
     Add-PropertyLine -List $rspLines -Name "ServerAddress" -Value $ServerAddress
     Add-PropertyLine -List $rspLines -Name "ServerUser" -Value $ServerUser
     Add-PropertyLine -List $rspLines -Name "TcpPort" -Value $TcpPort
@@ -1176,6 +1345,7 @@ function Invoke-SimulatorViaSsh {
 
     $rspLines = New-Object System.Collections.Generic.List[string]
     Add-PropertyLine -List $rspLines -Name "RuntimeIdentifier" -Value $rid
+    Add-PropertyLine -List $rspLines -Name "EnableIos" -Value "true"
     Add-PropertyLine -List $rspLines -Name "ServerAddress" -Value $ServerAddress
     Add-PropertyLine -List $rspLines -Name "ServerUser" -Value $ServerUser
     Add-PropertyLine -List $rspLines -Name "TcpPort" -Value $TcpPort
@@ -1288,11 +1458,15 @@ try {
     switch ($Action) {
         "build" {
             Assert-PairToMacAvailable
+            Assert-MacToolchain
             Invoke-Build
         }
         "simulator" {
-            if ($runningOnWindows -and $ServerAddress -and $ServerUser) { Invoke-SimulatorViaSsh }
-            else { Assert-PairToMacAvailable; Invoke-Run -Action "simulator" }
+            if ($runningOnWindows -and $ServerAddress -and $ServerUser) {
+                Assert-MacToolchain
+                Invoke-SimulatorViaSsh
+            }
+            else { Assert-PairToMacAvailable; Assert-MacToolchain; Invoke-Run -Action "simulator" }
         }
         "device" {
             if ($runningOnWindows -and $ServerAddress -and $ServerUser) {
@@ -1302,11 +1476,13 @@ try {
                     Write-Host "Geraete anzeigen: -Action list" -ForegroundColor Yellow
                     exit 1
                 }
+                Assert-MacToolchain
                 Invoke-DeviceViaSsh
             }
             else {
                 Assert-PairToMacAvailable
                 Assert-CodesigningForAction -Action "device"
+                Assert-MacToolchain
                 Invoke-Run -Action "device"
             }
         }
