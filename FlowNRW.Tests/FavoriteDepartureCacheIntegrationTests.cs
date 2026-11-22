@@ -218,7 +218,6 @@ public sealed class FavoriteDepartureCacheIntegrationTests
     {
         internal IReadOnlyList<DepartureCacheEntry> Entries { get; set; } = [];
         public Task<IReadOnlyList<DepartureCacheEntry>> LoadAsync(CancellationToken cancellationToken = default) => Task.FromResult(Entries);
-        public Task SaveAsync(IReadOnlyList<DepartureCacheEntry> entries, CancellationToken cancellationToken = default) { Entries = entries.ToArray(); return Task.CompletedTask; }
         public Task UpsertAsync(DepartureCacheEntry entry, CancellationToken cancellationToken = default)
         {
             Entries = Entries.Where(current => current.Key != entry.Key).Append(entry).ToArray();
