@@ -131,7 +131,6 @@ public sealed class ConnectionFavoriteTests
     private sealed class MemoryDepartureCache(params DepartureCacheEntry[] entries) : IDepartureCacheStore
     {
         public Task<IReadOnlyList<DepartureCacheEntry>> LoadAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<DepartureCacheEntry>>(entries);
-        public Task SaveAsync(IReadOnlyList<DepartureCacheEntry> value, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task UpsertAsync(DepartureCacheEntry entry, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task RemoveAsync(DepartureCacheKey key, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task RemoveOrphansAsync(IReadOnlyCollection<DepartureCacheKey> keys, CancellationToken cancellationToken = default) => Task.CompletedTask;

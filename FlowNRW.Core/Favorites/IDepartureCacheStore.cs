@@ -10,12 +10,6 @@ public interface IDepartureCacheStore
     /// <returns>Cached boards keyed by their technical favorite identities.</returns>
     Task<IReadOnlyList<DepartureCacheEntry>> LoadAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Atomically replaces all cached boards after validating their technical identities.</summary>
-    /// <param name="entries">Last-known successful boards.</param>
-    /// <param name="cancellationToken">Request cancellation.</param>
-    /// <returns>Successful durable replacement completion.</returns>
-    Task SaveAsync(IReadOnlyList<DepartureCacheEntry> entries, CancellationToken cancellationToken = default);
-
     /// <summary>Atomically adds or replaces one successful board without removing other favorites' boards.</summary>
     /// <param name="entry">Last-known successful board.</param>
     /// <param name="cancellationToken">Request cancellation.</param>

@@ -14,7 +14,8 @@ public sealed class DepartureCacheStoreTests
         try
         {
             var store = new JsonDepartureCacheStore(path);
-            await store.SaveAsync([Entry("first", "same", 51), Entry("second", "same", 52)]);
+            await store.UpsertAsync(Entry("first", "same", 51));
+            await store.UpsertAsync(Entry("second", "same", 52));
 
             var restored = await store.LoadAsync();
 
@@ -45,13 +46,13 @@ public sealed class DepartureCacheStoreTests
             var store = new JsonDepartureCacheStore(path);
             if (original == "[]")
             {
-                await store.SaveAsync([Entry("source", "id", 51)]);
+                await store.UpsertAsync(Entry("source", "id", 51));
                 Assert.Single(await store.LoadAsync());
             }
             else
             {
                 await Assert.ThrowsAsync<InvalidDataException>(() => store.LoadAsync());
-                await Assert.ThrowsAsync<InvalidDataException>(() => store.SaveAsync([Entry("source", "id", 51)]));
+                await Assert.ThrowsAsync<InvalidDataException>(() => store.UpsertAsync(Entry("source", "id", 51)));
                 Assert.Equal(original, await File.ReadAllTextAsync(path));
             }
         }
@@ -69,27 +70,47 @@ public sealed class DepartureCacheStoreTests
             await File.WriteAllTextAsync(path, original);
             var store = new JsonDepartureCacheStore(path);
             await Assert.ThrowsAsync<InvalidDataException>(() => store.LoadAsync());
-            await Assert.ThrowsAsync<InvalidDataException>(() => store.SaveAsync([Entry("source", "id", 51)]));
+            await Assert.ThrowsAsync<InvalidDataException>(() => store.UpsertAsync(Entry("source", "id", 51)));
             Assert.Equal(original, await File.ReadAllTextAsync(path));
         }
         finally { File.Delete(path); }
     }
 
-    /// <summary>Failed results and duplicate or incomplete technical identities are rejected before persistence.</summary>
+    /// <summary>Failed results and incomplete technical identities are rejected before persistence.</summary>
     [Fact]
-    public async Task Save_InvalidEntriesAreRejected()
+    public async Task Upsert_InvalidEntriesAreRejected()
     {
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
         try
         {
             var store = new JsonDepartureCacheStore(path);
-            await Assert.ThrowsAsync<InvalidDataException>(() => store.SaveAsync([Entry("source", "id", 51) with
+            await Assert.ThrowsAsync<InvalidDataException>(() => store.UpsertAsync(Entry("source", "id", 51) with
             {
                 Result = new ProviderResult<StopEvent> { ErrorCode = "offline" }
-            }]));
-            await Assert.ThrowsAsync<InvalidDataException>(() => store.SaveAsync([Entry("source", "id", 51), Entry("source", "id", 52)]));
-            await Assert.ThrowsAsync<InvalidDataException>(() => store.SaveAsync([Entry("", "id", 51)]));
+            }));
+            await Assert.ThrowsAsync<InvalidDataException>(() => store.UpsertAsync(Entry("", "id", 51)));
             Assert.False(File.Exists(path));
+        }
+        finally { File.Delete(path); }
+    }
+
+    /// <summary>A foreign-written file with duplicate technical identities is rejected while reading.</summary>
+    [Fact]
+    public async Task Load_DuplicateIdentitiesAreRejected()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
+        try
+        {
+            var store = new JsonDepartureCacheStore(path);
+            await store.UpsertAsync(Entry("source", "id", 51));
+            var written = await File.ReadAllTextAsync(path);
+            var entry = written.Trim('[', ']');
+            var original = $"[{entry},{entry}]";
+            await File.WriteAllTextAsync(path, original);
+
+            await Assert.ThrowsAsync<InvalidDataException>(() => store.LoadAsync());
+
+            Assert.Equal(original, await File.ReadAllTextAsync(path));
         }
         finally { File.Delete(path); }
     }
@@ -102,7 +123,8 @@ public sealed class DepartureCacheStoreTests
         try
         {
             var store = new JsonDepartureCacheStore(path);
-            await store.SaveAsync([Entry("keep", "one", 51), Entry("orphan", "two", 52)]);
+            await store.UpsertAsync(Entry("keep", "one", 51));
+            await store.UpsertAsync(Entry("orphan", "two", 52));
 
             await store.RemoveOrphansAsync([new("keep", "one")]);
 
@@ -122,7 +144,8 @@ public sealed class DepartureCacheStoreTests
         try
         {
             var store = new JsonDepartureCacheStore(path);
-            await store.SaveAsync([Entry("first", "same", 51), Entry("second", "same", 52)]);
+            await store.UpsertAsync(Entry("first", "same", 51));
+            await store.UpsertAsync(Entry("second", "same", 52));
             await store.UpsertAsync(Entry("first", "same", 53) with { Result = new ProviderResult<StopEvent> { Source = "replacement", Items = [] } });
 
             var restored = await store.LoadAsync();
