@@ -1,6 +1,5 @@
 using FlowNRW.Core.Presentation;
 using FlowNRW.Core.Refresh;
-using System.ComponentModel;
 
 namespace FlowNRW;
 
@@ -9,23 +8,20 @@ public sealed class ResultsPage : ContentPage
 {
     private readonly ResultsViewModel model;
     private readonly VerticalStackLayout journeys = new() { Spacing = 16 };
-    private readonly ForegroundState foreground;
+    private readonly RefreshLifecycle lifecycle;
     private readonly RefreshSettingsViewModel settings;
-    private readonly RefreshFreshness freshness;
     private readonly ConnectionFavoritesViewModel connectionFavorites;
     private readonly Label connectionHeader;
     private readonly Button favoriteConnection;
-    private bool active;
     /// <summary>Creates the result view.</summary>
     /// <param name="model">Session projection.</param>
-    /// <param name="foreground">Shared active-window state.</param>
     /// <param name="settings">Committed automatic refresh preference.</param>
-    /// <param name="freshness">Realtime age policy.</param>
+    /// <param name="lifecycle">Central refresh lifecycle owning resume composition.</param>
     /// <param name="connectionFavorites">Explicitly saved reusable journey endpoint pairs.</param>
-    public ResultsPage(ResultsViewModel model, ForegroundState foreground, RefreshSettingsViewModel settings, RefreshFreshness freshness,
+    public ResultsPage(ResultsViewModel model, RefreshSettingsViewModel settings, RefreshLifecycle lifecycle,
         ConnectionFavoritesViewModel connectionFavorites)
     {
-        this.foreground = foreground; this.settings = settings; this.freshness = freshness;
+        this.settings = settings; this.lifecycle = lifecycle;
         this.connectionFavorites = connectionFavorites;
         this.model = model; BindingContext = model.Session; Title = "Verbindungen";
         var layout = new VerticalStackLayout { Spacing = 16, Padding = 16 };
@@ -57,44 +53,35 @@ public sealed class ResultsPage : ContentPage
     /// <inheritdoc />
     protected override async void OnAppearing()
     {
-        base.OnAppearing(); active = true;
-        foreground.PropertyChanged += ForegroundChanged;
+        base.OnAppearing();
+        lifecycle.RefreshFailed += LifecycleRefreshFailed;
         model.Session.PropertyChanged += SessionChanged;
         RenderJourneys();
         try { await connectionFavorites.LoadAsync(); }
         catch (Exception) { Title = "Gespeicherte Verbindungen konnten nicht geladen werden"; }
         RenderConnectionHeader();
         await settings.LoadAsync();
-        await ResumeAsync();
+        await lifecycle.NotifyVisibleAsync(RefreshArea.Journeys, this);
     }
 
     /// <inheritdoc />
     protected override void OnDisappearing()
     {
-        active = false;
-        foreground.PropertyChanged -= ForegroundChanged;
+        lifecycle.NotifyHidden(RefreshArea.Journeys, this);
+        lifecycle.RefreshFailed -= LifecycleRefreshFailed;
         model.Session.PropertyChanged -= SessionChanged;
-        model.Session.CancelPending();
         base.OnDisappearing();
     }
 
-    private void SessionChanged(object? sender, PropertyChangedEventArgs args)
+    private void SessionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
         if (args.PropertyName == nameof(model.Session.Journeys)) RenderJourneys();
         if (args.PropertyName is nameof(model.Session.Result) or nameof(model.Session.Origin) or nameof(model.Session.Destination)) RenderConnectionHeader();
     }
 
-    private async void ForegroundChanged(object? sender, PropertyChangedEventArgs args)
+    private void LifecycleRefreshFailed(object? sender, RefreshFailedEventArgs args)
     {
-        if (!foreground.IsActive) model.Session.CancelPending();
-        else await ResumeAsync();
-    }
-
-    private async Task ResumeAsync()
-    {
-        if (!active || !foreground.IsActive || !settings.IsLoaded || settings.IntervalSeconds == 0) return;
-        try { await model.Session.RefreshIfStaleAsync(freshness); }
-        catch (Exception) { Title = "Aktualisierung fehlgeschlagen"; }
+        if (args.Area == RefreshArea.Journeys) Title = "Aktualisierung fehlgeschlagen";
     }
 
     private void RenderJourneys()
