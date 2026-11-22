@@ -102,7 +102,7 @@ public static class MauiProgram
             services.GetRequiredService<IStopSearchService>(), services.GetRequiredService<IDepartureService>(),
             services.GetRequiredService<IDepartureNavigation>(), providerOptions.MaxSearchLength,
             services.GetRequiredService<ICurrentLocationService>(), services.GetRequiredService<IStopSearchService>(),
-            services.GetRequiredService<IFavoriteStore>(), services.GetRequiredService<IDepartureCacheStore>(), services.GetRequiredService<RefreshFreshness>()));
+            services.GetRequiredService<DepartureBoardCache>()));
         builder.Services.AddSingleton<StopSearchPage>();
         builder.Services.AddTransient<DeparturePage>();
         builder.Services.AddSingleton<ForegroundState>();
@@ -152,9 +152,12 @@ public static class MauiProgram
 #endif
             return new JsonDepartureCacheStore(path);
         });
+        builder.Services.AddSingleton(services => new DepartureBoardCache(services.GetRequiredService<IDepartureCacheStore>(),
+            services.GetRequiredService<IFavoriteStore>(), services.GetRequiredService<RefreshFreshness>()));
         builder.Services.AddSingleton(services => new FavoriteHomeViewModel(services.GetRequiredService<IFavoriteStore>(),
             () => services.GetRequiredService<IDepartureService>(), services.GetRequiredService<ICurrentLocationService>(),
-            services.GetRequiredService<IStopSearchService>(), services.GetRequiredService<IDepartureCacheStore>(), services.GetRequiredService<RefreshFreshness>()));
+            services.GetRequiredService<IStopSearchService>(), services.GetRequiredService<IDepartureCacheStore>(), services.GetRequiredService<RefreshFreshness>(),
+            services.GetRequiredService<DepartureBoardCache>()));
         builder.Services.AddSingleton<HomePage>();
         var mapOptions = new MapOptions
         {

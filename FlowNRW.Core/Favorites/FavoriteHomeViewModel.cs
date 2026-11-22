@@ -13,6 +13,7 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     private readonly ICurrentLocationService location;
     private readonly IStopSearchService? nearby;
     private readonly IDepartureCacheStore? cache;
+    private readonly DepartureBoardCache? boards;
     private readonly RefreshFreshness freshness;
     private readonly SemaphoreSlim persistence = new(1, 1);
     private readonly List<FavoriteMonitorViewModel> savedOrder = [];
@@ -29,11 +30,14 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     /// <param name="nearby">Nearby-stop service.</param>
     /// <param name="cache">Optional durable cache for last-known departure boards.</param>
     /// <param name="freshness">Policy deciding whether a durable board is fresh enough to display.</param>
+    /// <param name="boards">Shared restore facade; defaults to an instance over the supplied cache.</param>
     public FavoriteHomeViewModel(IFavoriteStore store, Func<IDepartureService> departureFactory, ICurrentLocationService location,
-        IStopSearchService? nearby = null, IDepartureCacheStore? cache = null, RefreshFreshness? freshness = null)
+        IStopSearchService? nearby = null, IDepartureCacheStore? cache = null, RefreshFreshness? freshness = null,
+        DepartureBoardCache? boards = null)
     {
         this.store = store; this.departureFactory = departureFactory; this.location = location; this.nearby = nearby; this.cache = cache;
         this.freshness = freshness ?? new RefreshFreshness(new TransitCacheOptions());
+        this.boards = boards ?? (cache is null ? null : new DepartureBoardCache(cache, store, this.freshness));
         LocationCommand = new AsyncRelayCommand(UpdateDistancesAsync, () => !IsLocating, _ => SetLocationFailure("Standort konnte nicht ermittelt werden."));
     }
 
@@ -74,15 +78,13 @@ public sealed class FavoriteHomeViewModel : ObservableObject
                 try
                 {
                     var keys = savedOrder.Select(card => new DepartureCacheKey(card.Stop.Source, card.Stop.Id)).ToArray();
-                    var cached = await cache.LoadAsync(cancellationToken).WaitAsync(cancellationToken);
+                    var restored = await boards!.RestoreBoardsAsync(keys, cancellationToken).WaitAsync(cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
                     await cache.RemoveOrphansAsync(keys, cancellationToken).WaitAsync(cancellationToken);
-                    var byKey = cached.Where(entry => keys.Contains(entry.Key)).ToDictionary(entry => entry.Key);
-                    var now = DateTimeOffset.Now;
                     foreach (var card in savedOrder)
                     {
-                        if (byKey.TryGetValue(new DepartureCacheKey(card.Stop.Source, card.Stop.Id), out var entry))
-                            card.Restore(entry, now, freshness);
+                        if (restored.TryGetValue(new DepartureCacheKey(card.Stop.Source, card.Stop.Id), out var board))
+                            card.Restore(board);
                     }
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }

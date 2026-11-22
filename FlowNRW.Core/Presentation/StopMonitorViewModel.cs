@@ -11,9 +11,7 @@ public sealed class StopMonitorViewModel : ObservableObject
     private readonly IDepartureNavigation navigation;
     private readonly IStopSearchService nearby;
     private readonly ICurrentLocationService? location;
-    private readonly IFavoriteStore? favoriteStore;
-    private readonly IDepartureCacheStore? departureCache;
-    private readonly RefreshFreshness freshness;
+    private readonly DepartureBoardCache? boards;
     private CancellationTokenSource? request;
     private long revision;
     private bool opening;
@@ -31,19 +29,15 @@ public sealed class StopMonitorViewModel : ObservableObject
     /// <param name="maxSearchLength">Configured search length.</param>
     /// <param name="location">Optional current-location provider.</param>
     /// <param name="nearbySearch">Independent nearby lookup scope.</param>
-    /// <param name="favoriteStore">Saved favorites used to authorize persistent cache reads.</param>
-    /// <param name="departureCache">Persistent cache containing saved favorite boards.</param>
-    /// <param name="freshness">Freshness policy applied before a persistent cache board is displayed.</param>
+    /// <param name="boards">Shared facade restoring persisted boards of saved favorites.</param>
     public StopMonitorViewModel(IStopSearchService search, IDepartureService departures, IDepartureNavigation navigation, int maxSearchLength, ICurrentLocationService? location = null, IStopSearchService? nearbySearch = null,
-        IFavoriteStore? favoriteStore = null, IDepartureCacheStore? departureCache = null, RefreshFreshness? freshness = null)
+        DepartureBoardCache? boards = null)
     {
         Lookup = new EndpointViewModel(search, maxSearchLength);
         this.departures = departures;
         this.navigation = navigation;
         this.location = location;
-        this.favoriteStore = favoriteStore;
-        this.departureCache = departureCache;
-        this.freshness = freshness ?? new RefreshFreshness(new TransitCacheOptions());
+        this.boards = boards;
         nearby = nearbySearch ?? search;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => SelectedStop is not null && !IsBusy,
             _ => SetStatus("Aktualisierung fehlgeschlagen. Bitte erneut versuchen."));
@@ -227,12 +221,23 @@ public sealed class StopMonitorViewModel : ObservableObject
         var key = (stop.Source, stop.Id);
         var cached = retained ?? ReadSession(key);
         var version = revision;
-        if (cached is null) cached = await ReadPersistentFavoriteCacheAsync(stop, version);
+        if (cached is null && boards is not null)
+        {
+            using var source = new CancellationTokenSource();
+            request = source;
+            try
+            {
+                cached = (await boards.RestoreBoardAsync(stop, source.Token))?.Result;
+            }
+            catch (OperationCanceledException) { opening = false; return; }
+            catch (Exception) { }
+            finally { if (ReferenceEquals(request, source)) request = null; }
+        }
         if (version != revision || SelectedStop != stop) { opening = false; return; }
         Result = cached is null ? null : cached with
         {
-            Items = cached.Items.Where(item => EffectiveTime(item) is { } time && time >= DateTimeOffset.Now)
-                .OrderBy(item => EffectiveTime(item)!.Value).ToArray()
+            Items = cached.Items.Where(item => DepartureBoardCache.EffectiveTime(item) is { } time && time >= DateTimeOffset.Now)
+                .OrderBy(item => DepartureBoardCache.EffectiveTime(item)!.Value).ToArray()
         };
         LastAttempt = null;
         SetStatus("Abfahrten werden geladen …");
@@ -290,8 +295,8 @@ public sealed class StopMonitorViewModel : ObservableObject
             {
                 Result = result with
                 {
-                    Items = result.Items.Where(item => EffectiveTime(item) is not { } time || time >= started)
-                        .OrderBy(item => EffectiveTime(item) ?? DateTimeOffset.MaxValue).ToArray()
+                    Items = result.Items.Where(item => DepartureBoardCache.EffectiveTime(item) is not { } time || time >= started)
+                        .OrderBy(item => DepartureBoardCache.EffectiveTime(item) ?? DateTimeOffset.MaxValue).ToArray()
                 };
                 StoreSession(SelectedStop, Result);
                 SetStatus(result.Warnings.Count > 0 || result.IsFallback || result.IsStale
@@ -330,9 +335,6 @@ public sealed class StopMonitorViewModel : ObservableObject
         RefreshBindings();
     }
 
-    private static DateTimeOffset? EffectiveTime(StopEvent item) => item.Realtime.ActualTime
-        ?? (item.PlannedTime is { } planned ? planned + (item.Realtime.Delay ?? TimeSpan.Zero) : null);
-
     private ProviderResult<StopEvent>? ReadSession((string Source, string Id) key)
     {
         if (!sessionBoards.TryGetValue(key, out var cached)) return null;
@@ -355,20 +357,6 @@ public sealed class StopMonitorViewModel : ObservableObject
     }
 
     private sealed record SessionBoard(ProviderResult<StopEvent> Result, long Order);
-
-    private async Task<ProviderResult<StopEvent>?> ReadPersistentFavoriteCacheAsync(Stop stop, long version)
-    {
-        if (favoriteStore is null || departureCache is null) return null;
-        try
-        {
-            var favorites = await favoriteStore.LoadAsync();
-            if (version != revision || !favorites.Any(item => item.Source == stop.Source && item.Id == stop.Id)) return null;
-            var entry = (await departureCache.LoadAsync()).FirstOrDefault(item => item.Source == stop.Source && item.StopId == stop.Id);
-            return version == revision && entry is not null && !freshness.IsStale(entry.Result) ? entry.Result : null;
-        }
-        catch (OperationCanceledException) { return null; }
-        catch (Exception) { return null; }
-    }
 
     private static bool IsComplete(ProviderResult<StopEvent> result) => result.ErrorCode is null && result.Warnings.Count == 0 && !result.IsFallback && !result.IsStale;
 

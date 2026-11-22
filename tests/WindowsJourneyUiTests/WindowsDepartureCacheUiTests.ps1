@@ -1,4 +1,4 @@
-param([Parameter(Mandatory = $true)][string]$Exe, [string]$ScreenshotDirectory, [switch]$InventoryOnly, [switch]$ExpiredOnly, [switch]$DetailRetention)
+param([Parameter(Mandatory = $true)][string]$Exe, [string]$ScreenshotDirectory, [switch]$InventoryOnly, [switch]$ExpiredOnly, [switch]$DetailRetention, [switch]$MonitorStale)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
@@ -155,6 +155,36 @@ try {
     Click 'ToggleFavorite0'
     Assert ((Name 'FavoriteLines0') -match 'RE 1') 'Collapsing a favorite retains its line overview'
     Assert (Test-Path $env:FLOWNRW_UI_TEST_DEPARTURE_CACHE) 'Successful favorite response created an isolated departure cache'
+
+    if ($MonitorStale) {
+        $departureCacheFile = $env:FLOWNRW_UI_TEST_DEPARTURE_CACHE
+        function PatchRetrievedAt { [IO.File]::WriteAllText($departureCacheFile, ((Get-Content $departureCacheFile -Raw) -replace '"RetrievedAt":"[^"]+"', '"RetrievedAt":"2000-01-01T00:00:00+00:00"')) }
+        PatchRetrievedAt
+        $env:FLOWNRW_UI_TEST_SCENARIO = 'cache-start-error'
+        StartApp
+        Click 'OpenHomeStops'; SetText 'StopQuery' 'Favorite Far'; Click 'FindStops'; Click 'StopMatch0'
+        AwaitVisible 'Departure0' | Out-Null
+        Assert ((Name 'Departure0') -match 'RE 1 .*Stand 1') ('Stale persisted board is displayed on monitor open; actual: ' + (Name 'Departure0'))
+        AwaitText 'MonitorStatus' 'Letzte bekannte|fehlgeschlagen'
+        AwaitVisible 'MonitorNotice' | Out-Null
+        Assert ((Name 'Departure0') -match 'RE 1 .*Stand 1') 'Failed monitor refresh retains the displayed stale board and its notice'
+        $env:FLOWNRW_UI_TEST_SCENARIO = 'cache-start-slow-nearby'
+        PatchRetrievedAt
+        StartApp
+        Click 'OpenHomeStops'; SetText 'StopQuery' 'Favorite Far'; Click 'FindStops'; Click 'StopMatch0'
+        AwaitVisible 'Departure0' | Out-Null
+        Assert ((Name 'Departure0') -match 'RE 1 .*Stand 1' -and (Name 'Departure0') -notmatch 'Live') ('Cached board is shown before the delayed live refresh; actual: ' + (Name 'Departure0'))
+        AwaitText 'Departure0' 'Live Stand'
+        Write-Output 'PASS native monitor stale restore regression'
+        [IO.File]::WriteAllText($env:FLOWNRW_UI_TEST_FAVORITES, '[]')
+        $env:FLOWNRW_UI_TEST_SCENARIO = 'success'
+        StartApp
+        Click 'OpenHomeStops'; SetText 'StopQuery' 'Favorite Far'; Click 'FindStops'; Click 'StopMatch0'
+        Assert ($null -eq (Find 'Departure0')) ('Non-favorite does not display the matching persisted board; actual: ' + (Find 'Departure0').Current.Name)
+        AwaitText 'Departure0' 'RE 1'
+        Write-Output 'PASS native monitor membership regression'
+        return
+    }
 
     if ($InventoryOnly) {
         $env:FLOWNRW_UI_TEST_SCENARIO = 'cache-lines-bc'

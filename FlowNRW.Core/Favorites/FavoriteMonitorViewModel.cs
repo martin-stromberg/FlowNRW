@@ -81,20 +81,14 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
         return freshness.IsStale(Result) ? RefreshCoreAsync(true, cancellationToken) : Task.CompletedTask;
     }
 
-    /// <summary>Restores a successful board only when it belongs to this card and still has future departures.</summary>
-    /// <param name="entry">Cached board keyed by technical favorite identity.</param>
-    /// <param name="now">Current instant used to reject expired departures.</param>
-    /// <param name="freshness">Policy used to reject stale cached provider responses.</param>
+    /// <summary>Applies an already projected persistent board, keeping its line inventory even without departures.</summary>
+    /// <param name="board">Filtered and stale-marked board distributed by technical favorite identity.</param>
     /// <returns>Whether a usable local board was applied.</returns>
-    internal bool Restore(DepartureCacheEntry entry, DateTimeOffset now, RefreshFreshness freshness)
+    internal bool Restore(RestoredDepartureBoard board)
     {
-        if (entry.Key.Source != Stop.Source || entry.Key.Id != Stop.Id) return false;
-        var storedLines = entry.Lines ?? [];
-        Lines = SortedLines(storedLines.Count > 0 ? storedLines : entry.Result.Items.Select(LineName));
-        var retained = entry.Result.Items.Where(item => EffectiveTime(item) is { } time && time >= now)
-            .OrderBy(item => EffectiveTime(item)!.Value).ToArray();
-        if (retained.Length == 0) { RefreshBindings(); return false; }
-        Result = entry.Result with { Items = retained, IsStale = entry.Result.IsStale || freshness.IsStale(entry.Result) };
+        Lines = board.Lines;
+        if (board.Result is null) { RefreshBindings(); return false; }
+        Result = board.Result;
         LastAttempt = null;
         Status = "Letzter Stand wird aktualisiert …";
         RefreshBindings();
@@ -127,20 +121,20 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
             {
                 Result = result with
                 {
-                    Items = result.Items.Where(item => EffectiveTime(item) is { } time && time >= started)
-                        .OrderBy(item => EffectiveTime(item)!.Value).ToArray()
+                    Items = result.Items.Where(item => DepartureBoardCache.EffectiveTime(item) is { } time && time >= started)
+                        .OrderBy(item => DepartureBoardCache.EffectiveTime(item)!.Value).ToArray()
                 };
                 Status = result.Warnings.Count > 0 || result.IsFallback || result.IsStale
                     ? "Daten möglicherweise unvollständig oder veraltet."
                     : Items.Count == 0 ? "Keine nächsten Abfahrten gefunden." : $"{Items.Count} Abfahrten · {(automatic ? "automatisch" : "manuell")} aktualisiert.";
                 if (IsComplete(result))
                 {
-                    Lines = SortedLines(result.Items.Select(LineName));
+                    Lines = DepartureBoardCache.SortLines(result.Items.Select(DepartureBoardCache.LineName));
                     Notify(nameof(Lines));
                     var cached = Result with
                     {
-                        Items = Result.Items.Where(item => EffectiveTime(item) is { } time && time >= started)
-                            .OrderBy(item => EffectiveTime(item)!.Value).ToArray()
+                        Items = Result.Items.Where(item => DepartureBoardCache.EffectiveTime(item) is { } time && time >= started)
+                            .OrderBy(item => DepartureBoardCache.EffectiveTime(item)!.Value).ToArray()
                     };
                     try { if (persist is not null) await persist(new DepartureCacheEntry { Source = Stop.Source, StopId = Stop.Id, Result = cached, Lines = Lines }); }
                     catch (Exception) { }
@@ -154,18 +148,11 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
     }
 
     private static bool IsComplete(ProviderResult<StopEvent> result) => result.ErrorCode is null && result.Warnings.Count == 0 && !result.IsFallback && !result.IsStale;
-    private static string LineName(StopEvent item) => item.Line?.Name ?? item.Identity.Line ?? string.Empty;
 
     private void EnrichLines(ProviderResult<StopEvent> result)
     {
-        Lines = SortedLines(result.Items.Select(LineName).Concat(Lines));
+        Lines = DepartureBoardCache.SortLines(result.Items.Select(DepartureBoardCache.LineName).Concat(Lines));
         Notify(nameof(Lines));
-    }
-
-    private static string[] SortedLines(IEnumerable<string> lines)
-    {
-        return lines.Where(line => !string.IsNullOrWhiteSpace(line))
-            .Distinct(StringComparer.Ordinal).OrderBy(line => line, StringComparer.Ordinal).ToArray();
     }
 
     /// <summary>Cancels removed or departed cards and rejects uncooperative late responses.</summary>
@@ -180,9 +167,6 @@ public sealed class FavoriteMonitorViewModel : ObservableObject
     {
         DistanceMeters = distance; Notify(nameof(DistanceMeters)); Notify(nameof(DistanceLabel));
     }
-
-    private static DateTimeOffset? EffectiveTime(StopEvent item) => item.Realtime.ActualTime
-        ?? (item.PlannedTime is { } planned ? planned + (item.Realtime.Delay ?? TimeSpan.Zero) : null);
 
     private void SetFailure()
     {
