@@ -1,4 +1,5 @@
 using FlowNRW.Core.Favorites;
+using FlowNRW.Core.Presentation;
 using FlowNRW.Core.Refresh;
 using FlowNRW.Core.Transit;
 
@@ -155,17 +156,48 @@ internal sealed class LifecycleFixture
     internal ControlledLocation Location { get; } = new();
     internal List<ControlledDepartureService> Services { get; } = [];
     internal FavoriteHomeViewModel Home { get; }
+    internal ControlledDepartureService MonitorService { get; } = new();
+    internal StopMonitorViewModel Monitor { get; }
+    internal ControlledRoutingService Routing { get; } = new();
+    internal RecordingNavigation JourneyNavigation { get; } = new();
+    internal JourneySearchViewModel Journeys { get; }
     internal ForegroundState Foreground { get; } = new();
+    internal RefreshSettingsViewModel Settings { get; }
     internal RefreshLifecycle Lifecycle { get; }
 
     internal LifecycleFixture(int count, int interval = 60, TimeProvider? clock = null)
     {
         Store = new() { Stops = Enumerable.Range(0, count).Select(i => new Stop { Id = i.ToString(), Source = "fixture" }).ToArray() };
         Home = new(Store, () => { var service = new ControlledDepartureService(); Services.Add(service); return service; }, Location);
-        Lifecycle = new(Foreground, new(new ControlledRefreshSettingsStore { Loaded = interval }), Home, new(new(), Clock), clock);
+        Monitor = new(new ControlledSearchService(), MonitorService, new DepartureTestNavigation(), 100);
+        Journeys = new(new(new ControlledSearchService(), 100), new(new ControlledSearchService(), 100), Routing, JourneyNavigation);
+        Settings = new(new ControlledRefreshSettingsStore { Loaded = interval });
+        Lifecycle = new(Foreground, Settings, Home, Monitor, Journeys, new(new(), Clock), clock);
     }
 
     internal void Complete(int index) => Services[index].Pending[0].SetResult(new() { RetrievedAt = Clock.Now });
+
+    /// <summary>Opens a stop and completes its first refresh with stale data, so resumes refresh it again.</summary>
+    internal async Task SeedMonitorAsync()
+    {
+        var open = Monitor.OpenNearbyFromHomeAsync(new Address { Name = "stop", Stop = new Stop { Id = "monitor", Source = "fixture" } });
+        MonitorService.Pending[0].SetResult(new() { Source = "seed", RetrievedAt = Clock.Now.AddMinutes(-5) });
+        await open;
+    }
+
+    /// <summary>Runs one search with a stale result so the session qualifies for a resume.</summary>
+    internal async Task SeedJourneysAsync()
+    {
+        Journeys.Origin.SetSelectedAddress(new Address { Name = "origin", Coordinate = new GeoCoordinate(51, 7) });
+        Journeys.Destination.SetSelectedAddress(new Address { Name = "destination", Coordinate = new GeoCoordinate(51, 7) });
+        var search = Journeys.SearchAsync();
+        Routing.Pending[0].SetResult(new()
+        {
+            RetrievedAt = Clock.Now.AddMinutes(-5),
+            Items = [new Journey { Legs = [new JourneyLeg { Departure = new StopEvent { Identity = new TripIdentity { TripId = "seed" } } }] }]
+        });
+        await search;
+    }
 }
 
 internal sealed class LifecycleFavorites : IFavoriteStore

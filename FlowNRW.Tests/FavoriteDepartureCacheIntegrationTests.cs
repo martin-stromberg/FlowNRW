@@ -20,7 +20,7 @@ public sealed class FavoriteDepartureCacheIntegrationTests
         var card = Assert.Single(home.Cards);
         Assert.Equal("cached", card.Result?.Source);
         Assert.Contains("Letzter Stand", card.Status);
-        var refresh = home.RefreshAtStartupAsync();
+        var refresh = home.RefreshForOccasionAsync(FlowNRW.Core.Refresh.RefreshOccasion.Startup, new FlowNRW.Core.Refresh.RefreshFreshness(new TransitCacheOptions()));
         var provider = Assert.Single(services);
         Assert.Single(provider.Pending);
         provider.Pending[0].SetResult(Result("live", DateTimeOffset.Now.AddMinutes(6)));
@@ -56,7 +56,7 @@ public sealed class FavoriteDepartureCacheIntegrationTests
         var retained = Assert.Single(card.Items);
         Assert.True(retained.PlannedTime > DateTimeOffset.Now);
 
-        var refresh = home.RefreshAtStartupAsync();
+        var refresh = home.RefreshForOccasionAsync(FlowNRW.Core.Refresh.RefreshOccasion.Startup, new FlowNRW.Core.Refresh.RefreshFreshness(new TransitCacheOptions()));
         Assert.Single(services[0].Pending);
         services[0].Pending[0].SetException(new IOException());
         await refresh;

@@ -1,6 +1,5 @@
 using FlowNRW.Core.Presentation;
 using FlowNRW.Core.Refresh;
-using System.ComponentModel;
 
 namespace FlowNRW;
 
@@ -8,23 +7,20 @@ namespace FlowNRW;
 public sealed class JourneyDetailPage : ContentPage
 {
     private readonly JourneyDetailViewModel model;
-    private readonly ForegroundState foreground;
+    private readonly RefreshLifecycle lifecycle;
     private readonly RefreshSettingsViewModel settings;
-    private readonly RefreshFreshness freshness;
     private readonly VerticalStackLayout sections = new() { Spacing = 16, AutomationId = "JourneyDetails" };
     private readonly AsyncRelayCommand showMap;
-    private bool active;
 
     /// <summary>Creates the detail page.</summary>
     /// <param name="model">Selected journey projection.</param>
     /// <param name="map">Shared map snapshot.</param>
-    /// <param name="foreground">Shared active-window state.</param>
     /// <param name="settings">Committed automatic refresh preference.</param>
-    /// <param name="freshness">Realtime age policy.</param>
+    /// <param name="lifecycle">Central refresh lifecycle owning resume composition.</param>
     public JourneyDetailPage(JourneyDetailViewModel model, FlowNRW.Core.Maps.MapViewModel map,
-        ForegroundState foreground, RefreshSettingsViewModel settings, RefreshFreshness freshness)
+        RefreshSettingsViewModel settings, RefreshLifecycle lifecycle)
     {
-        this.model = model; this.foreground = foreground; this.settings = settings; this.freshness = freshness;
+        this.model = model; this.settings = settings; this.lifecycle = lifecycle;
         BindingContext = model; Title = "Verbindungsdetails";
         var layout = new VerticalStackLayout { Padding = 16, Spacing = 16 };
         showMap = new AsyncRelayCommand(async () =>
@@ -63,40 +59,31 @@ public sealed class JourneyDetailPage : ContentPage
     /// <inheritdoc />
     protected override async void OnAppearing()
     {
-        base.OnAppearing(); active = true;
-        foreground.PropertyChanged += ForegroundChanged;
+        base.OnAppearing();
+        lifecycle.RefreshFailed += LifecycleRefreshFailed;
         model.Session.PropertyChanged += SessionChanged;
         RenderDetails();
         await settings.LoadAsync();
-        await ResumeAsync();
+        await lifecycle.NotifyVisibleAsync(RefreshArea.Journeys, this);
     }
 
     /// <inheritdoc />
     protected override void OnDisappearing()
     {
-        active = false;
-        foreground.PropertyChanged -= ForegroundChanged;
+        lifecycle.NotifyHidden(RefreshArea.Journeys, this);
+        lifecycle.RefreshFailed -= LifecycleRefreshFailed;
         model.Session.PropertyChanged -= SessionChanged;
-        model.Session.CancelPending();
         base.OnDisappearing();
     }
 
-    private void SessionChanged(object? sender, PropertyChangedEventArgs args)
+    private void SessionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {
         if (args.PropertyName == nameof(model.Session.SelectedJourney)) RenderDetails();
     }
 
-    private async void ForegroundChanged(object? sender, PropertyChangedEventArgs args)
+    private void LifecycleRefreshFailed(object? sender, RefreshFailedEventArgs args)
     {
-        if (!foreground.IsActive) model.Session.CancelPending();
-        else await ResumeAsync();
-    }
-
-    private async Task ResumeAsync()
-    {
-        if (!active || !foreground.IsActive || !settings.IsLoaded || settings.IntervalSeconds == 0) return;
-        try { await model.Session.RefreshIfStaleAsync(freshness); }
-        catch (Exception) { Title = "Aktualisierung fehlgeschlagen"; }
+        if (args.Area == RefreshArea.Journeys) Title = "Aktualisierung fehlgeschlagen";
     }
 
     private void RenderDetails()

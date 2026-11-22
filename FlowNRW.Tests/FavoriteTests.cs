@@ -1,6 +1,7 @@
 using FlowNRW.Core.Favorites;
 using FlowNRW.Core.Maps;
 using FlowNRW.Core.Presentation;
+using FlowNRW.Core.Refresh;
 using FlowNRW.Core.Transit;
 
 namespace FlowNRW.Tests;
@@ -74,7 +75,7 @@ public sealed class FavoriteTests
             () => { var service = new ControlledDepartureService(); services.Add(service); return service; }, new ControlledLocation());
         await home.LoadAsync();
         var first = home.Cards[0]; var second = home.Cards[1];
-        var loading = home.RefreshMissingAsync();
+        var loading = home.RefreshForOccasionAsync(RefreshOccasion.CardsAdded, new RefreshFreshness(new TransitCacheOptions()));
         await first.RefreshAsync();
         Assert.Single(services[0].Pending);
         services[1].Pending[0].SetResult(new() { Source = "b" });
@@ -84,7 +85,7 @@ public sealed class FavoriteTests
         services[0].Pending[0].SetResult(new() { Source = "late" });
         await loading;
         Assert.Null(first.Result); Assert.Same(second, Assert.Single(home.Cards));
-        await home.RefreshMissingAsync();
+        await home.RefreshForOccasionAsync(RefreshOccasion.CardsAdded, new RefreshFreshness(new TransitCacheOptions()));
         Assert.Single(services[1].Pending);
     }
 

@@ -98,13 +98,31 @@ public sealed class FavoriteHomeViewModel : ObservableObject
         finally { persistence.Release(); }
     }
 
+    /// <summary>Runs the refresh step belonging to an occasion; callers pick the trigger, not the step.</summary>
+    /// <param name="occasion">Trigger to dispatch.</param>
+    /// <param name="freshness">Shared realtime freshness policy; the startup occasion refreshes regardless of age.</param>
+    /// <param name="cancellationToken">Visible page or background execution lifetime.</param>
+    /// <returns>Whether the refresh finished successfully; start and card-added occasions always report success.</returns>
+    public Task<bool> RefreshForOccasionAsync(RefreshOccasion occasion, RefreshFreshness freshness, CancellationToken cancellationToken = default)
+    {
+        return occasion switch
+        {
+            RefreshOccasion.Startup => Report(RefreshAtStartupAsync()),
+            RefreshOccasion.CardsAdded => Report(RefreshMissingAsync(freshness)),
+            _ => RefreshStaleAsync(freshness, cancellationToken)
+        };
+
+        static async Task<bool> Report(Task step) { await step; return true; }
+    }
+
     /// <summary>Starts independent initial loads for empty or expired boards without repeating completed requests.</summary>
+    /// <param name="freshness">Policy deciding which retained boards qualify for renewal.</param>
     /// <returns>All initial requests finishing or being cancelled.</returns>
-    public Task RefreshMissingAsync() => Task.WhenAll(Cards.Where(card => freshness.IsStale(card.Result) && !card.IsBusy).Select(card => card.RefreshAsync()));
+    private Task RefreshMissingAsync(RefreshFreshness freshness) => Task.WhenAll(Cards.Where(card => freshness.IsStale(card.Result) && !card.IsBusy).Select(card => card.RefreshAsync()));
 
     /// <summary>Starts a regular non-blocking provider refresh for every current card, including restored local boards.</summary>
     /// <returns>All started refreshes finishing or being cancelled.</returns>
-    public Task RefreshAtStartupAsync() => Task.WhenAll(Cards.Where(card => !card.IsBusy).Select(card => card.RefreshAutomaticallyAsync()));
+    private Task RefreshAtStartupAsync() => Task.WhenAll(Cards.Where(card => !card.IsBusy).Select(card => card.RefreshAutomaticallyAsync()));
 
     /// <summary>Loads nearby stops for the same explicit position used for favorite distances.</summary>
     /// <param name="cancellationToken">Cancels the current location or nearby-stop lookup.</param>
@@ -153,7 +171,7 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     /// <param name="freshness">Shared realtime freshness policy.</param>
     /// <param name="cancellationToken">Visible page or background execution lifetime.</param>
     /// <returns>Whether all eligible cards finished with a current successful response.</returns>
-    public async Task<bool> RefreshStaleAsync(RefreshFreshness freshness, CancellationToken cancellationToken = default)
+    private async Task<bool> RefreshStaleAsync(RefreshFreshness freshness, CancellationToken cancellationToken = default)
     {
         await LoadAsync(cancellationToken);
         if (!loaded) return false;
