@@ -70,12 +70,12 @@ public sealed class ConnectionFavoriteTests
         var stop = Stop("saved");
         var departures = new ControlledDepartureService();
         var model = new StopMonitorViewModel(new ControlledSearchService(), departures, new DepartureTestNavigation(), 100,
-            favoriteStore: new MemoryFavorites(stop), departureCache: new MemoryDepartureCache(new DepartureCacheEntry
+            boards: new DepartureBoardCache(new MemoryDepartureCache(new DepartureCacheEntry
             {
                 Source = stop.Source,
                 StopId = stop.Id,
                 Result = new() { Source = "cached", Items = [new StopEvent { PlannedTime = DateTimeOffset.Now.AddMinutes(8) }] }
-            }));
+            }), new MemoryFavorites(stop)));
         var opening = model.OpenNearbyFromHomeAsync(new Address { Name = stop.Name, Stop = stop });
         Assert.Equal("cached", model.Result?.Source);
         departures.Pending[0].SetResult(new() { Source = "live", Items = [new StopEvent { PlannedTime = DateTimeOffset.Now.AddMinutes(9) }] });
@@ -83,21 +83,45 @@ public sealed class ConnectionFavoriteTests
         Assert.Equal("live", model.Result?.Source);
     }
 
-    /// <summary>An expired persistent board is not displayed before the live request.</summary>
+    /// <summary>A stale persistent board is displayed marked stale through the stop search, then replaced by live data.</summary>
     [Fact]
-    public async Task StopSearch_DoesNotDisplayStalePersistentBoard()
+    public async Task StopSearch_DisplaysStalePersistentBoardMarked()
     {
         var stop = Stop("stale");
         var departures = new ControlledDepartureService();
         var clock = new TransitTestClock { Now = DateTimeOffset.UtcNow };
         var freshness = new FlowNRW.Core.Refresh.RefreshFreshness(new TransitCacheOptions { RealtimeTimeToLive = TimeSpan.FromSeconds(1) }, clock);
         var model = new StopMonitorViewModel(new ControlledSearchService(), departures, new DepartureTestNavigation(), 100,
-            favoriteStore: new MemoryFavorites(stop), departureCache: new MemoryDepartureCache(new DepartureCacheEntry
+            boards: new DepartureBoardCache(new MemoryDepartureCache(new DepartureCacheEntry
             {
                 Source = stop.Source,
                 StopId = stop.Id,
                 Result = new() { Source = "stale", RetrievedAt = clock.Now.AddMinutes(-1), Items = [new StopEvent { PlannedTime = DateTimeOffset.Now.AddMinutes(8) }] }
-            }), freshness: freshness);
+            }), new MemoryFavorites(stop), freshness));
+        var opening = model.OpenNearbyFromHomeAsync(new Address { Name = stop.Name, Stop = stop });
+        var restored = model.Result;
+        Assert.NotNull(restored);
+        Assert.Equal("stale", restored.Source);
+        Assert.True(restored.IsStale);
+        departures.Pending[0].SetResult(new() { Source = "live", Items = [new StopEvent { PlannedTime = DateTimeOffset.Now.AddMinutes(9) }] });
+        await opening;
+        Assert.Equal("live", model.Result?.Source);
+        Assert.False(model.Result!.IsStale);
+    }
+
+    /// <summary>A cache entry for a stop that is not a saved favorite is ignored before the live request.</summary>
+    [Fact]
+    public async Task StopSearch_PersistentBoardForNonFavoriteIsIgnored()
+    {
+        var stop = Stop("other");
+        var departures = new ControlledDepartureService();
+        var model = new StopMonitorViewModel(new ControlledSearchService(), departures, new DepartureTestNavigation(), 100,
+            boards: new DepartureBoardCache(new MemoryDepartureCache(new DepartureCacheEntry
+            {
+                Source = stop.Source,
+                StopId = stop.Id,
+                Result = new() { Source = "cached", Items = [new StopEvent { PlannedTime = DateTimeOffset.Now.AddMinutes(8) }] }
+            }), new MemoryFavorites()));
         var opening = model.OpenNearbyFromHomeAsync(new Address { Name = stop.Name, Stop = stop });
         Assert.Null(model.Result);
         departures.Pending[0].SetResult(new() { Source = "live", Items = [new StopEvent { PlannedTime = DateTimeOffset.Now.AddMinutes(9) }] });
