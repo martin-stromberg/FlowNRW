@@ -20,23 +20,22 @@ public sealed class DeparturePage : ContentPage
     private readonly TransitVisuals.NoticeToggle monitorNotice;
     private bool active;
     private long appearance;
-    private readonly RefreshFreshness freshness;
-    private CancellationTokenSource? resume;
+    private readonly RefreshLifecycle lifecycle;
 
     /// <summary>Creates the departure board.</summary>
     /// <param name="model">Shared monitor session.</param>
     /// <param name="favorites">Persisted technical stop selections.</param>
     /// <param name="settings">Shared refresh interval.</param>
     /// <param name="foreground">Active window state.</param>
-    /// <param name="freshness">Shared realtime age policy.</param>
+    /// <param name="lifecycle">Central refresh lifecycle owning resume composition.</param>
     public DeparturePage(StopMonitorViewModel model, FavoriteHomeViewModel favorites,
-        RefreshSettingsViewModel settings, ForegroundState foreground, RefreshFreshness freshness)
+        RefreshSettingsViewModel settings, ForegroundState foreground, RefreshLifecycle lifecycle)
     {
         this.model = model;
         this.favorites = favorites;
         this.settings = settings;
         this.foreground = foreground;
-        this.freshness = freshness;
+        this.lifecycle = lifecycle;
         refreshLoop = new RefreshLoop(model.RefreshAutomaticallyAsync, model.CancelPending);
         BindingContext = model;
         SetBinding(TitleProperty, new Binding(nameof(model.Title)));
@@ -108,6 +107,9 @@ public sealed class DeparturePage : ContentPage
         base.OnAppearing();
         active = true;
         var version = ++appearance;
+        _ = lifecycle.NotifyVisibleAsync(RefreshArea.Monitor, this);
+        lifecycle.RefreshFailed += LifecycleRefreshFailed;
+        lifecycle.ResumeCompleted += LifecycleResumeCompleted;
         settings.Changed += SettingsChanged;
         foreground.PropertyChanged += ForegroundChanged;
         model.PropertyChanged += ModelChanged;
@@ -125,14 +127,14 @@ public sealed class DeparturePage : ContentPage
     {
         active = false;
         appearance++;
-        resume?.Cancel();
-        resume = null;
+        lifecycle.NotifyHidden(RefreshArea.Monitor, this);
+        lifecycle.RefreshFailed -= LifecycleRefreshFailed;
+        lifecycle.ResumeCompleted -= LifecycleResumeCompleted;
         settings.Changed -= SettingsChanged;
         foreground.PropertyChanged -= ForegroundChanged;
         refreshLoop.Stop();
         model.PropertyChanged -= ModelChanged;
         favorites.PropertyChanged -= FavoritesChanged;
-        model.CancelPending();
         base.OnDisappearing();
     }
 
@@ -175,35 +177,21 @@ public sealed class DeparturePage : ContentPage
 
     private void SettingsChanged(object? sender, EventArgs args) => ReconcileRefreshLoop();
 
-    private async void ForegroundChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
+    private void ForegroundChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args) => ReconcileRefreshLoop();
+
+    private void LifecycleResumeCompleted(object? sender, RefreshAreaEventArgs args)
     {
-        if (!foreground.IsActive)
-        {
-            resume?.Cancel();
-            resume = null;
-            refreshLoop.Stop();
-            model.CancelPending();
-            return;
-        }
-        if (!active || !settings.IsLoaded || settings.IntervalSeconds == 0 || resume is not null) return;
-        using var source = new CancellationTokenSource();
-        resume = source;
-        try { await model.RefreshIfStaleAsync(freshness, source.Token); }
-        catch (OperationCanceledException) { }
-        catch (Exception) { Title = "Aktualisierung fehlgeschlagen"; }
-        finally
-        {
-            if (ReferenceEquals(resume, source))
-            {
-                resume = null;
-                ReconcileRefreshLoop();
-            }
-        }
+        if (args.Area == RefreshArea.Monitor) ReconcileRefreshLoop();
+    }
+
+    private void LifecycleRefreshFailed(object? sender, RefreshFailedEventArgs args)
+    {
+        if (args.Area == RefreshArea.Monitor) Title = "Aktualisierung fehlgeschlagen";
     }
 
     private void ReconcileRefreshLoop()
     {
-        if (active && foreground.IsActive && settings.IsLoaded && resume is null) refreshLoop.Start(settings.IntervalSeconds);
+        if (active && foreground.IsActive && settings.IsLoaded && !lifecycle.IsResuming(RefreshArea.Monitor)) refreshLoop.Start(settings.IntervalSeconds);
         else refreshLoop.Stop();
     }
 

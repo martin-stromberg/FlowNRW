@@ -282,7 +282,8 @@ internal sealed class ControlledRoutingService : IRoutingService
     internal List<TaskCompletionSource<ProviderResult<Journey>>> Pending { get; } = [];
     internal List<DateTimeOffset> Departures { get; } = [];
     internal List<bool> ArriveBy { get; } = [];
-    public Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default, bool arriveBy = false) { var source = new TaskCompletionSource<ProviderResult<Journey>>(); Pending.Add(source); Departures.Add(departure); ArriveBy.Add(arriveBy); return source.Task; }
+    internal List<CancellationToken> Tokens { get; } = [];
+    public Task<ProviderResult<Journey>> RouteAsync(Address origin, Address destination, DateTimeOffset departure, CancellationToken cancellationToken = default, bool arriveBy = false) { var source = new TaskCompletionSource<ProviderResult<Journey>>(); Pending.Add(source); Departures.Add(departure); ArriveBy.Add(arriveBy); Tokens.Add(cancellationToken); return source.Task; }
 }
 internal sealed class RecordingNavigation : IJourneyNavigation
 {

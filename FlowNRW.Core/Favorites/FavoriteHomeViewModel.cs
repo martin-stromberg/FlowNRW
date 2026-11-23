@@ -13,6 +13,7 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     private readonly ICurrentLocationService location;
     private readonly IStopSearchService? nearby;
     private readonly IDepartureCacheStore? cache;
+    private readonly DepartureBoardCache? boards;
     private readonly RefreshFreshness freshness;
     private readonly SemaphoreSlim persistence = new(1, 1);
     private readonly List<FavoriteMonitorViewModel> savedOrder = [];
@@ -29,11 +30,14 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     /// <param name="nearby">Nearby-stop service.</param>
     /// <param name="cache">Optional durable cache for last-known departure boards.</param>
     /// <param name="freshness">Policy deciding whether a durable board is fresh enough to display.</param>
+    /// <param name="boards">Shared restore facade; defaults to an instance over the supplied cache.</param>
     public FavoriteHomeViewModel(IFavoriteStore store, Func<IDepartureService> departureFactory, ICurrentLocationService location,
-        IStopSearchService? nearby = null, IDepartureCacheStore? cache = null, RefreshFreshness? freshness = null)
+        IStopSearchService? nearby = null, IDepartureCacheStore? cache = null, RefreshFreshness? freshness = null,
+        DepartureBoardCache? boards = null)
     {
         this.store = store; this.departureFactory = departureFactory; this.location = location; this.nearby = nearby; this.cache = cache;
         this.freshness = freshness ?? new RefreshFreshness(new TransitCacheOptions());
+        this.boards = boards ?? (cache is null ? null : new DepartureBoardCache(cache, store, this.freshness));
         LocationCommand = new AsyncRelayCommand(UpdateDistancesAsync, () => !IsLocating, _ => SetLocationFailure("Standort konnte nicht ermittelt werden."));
     }
 
@@ -74,15 +78,13 @@ public sealed class FavoriteHomeViewModel : ObservableObject
                 try
                 {
                     var keys = savedOrder.Select(card => new DepartureCacheKey(card.Stop.Source, card.Stop.Id)).ToArray();
-                    var cached = await cache.LoadAsync(cancellationToken).WaitAsync(cancellationToken);
+                    var restored = await boards!.RestoreBoardsAsync(keys, cancellationToken).WaitAsync(cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
                     await cache.RemoveOrphansAsync(keys, cancellationToken).WaitAsync(cancellationToken);
-                    var byKey = cached.Where(entry => keys.Contains(entry.Key)).ToDictionary(entry => entry.Key);
-                    var now = DateTimeOffset.Now;
                     foreach (var card in savedOrder)
                     {
-                        if (byKey.TryGetValue(new DepartureCacheKey(card.Stop.Source, card.Stop.Id), out var entry))
-                            card.Restore(entry, now, freshness);
+                        if (restored.TryGetValue(new DepartureCacheKey(card.Stop.Source, card.Stop.Id), out var board))
+                            card.Restore(board);
                     }
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
@@ -96,13 +98,31 @@ public sealed class FavoriteHomeViewModel : ObservableObject
         finally { persistence.Release(); }
     }
 
+    /// <summary>Runs the refresh step belonging to an occasion; callers pick the trigger, not the step.</summary>
+    /// <param name="occasion">Trigger to dispatch.</param>
+    /// <param name="freshness">Shared realtime freshness policy; the startup occasion refreshes regardless of age.</param>
+    /// <param name="cancellationToken">Visible page or background execution lifetime.</param>
+    /// <returns>Whether the refresh finished successfully; start and card-added occasions always report success.</returns>
+    public Task<bool> RefreshForOccasionAsync(RefreshOccasion occasion, RefreshFreshness freshness, CancellationToken cancellationToken = default)
+    {
+        return occasion switch
+        {
+            RefreshOccasion.Startup => Report(RefreshAtStartupAsync()),
+            RefreshOccasion.CardsAdded => Report(RefreshMissingAsync(freshness)),
+            _ => RefreshStaleAsync(freshness, cancellationToken)
+        };
+
+        static async Task<bool> Report(Task step) { await step; return true; }
+    }
+
     /// <summary>Starts independent initial loads for empty or expired boards without repeating completed requests.</summary>
+    /// <param name="freshness">Policy deciding which retained boards qualify for renewal.</param>
     /// <returns>All initial requests finishing or being cancelled.</returns>
-    public Task RefreshMissingAsync() => Task.WhenAll(Cards.Where(card => freshness.IsStale(card.Result) && !card.IsBusy).Select(card => card.RefreshAsync()));
+    private Task RefreshMissingAsync(RefreshFreshness freshness) => Task.WhenAll(Cards.Where(card => freshness.IsStale(card.Result) && !card.IsBusy).Select(card => card.RefreshAsync()));
 
     /// <summary>Starts a regular non-blocking provider refresh for every current card, including restored local boards.</summary>
     /// <returns>All started refreshes finishing or being cancelled.</returns>
-    public Task RefreshAtStartupAsync() => Task.WhenAll(Cards.Where(card => !card.IsBusy).Select(card => card.RefreshAutomaticallyAsync()));
+    private Task RefreshAtStartupAsync() => Task.WhenAll(Cards.Where(card => !card.IsBusy).Select(card => card.RefreshAutomaticallyAsync()));
 
     /// <summary>Loads nearby stops for the same explicit position used for favorite distances.</summary>
     /// <param name="cancellationToken">Cancels the current location or nearby-stop lookup.</param>
@@ -151,7 +171,7 @@ public sealed class FavoriteHomeViewModel : ObservableObject
     /// <param name="freshness">Shared realtime freshness policy.</param>
     /// <param name="cancellationToken">Visible page or background execution lifetime.</param>
     /// <returns>Whether all eligible cards finished with a current successful response.</returns>
-    public async Task<bool> RefreshStaleAsync(RefreshFreshness freshness, CancellationToken cancellationToken = default)
+    private async Task<bool> RefreshStaleAsync(RefreshFreshness freshness, CancellationToken cancellationToken = default)
     {
         await LoadAsync(cancellationToken);
         if (!loaded) return false;

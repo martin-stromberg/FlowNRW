@@ -26,19 +26,6 @@ public sealed class JsonDepartureCacheStore : IDepartureCacheStore
     }
 
     /// <inheritdoc />
-    public async Task SaveAsync(IReadOnlyList<DepartureCacheEntry> entries, CancellationToken cancellationToken = default)
-    {
-        var validated = Validate(entries);
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await ReadAsync(cancellationToken);
-            await WriteAsync(validated, cancellationToken);
-        }
-        finally { gate.Release(); }
-    }
-
-    /// <inheritdoc />
     public async Task UpsertAsync(DepartureCacheEntry entry, CancellationToken cancellationToken = default)
     {
         var validated = AssertSingle(entry);

@@ -19,8 +19,7 @@ public sealed class HomePage : ContentPage
     private bool active;
     private readonly RefreshSettingsViewModel settings;
     private readonly ForegroundState foreground;
-    private readonly RefreshFreshness freshness;
-    private CancellationTokenSource? resume;
+    private readonly RefreshLifecycle lifecycle;
     private readonly Dictionary<FavoriteMonitorViewModel, RefreshLoop> refreshLoops = [];
 
     /// <summary>Creates the home view.</summary>
@@ -29,15 +28,15 @@ public sealed class HomePage : ContentPage
     /// <param name="map">Validated favorite map snapshots.</param>
     /// <param name="settings">Persisted refresh interval.</param>
     /// <param name="foreground">Active window state.</param>
-    /// <param name="freshness">Shared realtime age policy.</param>
+    /// <param name="lifecycle">Central refresh lifecycle owning resume composition.</param>
     public HomePage(FavoriteHomeViewModel model, StopMonitorViewModel monitor, MapViewModel map,
-        RefreshSettingsViewModel settings, ForegroundState foreground, RefreshFreshness freshness)
+        RefreshSettingsViewModel settings, ForegroundState foreground, RefreshLifecycle lifecycle)
     {
         this.model = model;
         this.monitor = monitor;
         this.settings = settings;
         this.foreground = foreground;
-        this.freshness = freshness;
+        this.lifecycle = lifecycle;
         BindingContext = model;
         Title = "Meine Haltestellen";
         var layout = new VerticalStackLayout { Padding = 16, Spacing = 16 };
@@ -67,7 +66,6 @@ public sealed class HomePage : ContentPage
             if (args.PropertyName == nameof(model.Cards))
             {
                 RenderCards();
-                if (active && foreground.IsActive && resume is null) _ = RefreshMissingAsync();
                 ReconcileRefreshLoops();
             }
             status.IsVisible = ShowsHomeStatus();
@@ -105,6 +103,8 @@ public sealed class HomePage : ContentPage
         active = true;
         settings.Changed += SettingsChanged;
         foreground.PropertyChanged += ForegroundChanged;
+        lifecycle.RefreshFailed += LifecycleRefreshFailed;
+        lifecycle.ResumeCompleted += LifecycleResumeCompleted;
         var version = ++appearance;
         try
         {
@@ -113,7 +113,7 @@ public sealed class HomePage : ContentPage
             await model.LoadAsync();
             if (version != appearance) return;
             RenderCards(); ReconcileRefreshLoops();
-            if (version == appearance && foreground.IsActive) _ = RefreshAtStartupAsync(version);
+            if (version == appearance) _ = lifecycle.NotifyVisibleAsync(RefreshArea.Favorites, this);
             await model.RefreshNearbyAsync();
         }
         catch (Exception) { Title = "Favoriten konnten nicht geladen werden"; }
@@ -124,12 +124,12 @@ public sealed class HomePage : ContentPage
     {
         appearance++;
         active = false;
-        resume?.Cancel();
-        resume = null;
+        lifecycle.NotifyHidden(RefreshArea.Favorites, this);
         settings.Changed -= SettingsChanged;
         foreground.PropertyChanged -= ForegroundChanged;
+        lifecycle.RefreshFailed -= LifecycleRefreshFailed;
+        lifecycle.ResumeCompleted -= LifecycleResumeCompleted;
         ReconcileRefreshLoops();
-        model.CancelPending();
         base.OnDisappearing();
     }
 
@@ -138,35 +138,27 @@ public sealed class HomePage : ContentPage
 
     private void SettingsChanged(object? sender, EventArgs args) => ReconcileRefreshLoops();
 
-    private async void ForegroundChanged(object? sender, PropertyChangedEventArgs args)
+    private void ForegroundChanged(object? sender, PropertyChangedEventArgs args) => ReconcileRefreshLoops();
+
+    private void LifecycleResumeCompleted(object? sender, RefreshAreaEventArgs args)
     {
-        if (!foreground.IsActive)
+        if (args.Area == RefreshArea.Favorites) ReconcileRefreshLoops();
+    }
+
+    private void LifecycleRefreshFailed(object? sender, RefreshFailedEventArgs args)
+    {
+        if (args.Area != RefreshArea.Favorites) return;
+        Title = args.Occasion switch
         {
-            resume?.Cancel();
-            resume = null;
-            ReconcileRefreshLoops();
-            model.CancelPending();
-            return;
-        }
-        if (!active || !settings.IsLoaded || settings.IntervalSeconds == 0 || resume is not null) return;
-        using var source = new CancellationTokenSource();
-        resume = source;
-        try { await model.RefreshStaleAsync(freshness, source.Token); }
-        catch (OperationCanceledException) { }
-        catch (Exception) { Title = "Aktualisierung fehlgeschlagen"; }
-        finally
-        {
-            if (ReferenceEquals(resume, source))
-            {
-                resume = null;
-                ReconcileRefreshLoops();
-            }
-        }
+            RefreshOccasion.Startup => "Abfahrten konnten nicht aktualisiert werden",
+            RefreshOccasion.CardsAdded => "Abfahrten konnten nicht geladen werden",
+            _ => "Aktualisierung fehlgeschlagen"
+        };
     }
 
     private void ReconcileRefreshLoops()
     {
-        var running = active && foreground.IsActive && settings.IsLoaded && resume is null;
+        var running = active && foreground.IsActive && settings.IsLoaded && !lifecycle.IsResuming(RefreshArea.Favorites);
         foreach (var obsolete in refreshLoops.Keys.Where(card => !running || !model.Contains(card)).ToArray())
         {
             refreshLoops[obsolete].Dispose();
@@ -182,18 +174,6 @@ public sealed class HomePage : ContentPage
             }
             loop.Start(settings.IntervalSeconds);
         }
-    }
-
-    private async Task RefreshMissingAsync()
-    {
-        try { await model.RefreshMissingAsync(); }
-        catch (Exception) { Title = "Abfahrten konnten nicht geladen werden"; }
-    }
-
-    private async Task RefreshAtStartupAsync(long version)
-    {
-        try { await model.RefreshAtStartupAsync(); }
-        catch (Exception) when (version == appearance) { Title = "Abfahrten konnten nicht aktualisiert werden"; }
     }
 
     private void RenderCards()

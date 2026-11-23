@@ -53,7 +53,7 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
             ErrorCode = error ? "fixture_unavailable" : null,
             Source = "UI-Fixture " + stop.Name + " " + stop.Id,
             RetrievedAt = scenario is "resume-fresh" or "complete" or "complete-slow" ? DateTimeOffset.UtcNow : DateTimeOffset.UtcNow.AddMinutes(-2),
-            IsFallback = !complete, IsStale = !complete && scenario != "resume-fresh", Warnings = complete ? [] : ["fixture_warning"]
+            IsFallback = !complete, IsStale = !complete && scenario != "resume-fresh", Warnings = complete ? (string[])[] : (string[])["fixture_warning"]
         };
     }
 
@@ -73,11 +73,11 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
         await Task.Delay(text.Contains("slow", StringComparison.OrdinalIgnoreCase) ? 6000 : 600);
         return new ProviderResult<Address>
         {
-            Items = text == "empty" || text == "error" ? [] : [Candidate(text, 0), Candidate(text, 1)],
+            Items = text == "empty" || text == "error" ? (Address[])[] : (Address[])[Candidate(text, 0), Candidate(text, 1)],
             ErrorCode = text == "error" ? "fixture_unavailable" : null,
             Source = "UI-Fixture " + text,
             RetrievedAt = DateTimeOffset.UtcNow.AddMinutes(-8),
-            IsFallback = true, IsStale = true, Warnings = ["fixture_warning"]
+            IsFallback = true, IsStale = true, Warnings = (string[])["fixture_warning"]
         };
     }
 
@@ -90,15 +90,15 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
         var name = newest ? "Neue Umgebung" : "Umgebung";
         return new ProviderResult<NearbyStopResult>
         {
-            Items = scenario is "nearby-empty" or "nearby-error" ? [] :
-            [
+            Items = scenario is "nearby-empty" or "nearby-error" ? (NearbyStopResult[])[] :
+            (NearbyStopResult[])[
                 new() { Stop = new Stop { Id = "fixture-nearby-0", Name = name + " Süd", Source = "fixture", Coordinate = new(51.45, 7.01) }, DistanceMeters = 225 },
                 new() { Stop = new Stop { Id = "fixture-nearby-1", Name = name + " Nord", Source = "fixture", Coordinate = scenario == "nearby-missing" ? null : new(51.46, 7.01) } }
             ],
             ErrorCode = scenario == "nearby-error" ? "fixture_unavailable" : null,
             Source = "UI-Fixture Nearby " + (newest ? "new" : "original"),
             RetrievedAt = DateTimeOffset.UtcNow.AddMinutes(-2),
-            IsFallback = true, IsStale = true, Warnings = ["fixture_warning"]
+            IsFallback = true, IsStale = true, Warnings = (string[])["fixture_warning"]
         };
     }
 
@@ -116,11 +116,11 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
         var error = origin.Name.Contains("route-error") || scenario == "resume-route-error";
         return new ProviderResult<Journey>
         {
-            Items = origin.Name.Contains("route-empty") || error ? [] : [first, scenario == "resume-route-duplicate" ? first : Route(time.AddHours(1), "RE 2", origin, destination)],
+            Items = origin.Name.Contains("route-empty") || error ? (Journey[])[] : (Journey[])[first, scenario == "resume-route-duplicate" ? first : Route(time.AddHours(1), "RE 2", origin, destination)],
             ErrorCode = error ? "fixture_unavailable" : null,
             Source = "UI-Fixture " + origin.Name + (scenario.StartsWith("resume-", StringComparison.Ordinal) ? " Stand " + count : ""),
             RetrievedAt = scenario == "resume-route-fresh" ? DateTimeOffset.UtcNow : DateTimeOffset.UtcNow.AddMinutes(-8),
-            IsFallback = true, IsStale = scenario != "resume-route-fresh", Warnings = ["fixture_warning"]
+            IsFallback = true, IsStale = scenario != "resume-route-fresh", Warnings = (string[])["fixture_warning"]
         };
     }
 
@@ -139,10 +139,10 @@ internal sealed class UiTestFixtureServices : IStopSearchService, IRoutingServic
     {
         return new Journey
         {
-            Legs = [new JourneyLeg { Departure = Event(time, origin.Name, true), Arrival = Event(time.AddMinutes(20), "Umstieg", false), Line = new Line { Name = line, Operator = new Operator { Name = "Regionalverkehr NRW" } }, Geometry = line == "RE 1" ? new GeoGeometry { Coordinates = [new(51.45, 7.01), new(51.46, 7.02), new(51.47, 7.03)] } : null },
-                new JourneyLeg { Departure = Event(time.AddMinutes(20), "Umstieg", false), Arrival = Event(time.AddMinutes(25), "Bussteig", false), Walking = new WalkingSegment { DistanceMeters = 300, Duration = TimeSpan.FromMinutes(5), Geometry = line == "RE 1" ? new GeoGeometry { Coordinates = [new(51.47, 7.03), new(51.4705, 7.031)] } : null } },
+            Legs = (JourneyLeg[])[new JourneyLeg { Departure = Event(time, origin.Name, true), Arrival = Event(time.AddMinutes(20), "Umstieg", false), Line = new Line { Name = line, Operator = new Operator { Name = "Regionalverkehr NRW" } }, Geometry = line == "RE 1" ? new GeoGeometry { Coordinates = (GeoCoordinate[])[new(51.45, 7.01), new(51.46, 7.02), new(51.47, 7.03)] } : null },
+                new JourneyLeg { Departure = Event(time.AddMinutes(20), "Umstieg", false), Arrival = Event(time.AddMinutes(25), "Bussteig", false), Walking = new WalkingSegment { DistanceMeters = 300, Duration = TimeSpan.FromMinutes(5), Geometry = line == "RE 1" ? new GeoGeometry { Coordinates = (GeoCoordinate[])[new(51.47, 7.03), new(51.4705, 7.031)] } : null } },
                 new JourneyLeg { Departure = Event(time.AddMinutes(30), "Bussteig", false) with { Line = new Line { Name = "Bus 10", Mode = "bus", Operator = new Operator { Name = "Stadtwerke Essen" } } }, Arrival = Event(time.AddMinutes(45), destination.Name, false) }],
-            Transfers = [new Transfer { Stop = new Stop { Name = "Umstieg" }, Duration = TimeSpan.FromMinutes(10) }]
+            Transfers = (Transfer[])[new Transfer { Stop = new Stop { Name = "Umstieg" }, Duration = TimeSpan.FromMinutes(10) }]
         };
     }
 
