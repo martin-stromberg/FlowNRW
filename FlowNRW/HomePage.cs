@@ -1,0 +1,356 @@
+using FlowNRW.Core.Favorites;
+using FlowNRW.Core.Maps;
+using FlowNRW.Core.Presentation;
+using FlowNRW.Core.Refresh;
+using System.ComponentModel;
+
+namespace FlowNRW;
+
+/// <summary>Favorite departure boards with independent manual refresh and explicit distance sorting.</summary>
+public sealed class HomePage : ContentPage
+{
+    private readonly FavoriteHomeViewModel model;
+    private readonly VerticalStackLayout cards = new() { Spacing = 12 };
+    private readonly VerticalStackLayout nearbyCards = new() { Spacing = 12 };
+    private readonly List<Action> unsubscribe = [];
+    private readonly List<AsyncRelayCommand> actions = [];
+    private readonly StopMonitorViewModel monitor;
+    private long appearance;
+    private bool active;
+    private readonly RefreshSettingsViewModel settings;
+    private readonly ForegroundState foreground;
+    private readonly RefreshLifecycle lifecycle;
+    private readonly Dictionary<FavoriteMonitorViewModel, RefreshLoop> refreshLoops = [];
+
+    /// <summary>Creates the home view.</summary>
+    /// <param name="model">Retained favorite state.</param>
+    /// <param name="monitor">Shared single-stop monitor.</param>
+    /// <param name="map">Validated favorite map snapshots.</param>
+    /// <param name="settings">Persisted refresh interval.</param>
+    /// <param name="foreground">Active window state.</param>
+    /// <param name="lifecycle">Central refresh lifecycle owning resume composition.</param>
+    public HomePage(FavoriteHomeViewModel model, StopMonitorViewModel monitor, MapViewModel map,
+        RefreshSettingsViewModel settings, ForegroundState foreground, RefreshLifecycle lifecycle)
+    {
+        this.model = model;
+        this.monitor = monitor;
+        this.settings = settings;
+        this.foreground = foreground;
+        this.lifecycle = lifecycle;
+        BindingContext = model;
+        Title = "Meine Haltestellen";
+        var layout = new VerticalStackLayout { Padding = 16, Spacing = 16 };
+        var primaryNavigation = new Button { Text = "Verbindung suchen", AutomationId = "OpenJourneySearch", Command = Navigate("//main/connections-tab/search") };
+        SemanticProperties.SetDescription(primaryNavigation, "Verbindung suchen");
+        layout.Children.Add(primaryNavigation);
+        var showMap = new AsyncRelayCommand(async () => { map.ShowFavorites(model); await Shell.Current.GoToAsync("map"); },
+            () => model.Cards.Count > 0, _ => Title = "Karte konnte nicht geöffnet werden");
+        var shortcuts = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
+        shortcuts.Add(TransitVisuals.SecondaryAction(TransitIcons.Add, "Haltestelle hinzufügen", "OpenHomeStops", Navigate("//main/stations-tab/stops")), 0);
+        shortcuts.Add(TransitVisuals.SecondaryAction(TransitIcons.Map, "Favoriten auf Karte zeigen", "HomeMap", showMap), 1);
+        shortcuts.Add(TransitVisuals.SecondaryAction(TransitIcons.Refresh, "Entfernungen aktualisieren", "SortFavorites", model.LocationCommand), 2);
+        shortcuts.Add(TransitVisuals.SecondaryAction(TransitIcons.Settings, "Aktualisierung einstellen", "OpenRefreshSettings", Navigate("refresh-settings")), 3);
+        layout.Children.Add(shortcuts);
+        var status = new Label { AutomationId = "HomeStatus" };
+        status.SetBinding(Label.TextProperty, nameof(model.Status));
+        var location = new Label { AutomationId = "HomeLocationStatus" };
+        location.SetBinding(Label.TextProperty, nameof(model.LocationStatus));
+        layout.Children.Add(status);
+        layout.Children.Add(location);
+        layout.Children.Add(cards);
+        layout.Children.Add(TransitVisuals.Text("Nächste Haltestellen", 22, true, "NearbyHeading"));
+        var nearbyStatus = new Label { AutomationId = "NearbyStatus" }; nearbyStatus.SetBinding(Label.TextProperty, nameof(model.NearbyStatus)); layout.Children.Add(nearbyStatus);
+        layout.Children.Add(nearbyCards);
+        model.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(model.Cards))
+            {
+                RenderCards();
+                ReconcileRefreshLoops();
+            }
+            status.IsVisible = ShowsHomeStatus();
+            location.IsVisible = ShowsLocationStatus();
+            nearbyStatus.IsVisible = ShowsNearbyStatus();
+            RenderNearby();
+            showMap.Refresh();
+            foreach (var action in actions.ToArray()) action.Refresh();
+        };
+#if UI_TEST_FIXTURES
+        Loaded += (_, _) =>
+        {
+            if (Environment.GetEnvironmentVariable("FLOWNRW_UI_TEST_HIDE_CONTROLS") == "1") return;
+            if (layout.Children.Any(child => child.AutomationId == "HomeScenario")) return;
+            var fixture = Handler!.MauiContext!.Services.GetRequiredService<UiTestLocationServices>();
+            var scenario = new Entry { AutomationId = "HomeScenario", BindingContext = fixture };
+            scenario.SetBinding(Entry.TextProperty, nameof(fixture.Scenario)); layout.Children.Insert(0, scenario);
+            var lifecycleActive = new Entry { AutomationId = "LifecycleActive", BindingContext = fixture };
+            lifecycleActive.SetBinding(Entry.TextProperty, nameof(fixture.LifecycleActive)); layout.Children.Insert(0, lifecycleActive);
+            var calls = new Label { AutomationId = "FavoriteCalls", BindingContext = fixture };
+            calls.SetBinding(Label.TextProperty, nameof(fixture.DepartureCalls)); layout.Children.Insert(1, calls);
+        };
+#endif
+        Content = TransitVisuals.Page(layout);
+        status.IsVisible = ShowsHomeStatus();
+        location.IsVisible = ShowsLocationStatus();
+        nearbyStatus.IsVisible = ShowsNearbyStatus();
+        RenderNearby();
+    }
+
+    /// <inheritdoc />
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        active = true;
+        settings.Changed += SettingsChanged;
+        foreground.PropertyChanged += ForegroundChanged;
+        lifecycle.RefreshFailed += LifecycleRefreshFailed;
+        lifecycle.ResumeCompleted += LifecycleResumeCompleted;
+        var version = ++appearance;
+        try
+        {
+            await settings.LoadAsync();
+            if (version != appearance) return;
+            await model.LoadAsync();
+            if (version != appearance) return;
+            RenderCards(); ReconcileRefreshLoops();
+            if (version == appearance) _ = lifecycle.NotifyVisibleAsync(RefreshArea.Favorites, this);
+            await model.RefreshNearbyAsync();
+        }
+        catch (Exception) { Title = "Favoriten konnten nicht geladen werden"; }
+    }
+
+    /// <inheritdoc />
+    protected override void OnDisappearing()
+    {
+        appearance++;
+        active = false;
+        lifecycle.NotifyHidden(RefreshArea.Favorites, this);
+        settings.Changed -= SettingsChanged;
+        foreground.PropertyChanged -= ForegroundChanged;
+        lifecycle.RefreshFailed -= LifecycleRefreshFailed;
+        lifecycle.ResumeCompleted -= LifecycleResumeCompleted;
+        ReconcileRefreshLoops();
+        base.OnDisappearing();
+    }
+
+    private AsyncRelayCommand Navigate(string route) => new(() => Shell.Current.GoToAsync(route), () => true,
+        _ => Title = "Seite konnte nicht geöffnet werden");
+
+    private void SettingsChanged(object? sender, EventArgs args) => ReconcileRefreshLoops();
+
+    private void ForegroundChanged(object? sender, PropertyChangedEventArgs args) => ReconcileRefreshLoops();
+
+    private void LifecycleResumeCompleted(object? sender, RefreshAreaEventArgs args)
+    {
+        if (args.Area == RefreshArea.Favorites) ReconcileRefreshLoops();
+    }
+
+    private void LifecycleRefreshFailed(object? sender, RefreshFailedEventArgs args)
+    {
+        if (args.Area != RefreshArea.Favorites) return;
+        Title = args.Occasion switch
+        {
+            RefreshOccasion.Startup => "Abfahrten konnten nicht aktualisiert werden",
+            RefreshOccasion.CardsAdded => "Abfahrten konnten nicht geladen werden",
+            _ => "Aktualisierung fehlgeschlagen"
+        };
+    }
+
+    private void ReconcileRefreshLoops()
+    {
+        var running = active && foreground.IsActive && settings.IsLoaded && !lifecycle.IsResuming(RefreshArea.Favorites);
+        foreach (var obsolete in refreshLoops.Keys.Where(card => !running || !model.Contains(card)).ToArray())
+        {
+            refreshLoops[obsolete].Dispose();
+            refreshLoops.Remove(obsolete);
+        }
+        if (!running) return;
+        foreach (var card in model.Cards)
+        {
+            if (!refreshLoops.TryGetValue(card, out var loop))
+            {
+                loop = new RefreshLoop(card.RefreshAutomaticallyAsync, card.CancelPending);
+                refreshLoops.Add(card, loop);
+            }
+            loop.Start(settings.IntervalSeconds);
+        }
+    }
+
+    private void RenderCards()
+    {
+        foreach (var detach in unsubscribe) detach();
+        unsubscribe.Clear(); actions.Clear(); cards.Children.Clear();
+        for (var index = 0; index < model.Cards.Count; index++)
+            cards.Children.Add(BuildFavoriteCard(model.Cards[index], index));
+    }
+
+    private Border BuildFavoriteCard(FavoriteMonitorViewModel card, int index)
+    {
+        var layout = new VerticalStackLayout { Spacing = 8, BindingContext = card };
+        layout.Children.Add(BuildCardHeader(card, index));
+        AddLabel(layout, "FavoriteDistance" + index, nameof(card.DistanceLabel));
+        var statusRow = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto)], ColumnSpacing = 8 };
+        var status = new Label { AutomationId = "FavoriteStatus" + index, VerticalOptions = LayoutOptions.Center };
+        status.SetBinding(Label.TextProperty, nameof(card.Status));
+        status.IsVisible = ShowsFavoriteStatus(card) && !card.IsBusy;
+        statusRow.Add(status, 0);
+        var notice = new TransitVisuals.NoticeToggle("FavoriteNotice" + index, "FavoriteMetadata" + index);
+        notice.Metadata.SetBinding(Label.TextProperty, nameof(card.Metadata));
+        notice.Update(card.HasDataNotice && !card.IsBusy);
+        unsubscribe.Add(() => notice.Button.Command = null);
+        statusRow.Add(notice.Button, 1);
+        layout.Children.Add(statusRow);
+        layout.Children.Add(notice.Metadata);
+        var summary = new HorizontalStackLayout { Spacing = 8, AutomationId = "FavoriteLines" + index };
+        var summaryContainer = new ScrollView { Orientation = ScrollOrientation.Horizontal, Content = summary };
+        layout.Children.Add(summaryContainer);
+        var departures = new VerticalStackLayout { Spacing = 8 };
+        layout.Children.Add(departures);
+        RenderFavoriteSummary(card, summary);
+        RenderFavoriteDepartures(card, index, departures);
+        departures.IsVisible = card.IsExpanded;
+        summaryContainer.IsVisible = !card.IsExpanded;
+        SubscribeCardChanges(card, index, new(status, summary, summaryContainer, departures, notice));
+        layout.Children.Add(BuildCardActions(card, index));
+        TransitVisuals.ApplyRoles(layout);
+        notice.ApplyWarningColors();
+        return new Border { Padding = 16, Content = layout };
+    }
+
+    private Grid BuildCardHeader(FavoriteMonitorViewModel card, int index)
+    {
+        var header = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Auto), new(GridLength.Auto)], ColumnSpacing = 8 };
+        header.Add(TransitVisuals.Text(card.Title, 22, true, "FavoriteName" + index), 0);
+        var busy = new ActivityIndicator { AutomationId = "FavoriteBusy" + index, VerticalOptions = LayoutOptions.Center };
+        busy.SetBinding(ActivityIndicator.IsRunningProperty, nameof(card.IsBusy));
+        busy.SetBinding(IsVisibleProperty, nameof(card.IsBusy));
+        SemanticProperties.SetDescription(busy, "Abfahrten werden aktualisiert");
+        header.Add(busy, 1);
+        var expand = new Button { AutomationId = "ToggleFavorite" + index, HeightRequest = 48, WidthRequest = 48 };
+        void SetExpandIcon()
+        {
+            TransitIcons.SetIcon(expand, card.IsExpanded ? TransitIcons.ExpandLess : TransitIcons.ExpandMore, card.IsExpanded ? "Abfahrten einklappen" : "Abfahrten aufklappen");
+        }
+        SetExpandIcon();
+        expand.Command = new AsyncRelayCommand(() => { card.ToggleExpanded(); SetExpandIcon(); return Task.CompletedTask; }, () => true, _ => Title = "Abfahrten konnten nicht ein- oder ausgeklappt werden");
+        header.Add(expand, 2);
+        unsubscribe.Add(() => expand.Command = null);
+        return header;
+    }
+
+    private static void RenderFavoriteSummary(FavoriteMonitorViewModel card, HorizontalStackLayout summary)
+    {
+        summary.Children.Clear();
+        var descriptions = new List<string>();
+        foreach (var line in card.Lines)
+        {
+            var matching = card.Items.Where(item => (item.Line?.Name ?? item.Identity.Line) == line).ToArray();
+            var next = matching
+                .Select(item => item.Realtime.ActualTime ?? item.PlannedTime)
+                .Where(time => time is not null && time >= DateTimeOffset.Now).OrderBy(time => time).FirstOrDefault();
+            var text = next is { } time ? line + "  " + JourneyPresentation.Clock(time) : line;
+            summary.Children.Add(TransitVisuals.Badge(text, matching.FirstOrDefault()?.Line?.Mode));
+            descriptions.Add(text);
+        }
+        SemanticProperties.SetDescription(summary, string.Join(" · ", descriptions));
+    }
+
+    private static void RenderFavoriteDepartures(FavoriteMonitorViewModel card, int index, VerticalStackLayout departures)
+    {
+        departures.Children.Clear();
+        for (var item = 0; item < Math.Min(card.Items.Count, 5); item++)
+            departures.Children.Add(new DepartureCardView(card.Items[item], $"FavoriteDeparture{index}_{item}", compact: true));
+    }
+
+    /// <summary>The views of one favorite card that react to card property changes.</summary>
+    /// <param name="Status">Status label of the card.</param>
+    /// <param name="Summary">Summary strip of the card.</param>
+    /// <param name="SummaryContainer">Scroll container hosting the summary strip.</param>
+    /// <param name="Departures">Departure list of the card.</param>
+    /// <param name="Notice">Data-notice toggle of the card.</param>
+    /// <returns>A bundle of the card's reactive views.</returns>
+    private sealed record FavoriteCardViews(Label Status, HorizontalStackLayout Summary,
+        ScrollView SummaryContainer, VerticalStackLayout Departures, TransitVisuals.NoticeToggle Notice);
+
+    private void SubscribeCardChanges(FavoriteMonitorViewModel card, int index, FavoriteCardViews views)
+    {
+        PropertyChangedEventHandler changed = (_, args) =>
+        {
+            if (args.PropertyName is nameof(card.Items) or nameof(card.Lines)) { RenderFavoriteDepartures(card, index, views.Departures); RenderFavoriteSummary(card, views.Summary); }
+            if (args.PropertyName is nameof(card.Status) or nameof(card.IsBusy) or nameof(card.Result) or nameof(card.IsExpanded) or nameof(card.HasDataNotice))
+            {
+                views.Status.IsVisible = ShowsFavoriteStatus(card) && !card.IsBusy;
+                views.Departures.IsVisible = card.IsExpanded;
+                views.SummaryContainer.IsVisible = !card.IsExpanded;
+                views.Notice.Update(card.HasDataNotice && !card.IsBusy);
+            }
+        };
+        card.PropertyChanged += changed;
+        unsubscribe.Add(() => card.PropertyChanged -= changed);
+    }
+
+    private Grid BuildCardActions(FavoriteMonitorViewModel card, int index)
+    {
+        var actionGrid = new Grid { ColumnDefinitions = [new(GridLength.Star), new(GridLength.Star), new(GridLength.Star)], ColumnSpacing = 8 };
+        var refreshButton = new Button { AutomationId = "RefreshFavorite" + index, Command = card.RefreshCommand, HeightRequest = 48, WidthRequest = 48 };
+        TransitIcons.SetIcon(refreshButton, TransitIcons.Refresh, "Abfahrten aktualisieren");
+        actionGrid.Add(refreshButton, 0);
+        unsubscribe.Add(() => refreshButton.Command = null);
+        var open = new AsyncRelayCommand(() => monitor.OpenFavoriteAsync(model, card), () => model.Contains(card),
+            _ => Title = "Monitor konnte nicht geöffnet werden");
+        var remove = new AsyncRelayCommand(() => model.RemoveAsync(card), () => !model.IsSaving && model.Contains(card),
+            _ => Title = "Favorit konnte nicht entfernt werden");
+        // Cards render while a removal still runs (IsSaving true); without
+        // this re-evaluation the fresh remove button stays disabled forever.
+        PropertyChangedEventHandler savingChanged = (_, args) =>
+        { if (args.PropertyName == nameof(model.IsSaving)) remove.InvalidateExecution(); };
+        model.PropertyChanged += savingChanged;
+        unsubscribe.Add(() => model.PropertyChanged -= savingChanged);
+        var openButton = new Button { AutomationId = "OpenFavorite" + index, Command = open, HeightRequest = 48, WidthRequest = 48 };
+        TransitIcons.SetIcon(openButton, TransitIcons.DepartureBoard, "Abfahrtsmonitor öffnen");
+        actionGrid.Add(openButton, 1);
+        unsubscribe.Add(() => openButton.Command = null);
+        var removeButton = new Button { AutomationId = "RemoveFavorite" + index, Command = remove, HeightRequest = 48, WidthRequest = 48 };
+        TransitIcons.SetIcon(removeButton, TransitIcons.StarOutline, "Favorit entfernen");
+        actionGrid.Add(removeButton, 2);
+        unsubscribe.Add(() => removeButton.Command = null);
+        return actionGrid;
+    }
+
+    private void RenderNearby()
+    {
+        nearbyCards.Children.Clear();
+        for (var index = 0; index < model.NearbyStops.Count; index++)
+        {
+            var candidate = model.NearbyStops[index];
+            var button = new Button { AutomationId = "NearbyStop" + index, HeightRequest = 48, HorizontalOptions = LayoutOptions.Fill };
+            button.Command = new AsyncRelayCommand(() => monitor.OpenNearbyFromHomeAsync(candidate), () => candidate.Stop is not null,
+                _ => Title = "Haltestelle konnte nicht geöffnet werden");
+            nearbyCards.Children.Add(TransitVisuals.Candidate(candidate, button, model.NearbyDistanceLabel(candidate), detailsId: "NearbyDistance" + index));
+        }
+    }
+
+    private static void AddLabel(VerticalStackLayout layout, string id, string property, double size = 13)
+    {
+        var label = new Label { AutomationId = id, FontSize = size };
+        label.SetBinding(Label.TextProperty, property); layout.Children.Add(label);
+    }
+
+    private bool ShowsHomeStatus() => model.Cards.Count == 0 || model.Status.Contains("konnten nicht", StringComparison.OrdinalIgnoreCase)
+        || model.Status.Contains("keine vollständige", StringComparison.OrdinalIgnoreCase)
+        || model.Status.Contains("maximal", StringComparison.OrdinalIgnoreCase);
+
+    private bool ShowsLocationStatus() => model.IsLocating || (!model.LocationStatus.StartsWith("Entfernungen unbekannt", StringComparison.OrdinalIgnoreCase)
+        && !model.LocationStatus.StartsWith("Nach Luftlinie sortiert", StringComparison.OrdinalIgnoreCase)
+        && !model.LocationStatus.StartsWith("Standortabfrage abgebrochen", StringComparison.OrdinalIgnoreCase));
+
+    private bool ShowsNearbyStatus() => model.NearbyStops.Count == 0 || model.NearbyStatus.Contains("werden geladen", StringComparison.OrdinalIgnoreCase)
+        || model.NearbyStatus.Contains("wird ermittelt", StringComparison.OrdinalIgnoreCase)
+        || model.NearbyStatus.Contains("nicht verfügbar", StringComparison.OrdinalIgnoreCase)
+        || model.NearbyStatus.Contains("nicht geladen", StringComparison.OrdinalIgnoreCase);
+
+    private static bool ShowsFavoriteStatus(FavoriteMonitorViewModel card) => card.Status.Contains("Keine nächsten", StringComparison.OrdinalIgnoreCase)
+        || card.Status.Contains("Letzter Stand", StringComparison.OrdinalIgnoreCase)
+        || card.Status.Contains("fehlgeschlagen", StringComparison.OrdinalIgnoreCase)
+        || card.Status.Contains("nicht geladen", StringComparison.OrdinalIgnoreCase);
+}

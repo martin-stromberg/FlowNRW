@@ -1,0 +1,15 @@
+PASS MapDataStatus contains 2 Haltestellen.*2 Kartenpositionen
+PASS MonitorMetadata contains fixture-1
+PASS MonitorMetadata contains fixture-0
+PASS MapDataStatus contains 0 Kartenpositionen
+PASS MapStation0 contains Keine Kartenposition
+PASS Pan changes actual map viewport
+PASS MapStation0 contains onerror
+PASS MonitorStop contains onerror
+PASS MapMetadata contains Newest map
+PASS MapDataStatus contains Teilweiser Verlauf
+PASS MapSegment0 contains RE 1.*3 gelieferte Punkte
+PASS MapSegment1 contains Fußweg.*2 gelieferte Punkte
+PASS MapDataStatus contains Keine darstellbare Geometrie
+PASS Previous journey geometry removed
+PASS native map marker/list, missing positions, offline recovery, zoom, late tiles, journey geometry and back navigation

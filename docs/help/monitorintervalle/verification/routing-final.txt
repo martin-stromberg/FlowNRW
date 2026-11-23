@@ -1,0 +1,48 @@
+PASS Start: routing disabled without endpoints
+PASS OriginStatus contains Suchtext
+PASS Validation: unselected text cannot route
+PASS AddressEndpoints: ambiguous candidates rendered
+PASS OriginSelection contains Treffer 1
+PASS DestinationSelection contains Adresse Berlin
+PASS OriginMetadata contains Fallback.*Veralteter Cache.*Anbieterwarnung
+PASS OriginMetadata contains Quelle:.*Datenalter:
+PASS RoutingStatus contains geladen
+PASS ResultsAndDetails: ordered results and midnight offset
+PASS Journey0 contains UTC\+02:00
+PASS Journey0 contains 1 Umstiege.*RE 1.*Fixture Bahn.*Fußweg.*Bus 10
+PASS ResultsMetadata contains Quelle:.*Datenalter:.*Fallback.*Veralteter Cache.*Anbieterwarnung
+PASS JourneyDetailSection1 contains Ausfall
+PASS JourneyDetailSection1 contains keine Echtzeitdaten
+PASS JourneyDetailSection1 contains 23:58
+PASS JourneyDetailSection2 contains 300 m
+PASS JourneyDetailSection4 contains Umstieg.*10 Min
+PASS BackNavigation: result preserved
+PASS BackNavigation: endpoints preserved
+PASS BackNavigation: input invalidates old route
+PASS BackNavigation: old route metadata cleared
+PASS OriginSelection contains fixture-0.*de:05113
+PASS DestinationSelection contains fixture-0.*de:05113
+PASS StopEndpoints
+PASS OriginStatus contains Breite|Länge
+PASS OriginStatus contains Breite
+PASS Validation: invalid coordinate cannot route
+PASS OriginSelection contains 51.4556
+PASS DestinationSelection contains 13.405
+PASS CoordinateEndpoints and Validation recovery
+PASS OriginStatus contains geladen
+PASS OriginSelection contains Newest Start
+PASS OriginMatch0 contains Newest Start
+PASS DestinationSelection contains Parallel Ziel
+PASS LatestInputWins and independent endpoint requests
+PASS EmptyAndErrorRecovery: empty has no candidates
+PASS EmptyAndErrorRecovery: error has no candidates
+PASS EmptyAndErrorRecovery: route-empty allows retry
+PASS EmptyAndErrorRecovery: route-error allows retry
+PASS EmptyAndErrorRecovery
+PASS RoutingStatus contains geladen
+PASS ResultsMetadata contains New Route
+PASS JourneyDetailSection1 contains New Route
+PASS LatestRouteWins: old response did not navigate away from detail
+PASS LatestRouteWins: newest result unchanged
+PASS ResultsMetadata contains New Route
+PASS all fixture native UI scenarios

@@ -1,0 +1,57 @@
+PASS Favorite count is 0
+PASS HomeStatus contains Keine Favoriten|keine Favoriten|Haltestelle
+PASS Empty home offers actual stop lookup
+PASS ToggleFavorite contains hinzufügen|speichern
+PASS Favorite count is 1
+PASS FavoriteName0 contains Favorite Far
+PASS FavoriteDeparture0_0 contains RE 1
+PASS FavoriteMetadata0 contains Quelle:.*Datenalter:.*Fallback
+PASS FavoriteDistance0 contains unbekannt
+PASS ToggleFavorite contains entfernen
+PASS Favorite count is 1
+PASS new application process opened the same isolated favorite file
+PASS Favorite count is 1
+PASS FavoriteName0 contains Favorite Far
+PASS FavoriteDistance0 contains unbekannt
+PASS failed add is not reported as saved; retry, duplicate recognition and process persistence
+PASS Favorite count is 2
+PASS Favorite count is 3
+PASS FavoriteName0 contains Favorite Far
+PASS FavoriteName1 contains Favorite Near
+PASS FavoriteName2 contains Favorite Missing
+PASS FavoriteName1 contains Favorite Far
+PASS FavoriteName2 contains Favorite Missing
+PASS Known favorite coordinates provide actual calculated distance
+PASS FavoriteDistance2 contains unbekannt
+PASS FavoriteName0 contains Favorite Far
+PASS FavoriteName1 contains Favorite Near
+PASS FavoriteDistance0 contains unbekannt
+PASS FavoriteName0 contains Favorite Far
+PASS FavoriteDistance1 contains unbekannt
+PASS explicit distance sorting, unknown positions and stable fallback order without location
+PASS Double refresh starts one request for the busy card
+PASS Another favorite refreshes independently while first is loading
+PASS Failed card refresh keeps last known departures
+PASS MonitorStop contains Favorite Far
+PASS MonitorStop contains Favorite Far
+PASS independent monitor refreshes, failure retention and monitor/map/routing navigation
+PASS Favorite sorting control fits narrow viewport and accepts keyboard
+PASS Favorite count is 3
+PASS Failed remove keeps saved favorite visible
+PASS Favorite count is 2
+PASS new application process opened the same isolated favorite file
+PASS Favorite count is 2
+PASS Successful remove persists into a new process
+PASS FavoriteName0 contains Favorite Far
+PASS FavoriteName1 contains Favorite Near
+DIAGNOSTIC before removal: 2 Favoriten.; calls=fixture-favorite-far-0=2;fixture-favorite-near-0=1
+DIAGNOSTIC remove enabled=True; offscreen=False; bounds=223,1185,1838,12
+DIAGNOSTIC after removal: Favorit entfernt. 1 Favoriten.; count=1 Favoriten
+PASS Favorite count is 1
+PASS FavoriteName0 contains Favorite Near
+PASS Late removed-card response cannot recreate favorite
+PASS Favorite count is 0
+PASS new application process opened the same isolated favorite file
+PASS Favorite count is 0
+PASS HomeStatus contains Keine Favoriten|keine Favoriten|Haltestelle
+PASS native favorites: add/failure/retry, duplicate, four process starts, sorting/fallback, independent refresh, removal/failure/retry, empty home, navigation and keyboard

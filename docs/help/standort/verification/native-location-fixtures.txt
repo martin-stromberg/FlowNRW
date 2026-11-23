@@ -1,0 +1,48 @@
+PASS LocationCalls contains ^0$
+PASS LocationCalls contains ^0$
+PASS manual route and navigation do not request location
+PASS OriginSelection contains Aktueller Standort
+PASS DestinationSelection contains Aktueller Standort
+PASS LocationCalls contains ^2$
+PASS OriginLocationStatus contains ungefähr|Genauigkeit|ungenau
+PASS Failed location retains completed endpoint: denied
+PASS Location retry enabled: denied
+PASS Failed location retains completed endpoint: disabled
+PASS Location retry enabled: disabled
+PASS Failed location retains completed endpoint: unsupported
+PASS Location retry enabled: unsupported
+PASS Failed location retains completed endpoint: timeout
+PASS Location retry enabled: timeout
+PASS Failed location retains completed endpoint: unavailable
+PASS Location retry enabled: unavailable
+PASS Failed location retains completed endpoint: error
+PASS Location retry enabled: error
+PASS fixture permission revocation, failure states, retained selection and manual recovery
+PASS OriginSelection contains Newest manual endpoint
+PASS Page exit cancels pending location state
+PASS late endpoint responses and page exit do not overwrite new input
+PASS Location action fits narrow viewport
+PASS StopMatch0 contains Umgebung Süd
+PASS StopMatch0 contains 225
+PASS StopMatch1 contains Umgebung Nord
+PASS StopMatch1 contains unbekannt
+PASS StopSearchMetadata contains Nearby.*Datenalter:.*Fallback
+PASS Nearby action fits narrow viewport
+PASS MonitorMetadata contains fixture-nearby-0
+PASS MapDataStatus contains 2 Haltestellen.*2 Kartenpositionen
+PASS MonitorMetadata contains fixture-nearby-1
+PASS MonitorMetadata contains fixture-nearby-0
+PASS MapDataStatus contains 2 Haltestellen.*1 Kartenpositionen
+PASS MapStation1 contains Keine Kartenposition
+PASS MonitorMetadata contains fixture-nearby-1
+PASS Successful empty nearby result removes previous candidates
+PASS NearbyStatus contains vorher|bisher|letzte|bekannt
+PASS MonitorStop contains Manual after nearby failure
+PASS Manual stop lookup enabled after denied
+PASS Manual stop lookup enabled after timeout
+PASS Manual stop lookup enabled after unavailable
+PASS StopMatch0 contains Newest manual stop
+PASS StopMatch0 contains Neue Umgebung
+PASS StopSearchMetadata contains Nearby new
+PASS Abandoned location never navigates to monitor
+PASS fixture location endpoints, failure/revocation, latest wins, nearby list/map/monitor, unknown distance/position, keyboard and back navigation

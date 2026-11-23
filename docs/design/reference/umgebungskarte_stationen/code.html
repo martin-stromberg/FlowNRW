@@ -1,0 +1,346 @@
+<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@700&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-tertiary-container": "#fffbff", "secondary-fixed-dim": "#53e16f", "on-primary-container": "#fefcff", "on-secondary-container": "#00732a", "primary-fixed": "#d8e2ff", "on-primary-fixed-variant": "#004493", "error-container": "#ffdad6", "secondary": "#006e28", "on-tertiary": "#ffffff", "on-surface-variant": "#414755", "inverse-primary": "#adc6ff", "primary-container": "#0070eb", "on-tertiary-fixed-variant": "#6a3b00", "surface-container-highest": "#e3e2e7", "surface-bright": "#faf9fe", "tertiary-fixed-dim": "#ffb874", "surface-container": "#eeedf3", "outline-variant": "#c1c6d7", "tertiary-fixed": "#ffdcbf", "on-error": "#ffffff", "surface-variant": "#e3e2e7", "primary": "#0058bc", "surface-dim": "#dad9df", "on-error-container": "#93000a", "on-tertiary-fixed": "#2d1600", "surface-container-lowest": "#ffffff", "surface-container-low": "#f4f3f8", "on-primary": "#ffffff", "on-surface": "#1a1b1f", "surface-tint": "#005bc1", "inverse-surface": "#2f3034", "inverse-on-surface": "#f1f0f5", "outline": "#717786", "on-secondary": "#ffffff", "on-background": "#1a1b1f", "on-primary-fixed": "#001a41", "tertiary-container": "#ac6300", "tertiary": "#894d00", "on-secondary-fixed": "#002107", "primary-fixed-dim": "#adc6ff", "secondary-fixed": "#72fe88", "background": "#faf9fe", "secondary-container": "#6ffb85", "on-secondary-fixed-variant": "#00531c", "surface": "#faf9fe", "error": "#ba1a1a", "surface-container-high": "#e9e7ed" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "safe-bottom-tab": "84px", "spacing-4xs": "2px", "screen-margin-pad": "24px", "spacing-xs": "12px", "spacing-3xs": "4px", "card-gutter": "12px", "spacing-2xl": "40px", "spacing-md": "20px", "spacing-2xs": "8px", "spacing-lg": "24px", "spacing-sm": "16px", "screen-margin-phone": "16px", "spacing-xl": "32px" }, fontFamily: { "body": ["Inter"], "large-title-mobile": ["Inter"], "live-time-delay": ["JetBrains Mono"], "caption-2": ["Inter"], "live-time-primary": ["JetBrains Mono"], "platform-badge": ["Inter"], "caption-1": ["Inter"], "title-1": ["Inter"], "large-title": ["Inter"], "title-2": ["Inter"], "subhead": ["Inter"], "footnote": ["Inter"], "headline": ["Inter"], "title-3": ["Inter"], "callout": ["Inter"] }, fontSize: { "body": ["17px", { "lineHeight": "22px", "fontWeight": "400" }], "large-title-mobile": ["28px", { "lineHeight": "34px", "fontWeight": "700" }], "live-time-delay": ["14px", { "lineHeight": "18px", "fontWeight": "700" }], "caption-2": ["11px", { "lineHeight": "13px", "fontWeight": "600" }], "live-time-primary": ["18px", { "lineHeight": "22px", "fontWeight": "700" }], "platform-badge": ["13px", { "lineHeight": "16px", "fontWeight": "700" }], "caption-1": ["12px", { "lineHeight": "16px", "fontWeight": "500" }], "title-1": ["28px", { "lineHeight": "34px", "fontWeight": "700" }], "large-title": ["34px", { "lineHeight": "41px", "fontWeight": "700" }], "title-2": ["22px", { "lineHeight": "28px", "fontWeight": "700" }], "subhead": ["15px", { "lineHeight": "20px", "fontWeight": "400" }], "footnote": ["13px", { "lineHeight": "18px", "fontWeight": "400" }], "headline": ["17px", { "lineHeight": "22px", "fontWeight": "600" }], "title-3": ["20px", { "lineHeight": "25px", "fontWeight": "600" }], "callout": ["16px", { "lineHeight": "21px", "fontWeight": "400" }] } } } };</script></head><body class="bg-surface font-body text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-50 bg-surface/85 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-screen-margin-phone flex items-center justify-between"><div class="flex items-center gap-spacing-2xs"><img alt="FlowNRW App Icon" class="h-8 w-auto object-contain rounded-md" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwiqj1YYf_aNahsGROqUTg2cGPwwlpnW5zrXqTZ4YtIgwm4wZ2OzJQfm2mPK9mqB2-d3Z9B6YjTNe3hvpHOaL5UWl4cn-FSv8L3lUCCcfC_Yysz3bgIxoLdz4NMU2Ht1OSUj8jEOtoWxQfCnz5vRXhh2fXH3lFuY78aJjS6GnICz8VynjTstWQldbiPbI3_2t1H2EhDlkVBu5qUrQDJk9HMamd4MSIH4_EyMuY3Kdwo2B6vOQyidRK7SFkdiVT8-iOcfk"><div class="flex flex-col"><div class="flex items-center gap-spacing-3xs"><span class="font-headline text-headline text-on-surface leading-none">FlowNRW</span><span class="px-spacing-3xs py-spacing-4xs rounded-full bg-secondary-container text-on-secondary-container font-caption-2 text-caption-2 uppercase tracking-wide flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>Echtzeit aktiv</span></div><span class="font-caption-2 text-caption-2 text-on-surface-variant leading-none mt-spacing-4xs">Haltestellen</span></div></div><div class="flex items-center gap-spacing-2xs"><button aria-label="Schnellsuche" class="w-11 h-11 flex items-center justify-center rounded-full bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface"><span class="material-symbols-outlined text-[20px]">tune</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 pb-safe-bottom-tab bg-surface min-h-screen"><div class="flex flex-col w-full relative min-w-0">
+<!-- Interactive Map Canvas -->
+<div class="relative w-full h-[480px] overflow-hidden">
+<div class="w-full h-full bg-cover bg-center" data-location="Düsseldorf Heinrich-Heine-Allee, Germany" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCyznO1C_NRoh_BuLDf06Iifv7NVZ4EJ2W0s_JSqg18BVZcF1jQBDEPaNlxe2F2t_7bfZUSlf6xfBHyCjFFDq8Mod5Oy6e1FAaaItSwxc9SF5ho-zMEe0rqsrZ7Frf378x62TNu4iSGP4Jiuwdp1KJeqTuybsXiU1M9aV2FyHYK4p-JC_DCTUaG81iVOVTIiE5EPhd8VG4UbNdDV0lp6x-P8B4ceg3B3iFsl-rcVIGuwwZshJLKD2uF9w')"></div>
+<!-- Map Subtle Tint Scrim -->
+<div class="absolute inset-0 bg-gradient-to-b from-surface/40 via-transparent to-surface/90 pointer-events-none"></div>
+<!-- Floating Top Search & Filter Module -->
+<div class="absolute top-spacing-sm inset-x-screen-margin-phone flex flex-col gap-spacing-2xs z-20">
+<!-- Search Input Container -->
+<div class="bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-lg p-spacing-2xs flex items-center gap-spacing-2xs transition-all duration-200 focus-within:shadow-xl">
+<span class="material-symbols-outlined text-primary text-[22px] ml-spacing-3xs">search</span>
+<input class="bg-transparent font-subhead text-subhead text-on-surface placeholder:text-on-surface-variant flex-1 focus:outline-none min-w-0 truncate" id="map-search-input" placeholder="Haltestellen, Adressen oder POI suchen..." type="text" value="Düsseldorf Heinrich-Heine-Allee">
+<button class="w-7 h-7 flex items-center justify-center rounded-full bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors" id="clear-search-btn">
+<span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary-fixed text-on-primary-fixed hover:bg-primary transition-colors hover:text-on-primary">
+<span class="material-symbols-outlined text-[18px]">mic</span>
+</button>
+</div>
+<!-- Filter Pills Carousel -->
+<div class="flex items-center gap-spacing-2xs overflow-x-auto no-scrollbar py-spacing-4xs">
+<button class="filter-pill active flex items-center gap-spacing-3xs px-spacing-xs py-1.5 rounded-full bg-primary text-on-primary shadow-sm whitespace-nowrap transition-transform active:scale-95">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">near_me</span>
+<span class="font-caption-1 text-caption-1">In meiner Nähe</span>
+</button>
+<button class="filter-pill flex items-center gap-spacing-3xs px-spacing-xs py-1.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-md text-on-surface shadow-sm whitespace-nowrap hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-tertiary text-[16px]">train</span>
+<span class="font-caption-1 text-caption-1">Nur Fernverkehr</span>
+</button>
+<button class="filter-pill flex items-center gap-spacing-3xs px-spacing-xs py-1.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-md text-on-surface shadow-sm whitespace-nowrap hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-secondary text-[16px]">accessible</span>
+<span class="font-caption-1 text-caption-1">Barrierefrei</span>
+</button>
+<button class="filter-pill flex items-center gap-spacing-3xs px-spacing-xs py-1.5 rounded-full bg-surface-container-lowest/90 backdrop-blur-md text-on-surface shadow-sm whitespace-nowrap hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">pedal_bike</span>
+<span class="font-caption-1 text-caption-1">Leihrad / Sharing</span>
+</button>
+</div>
+</div>
+<!-- Floating Map Control Buttons (iOS Style Right Aligned) -->
+<div class="absolute right-screen-margin-phone top-36 flex flex-col gap-spacing-2xs z-20">
+<!-- Compass / Network Overlay Toggle -->
+<button class="w-11 h-11 rounded-xl bg-surface-container-lowest/95 backdrop-blur-xl text-on-surface shadow-md flex items-center justify-center hover:bg-surface-container-high active:scale-90 transition-all" id="toggle-layer-btn">
+<span class="material-symbols-outlined text-[22px] text-primary">layers</span>
+</button>
+<!-- GPS Location Recenter -->
+<button class="w-11 h-11 rounded-xl bg-surface-container-lowest/95 backdrop-blur-xl text-primary shadow-md flex items-center justify-center hover:bg-surface-container-high active:scale-90 transition-all group" id="recenter-gps-btn">
+<span class="material-symbols-outlined text-[22px] group-hover:rotate-45 transition-transform">my_location</span>
+</button>
+<!-- 3D / Perspective Toggle -->
+<button class="w-11 h-11 rounded-xl bg-surface-container-lowest/95 backdrop-blur-xl text-on-surface shadow-md flex items-center justify-center hover:bg-surface-container-high active:scale-90 transition-all">
+<span class="font-caption-1 text-caption-1 font-bold text-on-surface-variant">3D</span>
+</button>
+</div>
+<!-- Animated Transit Pins on Map Canvas -->
+<!-- Pin 1: Selected (Heinrich-Heine-Allee - U-Bahn) -->
+<div class="absolute top-[48%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center cursor-pointer group">
+<div class="relative flex items-center justify-center">
+<span class="absolute w-12 h-12 rounded-full bg-primary/25 animate-ping"></span>
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary shadow-xl flex items-center justify-center transform group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[22px]">subway</span>
+</div>
+</div>
+<div class="mt-1 px-spacing-2xs py-spacing-4xs rounded-lg bg-inverse-surface/90 text-inverse-on-surface shadow-md whitespace-nowrap flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-secondary-container"></span>
+<span class="font-caption-2 text-caption-2">Heinrich-Heine-Allee</span>
+</div>
+</div>
+<!-- Pin 2: Düsseldorf Hbf (Fernverkehr/Bahn) -->
+<div class="absolute top-[30%] right-[22%] z-10 flex flex-col items-center cursor-pointer opacity-90 hover:opacity-100 hover:scale-105 transition-all">
+<div class="w-8 h-8 rounded-full bg-error text-on-error shadow-md flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">directions_railway</span>
+</div>
+<div class="mt-1 px-1.5 py-0.5 rounded bg-surface-container-lowest/90 text-on-surface font-caption-2 text-caption-2 shadow-xs whitespace-nowrap">
+        Düsseldorf Hbf
+      </div>
+</div>
+<!-- Pin 3: Graf-Adolf-Platz (Tram) -->
+<div class="absolute bottom-[24%] left-[26%] z-10 flex flex-col items-center cursor-pointer opacity-90 hover:opacity-100 hover:scale-105 transition-all">
+<div class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container shadow-md flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">tram</span>
+</div>
+<div class="mt-1 px-1.5 py-0.5 rounded bg-surface-container-lowest/90 text-on-surface font-caption-2 text-caption-2 shadow-xs whitespace-nowrap">
+        Graf-Adolf-Platz
+      </div>
+</div>
+<!-- Pin 4: Schadowstraße (U-Bahn / Tram Hub) -->
+<div class="absolute top-[28%] left-[20%] z-10 flex flex-col items-center cursor-pointer opacity-85 hover:opacity-100 hover:scale-105 transition-all">
+<div class="w-7 h-7 rounded-full bg-primary-container text-on-primary-container shadow-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]">directions_transit</span>
+</div>
+<div class="mt-1 px-1.5 py-0.5 rounded bg-surface-container-lowest/90 text-on-surface font-caption-2 text-caption-2 shadow-xs whitespace-nowrap">
+        Schadowstr.
+      </div>
+</div>
+</div>
+<!-- Sheet Card: Native Apple Half-Sheet Container -->
+<div class="relative -mt-8 mx-auto w-full max-w-2xl px-screen-margin-phone z-30 pb-spacing-lg">
+<div class="bg-surface-container-lowest rounded-3xl shadow-2xl p-spacing-md flex flex-col gap-spacing-md transition-all">
+<!-- Apple Sheet Grab Handle & Proximity Badge -->
+<div class="flex flex-col items-center gap-spacing-2xs">
+<div class="w-10 h-1.5 rounded-full bg-outline-variant/60"></div>
+<div class="w-full flex items-center justify-between mt-spacing-3xs">
+<div class="flex items-center gap-spacing-2xs">
+<span class="px-spacing-2xs py-spacing-4xs rounded-md bg-secondary-container text-on-secondary-container font-caption-2 text-caption-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">directions_walk</span>
+              600 m · ca. 7 Min
+            </span>
+<span class="px-spacing-2xs py-spacing-4xs rounded-md bg-surface-container-high text-on-surface-variant font-caption-2 text-caption-2">
+              Zone A3 (Düsseldorf)
+            </span>
+</div>
+<!-- Quick Action Buttons: Share & Favorite -->
+<div class="flex items-center gap-spacing-3xs">
+<button class="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant transition-colors" id="favorite-toggle" title="Station merken">
+<span class="material-symbols-outlined text-[18px]">bookmark_border</span>
+</button>
+<button class="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant transition-colors" title="Teilen">
+<span class="material-symbols-outlined text-[18px]">share</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Station Identity Header -->
+<div class="flex items-start justify-between gap-spacing-xs">
+<div class="flex flex-col">
+<div class="flex items-center gap-spacing-3xs">
+<span class="w-5 h-5 rounded-md bg-primary text-on-primary flex items-center justify-center font-caption-2 text-caption-2 font-bold">U</span>
+<span class="font-caption-1 text-caption-1 text-on-surface-variant">U-Bahnhof &amp; Straßenbahnknoten</span>
+</div>
+<h2 class="font-title-2 text-title-2 text-on-surface leading-tight mt-spacing-4xs">Düsseldorf Heinrich-Heine-Allee</h2>
+<p class="font-subhead text-subhead text-on-surface-variant">Altstadt / Kö-Bogen Eingang</p>
+</div>
+<!-- Live Departures Count Beacon -->
+<div class="flex flex-col items-end">
+<div class="px-spacing-2xs py-1 rounded-full bg-secondary-container text-on-secondary-container flex items-center gap-1 font-caption-2 text-caption-2">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+            14 Linien aktiv
+          </div>
+</div>
+</div>
+<!-- Station Amenities Grid (Micro-Chips) -->
+<div class="grid grid-cols-3 gap-spacing-2xs pt-1">
+<!-- Amenity 1: Elevator -->
+<div class="flex flex-col items-center justify-center p-spacing-2xs rounded-xl bg-surface-container-low text-center group hover:bg-surface-container transition-colors">
+<div class="w-7 h-7 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center mb-1">
+<span class="material-symbols-outlined text-[16px]">elevator</span>
+</div>
+<span class="font-caption-2 text-caption-2 text-on-surface font-semibold">Aufzüge aktiv</span>
+<span class="font-footnote text-[11px] text-secondary">Stufenfrei</span>
+</div>
+<!-- Amenity 2: DB Ticket Vending -->
+<div class="flex flex-col items-center justify-center p-spacing-2xs rounded-xl bg-surface-container-low text-center group hover:bg-surface-container transition-colors">
+<div class="w-7 h-7 rounded-full bg-primary-fixed text-on-primary-fixed-variant flex items-center justify-center mb-1">
+<span class="material-symbols-outlined text-[16px]">confirmation_number</span>
+</div>
+<span class="font-caption-2 text-caption-2 text-on-surface font-semibold">DB Automat</span>
+<span class="font-footnote text-[11px] text-on-surface-variant">Zwischenebene</span>
+</div>
+<!-- Amenity 3: Nextbike Station -->
+<div class="flex flex-col items-center justify-center p-spacing-2xs rounded-xl bg-surface-container-low text-center group hover:bg-surface-container transition-colors">
+<div class="w-7 h-7 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center mb-1">
+<span class="material-symbols-outlined text-[16px]">pedal_bike</span>
+</div>
+<span class="font-caption-2 text-caption-2 text-on-surface font-semibold">Nextbike (4)</span>
+<span class="font-footnote text-[11px] text-secondary font-medium">Verfügbar</span>
+</div>
+</div>
+<!-- Section: Nächste Live-Abfahrten Preview -->
+<div class="flex flex-col gap-spacing-2xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-spacing-3xs">
+<span class="font-headline text-headline text-on-surface">Nächste Abfahrten</span>
+<span class="font-caption-2 text-caption-2 px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant">Live</span>
+</div>
+<button class="font-caption-1 text-caption-1 text-primary hover:underline font-semibold flex items-center gap-0.5">
+            Alle Abfahrten
+            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+<!-- Departure List Cards -->
+<div class="flex flex-col gap-spacing-2xs">
+<!-- Row 1: U72 -->
+<div class="flex items-center justify-between p-spacing-xs rounded-xl bg-surface-container-low hover:bg-surface-container transition-all">
+<div class="flex items-center gap-spacing-xs min-w-0">
+<span class="px-2 py-1 rounded-md bg-primary text-on-primary font-platform-badge text-platform-badge leading-none">
+                U 72
+              </span>
+<div class="flex flex-col min-w-0">
+<span class="font-subhead text-subhead font-semibold text-on-surface truncate">Ratingen Mitte</span>
+<span class="font-caption-2 text-caption-2 text-on-surface-variant">Gleis 1 · Niederflur</span>
+</div>
+</div>
+<div class="flex flex-col items-end shrink-0 pl-spacing-xs">
+<div class="flex items-center gap-spacing-3xs">
+<span class="font-live-time-primary text-live-time-primary text-on-surface">in 2 Min</span>
+</div>
+<span class="font-caption-2 text-caption-2 text-secondary flex items-center gap-1 font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Pünktlich
+              </span>
+</div>
+</div>
+<!-- Row 2: U75 -->
+<div class="flex items-center justify-between p-spacing-xs rounded-xl bg-surface-container-low hover:bg-surface-container transition-all">
+<div class="flex items-center gap-spacing-xs min-w-0">
+<span class="px-2 py-1 rounded-md bg-primary text-on-primary font-platform-badge text-platform-badge leading-none">
+                U 75
+              </span>
+<div class="flex flex-col min-w-0">
+<span class="font-subhead text-subhead font-semibold text-on-surface truncate">Neuss Hauptbahnhof</span>
+<span class="font-caption-2 text-caption-2 text-on-surface-variant">Gleis 2 · Barrierefrei</span>
+</div>
+</div>
+<div class="flex flex-col items-end shrink-0 pl-spacing-xs">
+<div class="flex items-center gap-spacing-3xs">
+<span class="font-live-time-primary text-live-time-primary text-on-surface">in 4 Min</span>
+</div>
+<span class="font-caption-2 text-caption-2 text-secondary flex items-center gap-1 font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Pünktlich
+              </span>
+</div>
+</div>
+<!-- Row 3: U76 (Delayed) -->
+<div class="flex items-center justify-between p-spacing-xs rounded-xl bg-surface-container-low hover:bg-surface-container transition-all">
+<div class="flex items-center gap-spacing-xs min-w-0">
+<span class="px-2 py-1 rounded-md bg-primary text-on-primary font-platform-badge text-platform-badge leading-none">
+                U 76
+              </span>
+<div class="flex flex-col min-w-0">
+<span class="font-subhead text-subhead font-semibold text-on-surface truncate">Krefeld Rheinstraße</span>
+<span class="font-caption-2 text-caption-2 text-on-surface-variant">Gleis 2 · Expresslinie</span>
+</div>
+</div>
+<div class="flex flex-col items-end shrink-0 pl-spacing-xs">
+<div class="flex items-center gap-spacing-3xs">
+<span class="font-caption-1 text-caption-1 line-through text-on-surface-variant">in 5 Min</span>
+<span class="font-live-time-primary text-live-time-primary text-error">in 7 Min</span>
+</div>
+<span class="font-caption-2 text-caption-2 text-error font-medium flex items-center gap-1">
+                +2 Min Verzögerung
+              </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Footer: Dual Buttons -->
+<div class="grid grid-cols-1 gap-spacing-2xs pt-spacing-2xs">
+<button class="w-full py-3.5 px-spacing-md rounded-xl bg-primary hover:bg-primary-container text-on-primary font-headline text-headline flex items-center justify-center gap-spacing-2xs shadow-md transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-[20px]">turn_right</span>
+<span class="">Route hierher planen</span>
+</button>
+<div class="grid grid-cols-2 gap-spacing-2xs">
+<button class="py-2.5 px-spacing-sm rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-subhead text-subhead font-medium flex items-center justify-center gap-spacing-3xs transition-all active:scale-[0.98]" id="save-station-btn">
+<span class="material-symbols-outlined text-[18px]">star_outline</span>
+<span class="">Als Favorit</span>
+</button>
+<button class="py-2.5 px-spacing-sm rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-subhead text-subhead font-medium flex items-center justify-center gap-spacing-3xs transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">navigation</span>
+<span class="">Fußweg starten</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    // Interactive Layer Toggle micro-feedback
+    const layerBtn = document.getElementById('toggle-layer-btn');
+    let layerActive = false;
+    if (layerBtn) {
+      layerBtn.addEventListener('click', () => {
+        layerActive = !layerActive;
+        if (layerActive) {
+          layerBtn.classList.add('bg-primary', 'text-on-primary');
+          layerBtn.classList.remove('bg-surface-container-lowest/95', 'text-on-surface');
+        } else {
+          layerBtn.classList.remove('bg-primary', 'text-on-primary');
+          layerBtn.classList.add('bg-surface-container-lowest/95', 'text-on-surface');
+        }
+      });
+    }
+
+    // Favorite Button Micro-Interaction
+    const favToggle = document.getElementById('favorite-toggle');
+    const saveStationBtn = document.getElementById('save-station-btn');
+    let isSaved = false;
+
+    function toggleSave() {
+      isSaved = !isSaved;
+      if (favToggle) {
+        favToggle.innerHTML = isSaved 
+          ? '<span class="material-symbols-outlined text-[18px] text-tertiary-container" style="font-variation-settings: \'FILL\' 1;">bookmark</span>'
+          : '<span class="material-symbols-outlined text-[18px]">bookmark_border</span>';
+      }
+      if (saveStationBtn) {
+        saveStationBtn.innerHTML = isSaved
+          ? '<span class="material-symbols-outlined text-[18px] text-tertiary-container" style="font-variation-settings: \'FILL\' 1;">star</span><span>Gespeichert</span>'
+          : '<span class="material-symbols-outlined text-[18px]">star_outline</span><span>Als Favorit</span>';
+      }
+    }
+
+    if (favToggle) favToggle.addEventListener('click', toggleSave);
+    if (saveStationBtn) saveStationBtn.addEventListener('click', toggleSave);
+
+    // Recenter GPS Button Rotation Feedback
+    const gpsBtn = document.getElementById('recenter-gps-btn');
+    if (gpsBtn) {
+      gpsBtn.addEventListener('click', () => {
+        const icon = gpsBtn.querySelector('span');
+        if (icon) {
+          icon.classList.add('animate-spin');
+          setTimeout(() => {
+            icon.classList.remove('animate-spin');
+          }, 600);
+        }
+      });
+    }
+
+    // Filter pills toggling
+    const filterPills = document.querySelectorAll('.filter-pill');
+    filterPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        filterPills.forEach(p => {
+          p.classList.remove('bg-primary', 'text-on-primary');
+          p.classList.add('bg-surface-container-lowest/90', 'text-on-surface');
+        });
+        pill.classList.remove('bg-surface-container-lowest/90', 'text-on-surface');
+        pill.classList.add('bg-primary', 'text-on-primary');
+      });
+    });
+
+    // Clear search button interaction
+    const clearBtn = document.getElementById('clear-search-btn');
+    const searchInput = document.getElementById('map-search-input');
+    if (clearBtn && searchInput) {
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        searchInput.focus();
+      });
+    }
+  })();
+</script></main><nav class="fixed bottom-0 inset-x-0 z-50 pb-safe bg-surface/85 backdrop-blur-xl shadow-[0_-1px_10px_rgba(0,0,0,0.05)]" data-active-classes="text-primary"><div class="flex justify-around items-center h-16 px-spacing-2xs"><a class="flex flex-col items-center justify-center gap-spacing-4xs min-w-[64px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="abfahrten" href="#"><span class="material-symbols-outlined text-[24px]">schedule</span><span class="font-caption-2 text-caption-2">Abfahrten</span></a><a class="flex flex-col items-center justify-center gap-spacing-4xs min-w-[64px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="verbindungen" href="#"><span class="material-symbols-outlined text-[24px]">directions_transit</span><span class="font-caption-2 text-caption-2">Verbindungen</span></a><a class="flex flex-col items-center justify-center gap-spacing-4xs min-w-[64px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="fahrtbegleiter" href="#"><span class="material-symbols-outlined text-[24px]">alt_route</span><span class="font-caption-2 text-caption-2">Fahrtbegleiter</span></a><a aria-current="page" class="flex flex-col items-center justify-center gap-spacing-4xs min-w-[64px] min-h-[44px] transition-colors text-primary" data-path="haltestellen" href="#"><span class="material-symbols-outlined text-[24px]">map</span><span class="font-caption-2 text-caption-2">Haltestellen</span></a></div></nav>
+
+</body></html>

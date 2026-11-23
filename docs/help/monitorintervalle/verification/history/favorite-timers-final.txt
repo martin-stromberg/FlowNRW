@@ -1,0 +1,7 @@
+Native refresh tests use actual 30-second waits; all paths and data are isolated fixtures.
+PASS Effective saved interval 30
+WAIT next real timer request 0 seconds
+WAIT next real timer request 5 seconds
+WAIT next real timer request 10 seconds
+WAIT next real timer request 15 seconds
+WAIT next real timer request 20 seconds

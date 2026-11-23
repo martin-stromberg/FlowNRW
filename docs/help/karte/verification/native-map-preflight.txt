@@ -1,0 +1,4 @@
+PASS MapDataStatus contains 2 Haltestellen.*2 Kartenpositionen
+PASS MonitorMetadata contains fixture-1
+PASS MonitorMetadata contains fixture-0
+PASS native map marker, list and back navigation

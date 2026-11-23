@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <!-- Default version for local builds. CI overrides this via -p:Version=X.Y.Z[-rc.N]
+         (see .github/actions/build-and-package/action.yml); never bump it by hand -
+         releases are versioned automatically from conventional commits (semantic-release). -->
+    <Version>0.0.1</Version>
+    <Authors>Martin Stromberg</Authors>
+    <Product>FlowNRW</Product>
+    <LangVersion>latest</LangVersion>
+    <DefaultItemExcludes>$(DefaultItemExcludes);**\artifacts\**;**\publish\**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,24 @@
+  FlowNRW.Core -> D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Core\bin\Release\net10.0\FlowNRW.Core.dll
+  FlowNRW.Tests -> D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Tests\bin\Release\net10.0\FlowNRW.Tests.dll
+Testlauf für "D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Tests\bin\Release\net10.0\FlowNRW.Tests.dll" (.NETCoreApp,Version=v10.0)
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster überein.
+[xUnit.net 00:00:00.43]     FlowNRW.Tests.ProviderOrchestratorTests_Union.RouteAsync_RegionalAAndNationalAB_ReturnsUnion [FAIL]
+[xUnit.net 00:00:00.44]     FlowNRW.Tests.ProviderOrchestratorTests_Union.DeparturesAsync_RegionalAAndNationalAB_ReturnsUnion [FAIL]
+  Fehler FlowNRW.Tests.ProviderOrchestratorTests_Union.RouteAsync_RegionalAAndNationalAB_ReturnsUnion [102 ms]
+  Fehlermeldung:
+   Assert.Equal() Failure: Values differ
+Expected: 2
+Actual:   1
+  Stapelverfolgung:
+     at FlowNRW.Tests.ProviderOrchestratorTests_Union.RouteAsync_RegionalAAndNationalAB_ReturnsUnion() in D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Tests\ProviderOrchestratorTests_Union.cs:line 29
+--- End of stack trace from previous location ---
+  Fehler FlowNRW.Tests.ProviderOrchestratorTests_Union.DeparturesAsync_RegionalAAndNationalAB_ReturnsUnion [4 ms]
+  Fehlermeldung:
+   Assert.Equal() Failure: Values differ
+Expected: 2
+Actual:   1
+  Stapelverfolgung:
+     at FlowNRW.Tests.ProviderOrchestratorTests_Union.DeparturesAsync_RegionalAAndNationalAB_ReturnsUnion() in D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Tests\ProviderOrchestratorTests_Union.cs:line 44
+--- End of stack trace from previous location ---
+
+Fehler!      : Fehler:     2, erfolgreich:     0, übersprungen:     0, gesamt:     2, Dauer: 122 ms - FlowNRW.Tests.dll (net10.0)

@@ -1,0 +1,20 @@
+name: Setup MAUI workload
+
+description: >
+  Installs the .NET MAUI Windows workload required to restore/build/publish FlowNRW
+  (net10.0-windows). Assumes actions/setup-dotnet has already provisioned the .NET 10 SDK and
+  that the runner is Windows - the Windows target framework cannot be built anywhere else.
+  Shared by the "static checks" jobs (pr-staging-ci.yml / staging-ci.yml) and by the
+  build-and-package action so the install command only exists once.
+
+runs:
+  using: composite
+  steps:
+    - name: Install maui-windows workload
+      shell: pwsh
+      run: |
+        dotnet workload install maui-windows --skip-sign-check
+        if ($LASTEXITCODE -ne 0) {
+          throw "Installing the maui-windows workload failed."
+        }
+        dotnet workload list

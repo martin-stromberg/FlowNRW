@@ -1,0 +1,35 @@
+FlowNRW – Begutachtungsstand Verbindungssuche
+
+Start unter Windows x64
+
+1. Das ZIP vollständig in einen eigenen Ordner entpacken.
+2. FlowNRW.exe aus diesem Ordner starten. Die Dateien im Ordner zusammenlassen.
+3. Für reale Fahrpläne eine Internetverbindung verwenden.
+
+Kurzer Rundgang
+
+- Unter Start und Ziel eine Adresse oder Haltestelle eingeben, suchen und jeweils
+  den passenden Treffer auswählen. Beispiel: Gelsenkirchen Hbf nach Essen Hbf.
+- Alternativ pro Feld „Koordinaten eingeben“ einschalten, Breite und Länge
+  eingeben und übernehmen. Dezimalkomma und Dezimalpunkt werden unterstützt.
+- „Verbindungen suchen“ öffnet bei verfügbaren Ergebnissen die Verbindungsliste.
+  Eine Verbindung auswählen, um Teilstrecken, Zeiten und Umstiege zu sehen.
+- Mit „Zurück“ zu Ergebnissen und Suche wechseln. Die Auswahl bleibt erhalten.
+  Nach Änderung einer Eingabe muss der passende Endpunkt erneut gewählt werden.
+- Bei fehlenden Ergebnissen oder Anbieterfehlern die Eingabe prüfen und erneut
+  suchen. Quelle, Datenstand und Hinweise auf Ersatzquellen/veraltete Daten beachten.
+
+Umfang und Grenzen
+
+Dieser Zwischenstand enthält die manuelle Verbindungssuche mit Ergebnisdetails.
+Karte, Standortübernahme, Favoriten, Abfahrtsmonitore und automatische Aktualisierung
+folgen in weiteren Entwicklungsschritten. Die App fordert für die manuelle Suche
+keine Standortfreigabe an. Verfügbarkeit und Vollständigkeit der Fahrplandaten
+hängen von den verwendeten Diensten ab; unbekannte Angaben bleiben unbekannt.
+Dieser Download ist die Windows-App. Die native iOS-Prüfung erfolgt gesondert.
+
+Für Rückmeldungen
+
+Die Datei release-metadata.json nennt Version und Quellcode-Commit dieses Pakets.
+Bitte diese Kennung, den ausgeführten Ablauf sowie erwartetes und beobachtetes
+Verhalten angeben. Persönliche Adressen oder Standortdaten nur bei Bedarf teilen.

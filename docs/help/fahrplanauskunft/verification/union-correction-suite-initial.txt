@@ -1,0 +1,46 @@
+  FlowNRW.Core -> D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Core\bin\Release\net10.0\FlowNRW.Core.dll
+  FlowNRW.Tests -> D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Tests\bin\Release\net10.0\FlowNRW.Tests.dll
+Testlauf für "D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Tests\bin\Release\net10.0\FlowNRW.Tests.dll" (.NETCoreApp,Version=v10.0)
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster überein.
+[xUnit.net 00:00:00.21]     FlowNRW.Tests.ProviderOrchestratorTests_Fallback.RouteAsync_EitherPointInNrw_PrioritizesRegional(originInNrw: True) [FAIL]
+  Fehler FlowNRW.Tests.ProviderOrchestratorTests_Fallback.RouteAsync_EitherPointInNrw_PrioritizesRegional(originInNrw: True) [41 ms]
+  Fehlermeldung:
+   Assert.Single() Failure: The collection contained 2 items
+Collection: [Journey { Id = regional, Legs = FlowNRW.Core.Transit.JourneyLeg[], Transfers = FlowNRW.Core.Transit.Transfer[] }, Journey { Id = national, Legs = FlowNRW.Core.Transit.JourneyLeg[], Transfers = FlowNRW.Core.Transit.Transfer[] }]
+  Stapelverfolgung:
+     at FlowNRW.Tests.ProviderOrchestratorTests_Fallback.RouteAsync_EitherPointInNrw_PrioritizesRegional(Boolean originInNrw) in D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Tests\ProviderOrchestratorTests_Fallback.cs:line 23
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:00.21]     FlowNRW.Tests.ProviderOrchestratorTests_RegionResolution.DeparturesAsync_UnlocatedNrwStop_UsesRegionalProvider [FAIL]
+[xUnit.net 00:00:00.21]     FlowNRW.Tests.ProviderOrchestratorTests_Fallback.RouteAsync_EitherPointInNrw_PrioritizesRegional(originInNrw: False) [FAIL]
+[xUnit.net 00:00:00.21]     FlowNRW.Tests.ProviderOrchestratorTests_RegionResolution.RouteAsync_UnlocatedNrwEndpoint_ResolvesBeforeChoosingProvider(identityOnly: False) [FAIL]
+[xUnit.net 00:00:00.21]     FlowNRW.Tests.ProviderOrchestratorTests_RegionResolution.RouteAsync_UnlocatedNrwEndpoint_ResolvesBeforeChoosingProvider(identityOnly: True) [FAIL]
+  Fehler FlowNRW.Tests.ProviderOrchestratorTests_RegionResolution.DeparturesAsync_UnlocatedNrwStop_UsesRegionalProvider [4 ms]
+  Fehlermeldung:
+   Assert.Single() Failure: The collection contained 2 items
+Collection: [StopEvent { Identity = TripIdentity { Source = , TripId = regional, SharedTripId = , Stop = Stop { Id = , Name = , Source = , Dhid = , Coordinate =  }, Line = , Operator = , Direction = , PlannedTime =  }, PlannedTime = , Realtime = RealtimeStatus { ActualTime = , Delay = , Cancelled = , Platform = , PlannedPlatform = , Source = , RetrievedAt = 15.09.2026 05:25:00 +00:00 }, Line =  }, StopEvent { Identity = TripIdentity { Source = , TripId = national, SharedTripId = , Stop = Stop { Id = , Name = , Source = , Dhid = , Coordinate =  }, Line = , Operator = , Direction = , PlannedTime =  }, PlannedTime = , Realtime = RealtimeStatus { ActualTime = , Delay = , Cancelled = , Platform = , PlannedPlatform = , Source = , RetrievedAt = 15.09.2026 05:25:00 +00:00 }, Line =  }]
+  Stapelverfolgung:
+     at FlowNRW.Tests.ProviderOrchestratorTests_RegionResolution.DeparturesAsync_UnlocatedNrwStop_UsesRegionalProvider() in D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Tests\ProviderOrchestratorTests_RegionResolution.cs:line 34
+--- End of stack trace from previous location ---
+  Fehler FlowNRW.Tests.ProviderOrchestratorTests_Fallback.RouteAsync_EitherPointInNrw_PrioritizesRegional(originInNrw: False) [< 1 ms]
+  Fehlermeldung:
+   Assert.Single() Failure: The collection contained 2 items
+Collection: [Journey { Id = regional, Legs = FlowNRW.Core.Transit.JourneyLeg[], Transfers = FlowNRW.Core.Transit.Transfer[] }, Journey { Id = national, Legs = FlowNRW.Core.Transit.JourneyLeg[], Transfers = FlowNRW.Core.Transit.Transfer[] }]
+  Stapelverfolgung:
+     at FlowNRW.Tests.ProviderOrchestratorTests_Fallback.RouteAsync_EitherPointInNrw_PrioritizesRegional(Boolean originInNrw) in D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Tests\ProviderOrchestratorTests_Fallback.cs:line 23
+--- End of stack trace from previous location ---
+  Fehler FlowNRW.Tests.ProviderOrchestratorTests_RegionResolution.RouteAsync_UnlocatedNrwEndpoint_ResolvesBeforeChoosingProvider(identityOnly: False) [< 1 ms]
+  Fehlermeldung:
+   Assert.Single() Failure: The collection contained 2 items
+Collection: [Journey { Id = regional, Legs = FlowNRW.Core.Transit.JourneyLeg[], Transfers = FlowNRW.Core.Transit.Transfer[] }, Journey { Id = national, Legs = FlowNRW.Core.Transit.JourneyLeg[], Transfers = FlowNRW.Core.Transit.Transfer[] }]
+  Stapelverfolgung:
+     at FlowNRW.Tests.ProviderOrchestratorTests_RegionResolution.RouteAsync_UnlocatedNrwEndpoint_ResolvesBeforeChoosingProvider(Boolean identityOnly) in D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Tests\ProviderOrchestratorTests_RegionResolution.cs:line 25
+--- End of stack trace from previous location ---
+  Fehler FlowNRW.Tests.ProviderOrchestratorTests_RegionResolution.RouteAsync_UnlocatedNrwEndpoint_ResolvesBeforeChoosingProvider(identityOnly: True) [< 1 ms]
+  Fehlermeldung:
+   Assert.Single() Failure: The collection contained 2 items
+Collection: [Journey { Id = regional, Legs = FlowNRW.Core.Transit.JourneyLeg[], Transfers = FlowNRW.Core.Transit.Transfer[] }, Journey { Id = national, Legs = FlowNRW.Core.Transit.JourneyLeg[], Transfers = FlowNRW.Core.Transit.Transfer[] }]
+  Stapelverfolgung:
+     at FlowNRW.Tests.ProviderOrchestratorTests_RegionResolution.RouteAsync_UnlocatedNrwEndpoint_ResolvesBeforeChoosingProvider(Boolean identityOnly) in D:\Repositories\softwareschmiede\5142e36d-e8e0-4663-82eb-99c1599a0b31\FlowNRW.Tests\ProviderOrchestratorTests_RegionResolution.cs:line 25
+--- End of stack trace from previous location ---
+
+Fehler!      : Fehler:     5, erfolgreich:   100, übersprungen:     0, gesamt:   105, Dauer: 293 ms - FlowNRW.Tests.dll (net10.0)
